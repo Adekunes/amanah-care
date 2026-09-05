@@ -296,7 +296,7 @@ async function enterApp(){
   buildChipsets();
   await loadNames();
   await renderStrip();
-  await renderCareToday();
+  await renderCareLog();
   startPolling();
 }
 
@@ -360,7 +360,7 @@ async function logItem(){
   $('#log-note').value='';
   $$('#preset-row .chip').forEach(x=>x.classList.remove('on'));
   pick.preset=null; $('#btn-log').disabled=true;
-  toast('Logged'); await renderCareToday();
+  toast('Logged'); await renderCareLog();
 }
 async function careSince(since){
   const rows = await api(`/families/${ME.family_id}/care?since=${encodeURIComponent(since||'1970-01-01')}`);
@@ -369,16 +369,49 @@ async function careSince(since){
     out.push({ ...r, text: p?.text ?? '🔒 locked' }); }
   return out;
 }
-async function renderCareToday(){
-  const midnight = new Date(); midnight.setHours(0,0,0,0);
-  const items = await careSince(midnight.toISOString());
-  const box = $('#care-today');
-  $('#today-count').textContent = items.length;
-  if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; return; }
-  box.innerHTML = items.map(i=>`<div class="item">
-    <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
-    <div class="muted">${esc(nameOf(i.actor_id))} · ${new Date(i.occurred_at).toLocaleTimeString()}</div>
-  </div>`).join('');
+const DAY_MS = 86400000;
+const LOG_DAYS = 30;                      // how far back the grouped log reaches
+
+const dayKey = (d)=>{ const x = new Date(d); x.setHours(0,0,0,0); return x.getTime(); };
+
+function dayLabel(ts){
+  const today = dayKey(Date.now());
+  if(ts === today) return 'Today';
+  if(ts === today - DAY_MS) return 'Yesterday';
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, d.getFullYear() === new Date().getFullYear()
+    ? { weekday:'short', day:'numeric', month:'short' }
+    : { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+
+// One section per day, newest day first, newest entry first inside each day.
+async function renderCareLog(){
+  const from = new Date(Date.now() - (LOG_DAYS-1)*DAY_MS); from.setHours(0,0,0,0);
+  const items = await careSince(from.toISOString());
+  const box = $('#care-log');
+  $('#log-count').textContent = items.length;
+  if(!items.length){ box.innerHTML = '<p class="muted">Nothing logged yet.</p>'; return; }
+
+  const byDay = new Map();
+  for(const i of items){
+    const k = dayKey(i.occurred_at);
+    if(!byDay.has(k)) byDay.set(k, []);
+    byDay.get(k).push(i);
+  }
+
+  box.innerHTML = [...byDay.keys()].sort((a,b)=>b-a).map(k=>{
+    const rows = byDay.get(k).slice().reverse();
+    return `<section class="day">
+      <div class="day-head">
+        <span class="day-name">${dayLabel(k)}</span>
+        <span class="day-count tnum">${rows.length} ${rows.length===1?'entry':'entries'}</span>
+      </div>
+      ${rows.map(i=>`<div class="item">
+        <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
+        <div class="muted">${esc(nameOf(i.actor_id))} · ${new Date(i.occurred_at).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</div>
+      </div>`).join('')}
+    </section>`;
+  }).join('');
 }
 
 // ---- handoff ----

@@ -164,3 +164,12 @@ label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
 .chip.static{cursor:default;background:var(--brand-soft);border-color:transparent;
   color:var(--brand-ink);min-height:32px;font-size:12.5px;padding:0 11px}
 .chip.static:hover{background:var(--brand-soft);border-color:transparent}
+
+/* ---- care log grouped by day ---- */
+.day{display:flex;flex-direction:column}
+.day + .day{margin-top:18px}
+.day-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding-bottom:7px;margin-bottom:4px;border-bottom:1.5px solid var(--line-2)}
+.day-name{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--brand)}
+.day-count{font-size:12px;color:var(--muted)}
