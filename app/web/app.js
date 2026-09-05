@@ -46,6 +46,26 @@ function toast(msg){ const t=document.createElement('div'); t.className='toast';
   document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
 
 function save(){ localStorage.setItem('amanah', JSON.stringify(ME)); }
+
+// Who has logged in on this device. Keeping H here is what makes logging back
+// in possible without a fresh invite; "Forget this device" is the one action
+// that actually removes it.
+const ACCOUNTS = 'amanah.accounts';
+function loadAccounts(){
+  try{ return JSON.parse(localStorage.getItem(ACCOUNTS)) || []; }catch{ return []; }
+}
+function rememberAccount(me){
+  if(!me?.h) return;
+  const rest = loadAccounts().filter(a=>
+    !(a.family_id===me.family_id && a.member_id===me.member_id));
+  const next = [{ family_id:me.family_id, member_id:me.member_id, role:me.role,
+                  h:me.h, my_name:me.my_name }, ...rest].slice(0,6);
+  localStorage.setItem(ACCOUNTS, JSON.stringify(next));
+}
+function forgetDevice(){
+  localStorage.removeItem(ACCOUNTS);
+  localStorage.removeItem('amanah');
+}
 async function loadSession(){
   const raw = localStorage.getItem('amanah'); if(!raw) return false;
   ME = JSON.parse(raw); KEY = await importKeyRaw(ME.h); return true;
@@ -157,8 +177,54 @@ function renderInviteTab(){
 // ---- login ----
 let pendingInvite = null;
 
-// Step 1: an invite code (pasted, or in the # fragment) opens the login page.
+// Mode A: people who have logged in on this device before.
+function showAccounts(){
+  const accts = loadAccounts();
+  if(!accts.length) return show('landing');
+  $('#login-title').textContent = 'Log in';
+  $('#login-sub').textContent = 'Choose who you are on this device.';
+  $('#login-accounts').classList.remove('hide');
+  $('#login-invite').classList.add('hide');
+  $('#btn-login-back').classList.add('hide');
+  $('#account-list').innerHTML = accts.map((a,i)=>{
+    const role = roleOf(a.role);
+    return `<div class="card">
+      <div class="card-head">
+        <div class="who-id"><b>${esc(a.my_name)}</b>
+          <span class="pill role-${role}">${ROLES[role].label}</span></div>
+      </div>
+      <p class="muted">Family ${esc(a.family_id)} · opens ${
+        ROLES[role].tabs.map(t=>TAB_LABEL[t]).join(', ')}</p>
+      <button data-acct="${i}">Log in as ${esc(a.my_name)}</button>
+    </div>`;
+  }).join('');
+  $$('[data-acct]').forEach(b=>
+    b.onclick = ()=>continueAs(accts[+b.dataset.acct]).catch(e=>toast(e.message)));
+  show('login');
+}
+
+// Re-enter as a remembered member. The join call is idempotent and re-proves
+// the key, so this also recovers if the database was reset underneath us.
+async function continueAs(a){
+  KEY = await importKeyRaw(a.h);
+  const kc = await keyCheck(KEY);
+  try{
+    await api('/families/'+a.family_id+'/join', { method:'POST', body: JSON.stringify({
+      key_check: kc, member:{ id:a.member_id, role:a.role } }) });
+  }catch{ return toast('That family is no longer reachable'); }
+  ME = { family_id:a.family_id, member_id:a.member_id, role:a.role,
+         h:a.h, my_name:a.my_name };
+  save(); rememberAccount(ME);
+  enterApp();
+}
+
+// Mode B: an invite code (pasted, or in the # fragment) opens the login page.
 function showLogin(p){
+  $('#login-accounts').classList.add('hide');
+  $('#login-invite').classList.remove('hide');
+  $('#btn-login-back').classList.remove('hide');
+  $('#login-title').textContent = 'Log in';
+  $('#login-sub').textContent = 'You have been invited to a family on this device.';
   pendingInvite = p;
   const role = roleOf(p.r);
   $('#login-family').textContent = p.f;
@@ -189,7 +255,7 @@ async function doLogin(){
   }catch{ return toast('Login failed: wrong key, or no such family'); }
   ME = { family_id:p.f, member_id, role, h:p.h, my_name:name };
   if(!pinned) await postEncEvent('MemberJoined', { name }, { actor_id: member_id });
-  save();
+  save(); rememberAccount(ME);
   // Keep H out of the address bar and out of history once we are in.
   history.replaceState(null, '', location.pathname);
   pendingInvite = null;
@@ -198,6 +264,7 @@ async function doLogin(){
 
 function logout(){
   if(pollTimer) clearInterval(pollTimer);
+  rememberAccount(ME);              // so the login page can offer a way back
   localStorage.removeItem('amanah');
   ME = null; KEY = null;
   history.replaceState(null, '', location.pathname);
@@ -463,7 +530,10 @@ on('#btn-join',       ()=>{
   p ? showLogin(p) : toast('That code is not readable');
 });
 on('#btn-login',      ()=>doLogin().catch(e=>toast(e.message)));
-on('#btn-login-back', ()=>{ pendingInvite=null; show('landing'); });
+on('#btn-login-back', ()=>{ pendingInvite=null;
+  loadAccounts().length ? showAccounts() : show('landing'); });
+on('#btn-use-code',   ()=>show('landing'));
+on('#btn-forget',     ()=>{ forgetDevice(); location.reload(); });
 on('#btn-logout',     ()=>logout());
 on('#btn-enter',      ()=>enterApp());
 on('#btn-copy',       ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); });
@@ -479,6 +549,7 @@ $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 loadSession().then(ok=>{
   if(ok) return enterApp();
   const p = location.hash.length > 1 && decodeInvite(location.hash);
-  if(p) return showLogin(p);
+  if(p) return showLogin(p);              // an invite always wins
+  if(loadAccounts().length) return showAccounts();
   show('landing');
 });

@@ -66,9 +66,21 @@
   <!-- LOGIN (what an invited person lands on) -->
   <section id="view-login" class="hide">
     <div class="group">
-      <h1>Log in</h1>
-      <p class="muted">You have been invited to a family on this device.</p>
+      <h1 id="login-title">Log in</h1>
+      <p class="muted" id="login-sub">You have been invited to a family on this device.</p>
     </div>
+
+    <!-- who has logged in on this device before -->
+    <div id="login-accounts" class="hide">
+      <div id="account-list" class="group"></div>
+      <div class="card flat">
+        <button id="btn-use-code" class="ghost">Log in with an invite code</button>
+        <div class="warnbox">The family key stays on this device so you can log back in. Forgetting the device removes it, and you will need a new invite to return.</div>
+        <button id="btn-forget" class="ghost small">Forget this device</button>
+      </div>
+    </div>
+
+    <div id="login-invite">
     <div class="card">
       <div class="card-head">
         <h2>Family <span id="login-family" class="tnum"></span></h2>
@@ -87,6 +99,7 @@
         <input id="l-name" placeholder="e.g. Brother B" autocomplete="name"></div>
       <button id="btn-login">Log in</button>
       <div class="notebox">Your invite code is the credential. The server checks it against the family key before letting you in, and never sees the key itself. The role was set by whoever invited you.</div>
+    </div>
     </div>
     <button id="btn-login-back" class="ghost">Back</button>
   </section>
