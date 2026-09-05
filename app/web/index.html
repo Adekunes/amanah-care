@@ -36,17 +36,11 @@
     <div class="card">
       <div class="group">
         <h2>Join your family</h2>
-        <p class="muted">Scan the family QR, or paste the invite code someone gave you in person.</p>
+        <p class="muted">Scan the family QR, or paste the invite code or link someone gave you in person.</p>
       </div>
-      <div class="stack tight">
-        <div class="field"><label for="j-code">Invite code</label>
-          <textarea id="j-code" placeholder="paste code"></textarea></div>
-        <div class="field"><label for="j-name">Your name</label>
-          <input id="j-name" placeholder="e.g. Brother B"></div>
-        <div class="field"><label for="j-role">Your role</label>
-          <select id="j-role"><option value="family">Family</option><option value="support">Support worker</option><option value="elder">Elder</option></select></div>
-      </div>
-      <button id="btn-join" class="ghost">Join with key</button>
+      <div class="field"><label for="j-code">Invite code or link</label>
+        <textarea id="j-code" placeholder="paste code or link"></textarea></div>
+      <button id="btn-join" class="ghost">Continue</button>
     </div>
   </section>
 
@@ -69,8 +63,43 @@
     <button id="btn-enter">Enter the app</button>
   </section>
 
+  <!-- LOGIN (what an invited person lands on) -->
+  <section id="view-login" class="hide">
+    <div class="group">
+      <h1>Log in</h1>
+      <p class="muted">You have been invited to a family on this device.</p>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Family <span id="login-family" class="tnum"></span></h2>
+        <span class="pill" id="login-role-pill">Family</span>
+      </div>
+      <div class="group">
+        <span class="eyebrow">You are joining as</span>
+        <p id="login-role-name" style="font-size:19px;font-weight:700;margin:0"></p>
+        <p class="muted" id="login-role-note"></p>
+      </div>
+      <div class="group">
+        <span class="eyebrow">This role can open</span>
+        <div id="login-can" class="chips"></div>
+      </div>
+      <div class="field"><label for="l-name">Your name</label>
+        <input id="l-name" placeholder="e.g. Brother B" autocomplete="name"></div>
+      <button id="btn-login">Log in</button>
+      <div class="notebox">Your invite code is the credential. The server checks it against the family key before letting you in, and never sees the key itself. The role was set by whoever invited you.</div>
+    </div>
+    <button id="btn-login-back" class="ghost">Back</button>
+  </section>
+
   <!-- APP -->
   <section id="view-app" class="hide">
+    <div class="who">
+      <div class="who-id">
+        <b id="who-name">Me</b>
+        <span class="pill" id="who-role">Family</span>
+      </div>
+      <button id="btn-logout" class="ghost small">Log out</button>
+    </div>
     <nav class="tabs">
       <button data-tab="log" class="on">Log</button>
       <button data-tab="handoff">Hand off</button>
@@ -166,13 +195,23 @@
       <div class="card">
         <div class="group">
           <h2>Add someone to this family</h2>
-          <p class="muted">Hold this QR up to their phone, or copy the code and hand it over in person. The family key is inside it, so never paste it into a chat.</p>
+          <p class="muted">Choose the role, then hold the QR up to their phone. It opens a login page with that role already set. The family key is inside the code, so never paste it into a chat.</p>
+        </div>
+        <div class="field"><label for="inv-role">Invite them as</label>
+          <select id="inv-role">
+            <option value="family">Family</option>
+            <option value="support">Support worker</option>
+            <option value="elder">Elder</option>
+          </select></div>
+        <div class="group">
+          <span class="eyebrow">They will be able to open</span>
+          <div id="inv-can" class="chips"></div>
         </div>
         <div id="qr-app"></div>
         <div class="field"><label for="invite-code-app">Invite code</label>
           <textarea id="invite-code-app" readonly></textarea></div>
         <button id="btn-copy-app" class="ghost small">Copy code</button>
-        <div class="warnbox">They choose their own name and role on the Join screen. A support worker holds the same key as family, so the card is not filtered for them yet.</div>
+        <div class="warnbox">The role is set here, not by them, but the server still trusts what the browser declares (KL-02). A support worker also holds the same key as family, so their card is filtered in the UI only (KL-01).</div>
       </div>
     </div>
 

@@ -26,6 +26,20 @@ const CATS = [
 
 let pick = { category: null, preset: null };
 
+// What each role may open. The invite carries the role, so nobody self-assigns.
+// Server-side this is still client-declared (KL-02): a UI boundary, not a guard.
+const TAB_LABEL = { log:'Log', handoff:'Hand off', inbox:'Inbox', prefs:'Prefs',
+                    invite:'Invite', flow:'Flow' };
+const ROLES = {
+  family:  { label:'Family', tabs:['log','handoff','inbox','prefs','invite','flow'],
+             note:'Full access: log care, hand off, and add other members.' },
+  support: { label:'Support worker', tabs:['log','inbox','flow'],
+             note:'Logs care and reads handoffs. Cannot change preferences or add members.' },
+  elder:   { label:'Elder', tabs:['inbox','prefs','flow'],
+             note:'Reads what was handed over and owns the preferences. Care is not logged about them by them.' },
+};
+const roleOf = (r)=> ROLES[r] ? r : 'family';
+
 const esc = (v)=>String(v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
@@ -72,7 +86,7 @@ async function traceProjection(tr){
 }
 
 // ---- views ----
-function show(id){ ['landing','invite','app'].forEach(v=>$('#view-'+v).classList.toggle('hide', v!==id)); }
+function show(id){ ['landing','login','invite','app'].forEach(v=>$('#view-'+v).classList.toggle('hide', v!==id)); }
 function tab(name){
   $$('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
   $$('.tabview').forEach(v=>v.classList.add('hide'));
@@ -103,9 +117,20 @@ async function createFamily(){
   showInvite();
 }
 
-function inviteCode(){
-  return b64.from(new TextEncoder().encode(JSON.stringify({ f: ME.family_id, h: ME.h })))
+function inviteCode(role){
+  return b64.from(new TextEncoder().encode(
+      JSON.stringify({ f: ME.family_id, h: ME.h, r: roleOf(role) })))
     .replace(/\+/g,'-').replace(/\//g,'_');
+}
+const loginLink = (code)=> location.origin + location.pathname + '#' + code;
+
+// Accepts a bare code or a full login link, so pasting either works.
+function decodeInvite(raw){
+  try{
+    const s = String(raw).trim().replace(/^.*#/,'').replace(/-/g,'+').replace(/_/g,'/');
+    const p = JSON.parse(new TextDecoder().decode(b64.to(s)));
+    return (p && p.f && p.h) ? p : null;
+  }catch{ return null; }
 }
 function renderQR(el, code){
   el.innerHTML='';
@@ -113,40 +138,70 @@ function renderQR(el, code){
   el.innerHTML = qr.createImgTag(4,8);
 }
 function showInvite(){
-  const code = inviteCode();
+  const code = inviteCode('family');
   $('#invite-code').value = code;
-  renderQR($('#qr'), code);
+  renderQR($('#qr'), loginLink(code));
   show('invite');
 }
 // Same code, reachable from inside the app so a family can grow after day one.
 // H is already in memory for whoever is signed in, so no re-entry of the key.
 function renderInviteTab(){
-  const code = inviteCode();
+  const role = roleOf($('#inv-role').value);
+  const code = inviteCode(role);
   $('#invite-code-app').value = code;
-  renderQR($('#qr-app'), code);
+  renderQR($('#qr-app'), loginLink(code));   // scanning opens the login page
+  $('#inv-can').innerHTML = ROLES[role].tabs
+    .map(t=>`<span class="chip static">${TAB_LABEL[t]}</span>`).join('');
 }
 
-async function joinFamily(){
-  let payload;
-  try{
-    const raw = $('#j-code').value.trim().replace(/-/g,'+').replace(/_/g,'/');
-    payload = JSON.parse(new TextDecoder().decode(b64.to(raw)));
-  }catch{ return toast('Bad invite code'); }
-  // A demo/seed code may pin the member (m,r,n) so the seeded handoff reaches you.
-  const pinned = !!payload.m;
-  const name = pinned ? payload.n : ($('#j-name').value.trim() || 'Me');
-  const role = pinned ? payload.r : $('#j-role').value;
-  const member_id = pinned ? payload.m : uuid();
-  KEY = await importKeyRaw(payload.h);
+// ---- login ----
+let pendingInvite = null;
+
+// Step 1: an invite code (pasted, or in the # fragment) opens the login page.
+function showLogin(p){
+  pendingInvite = p;
+  const role = roleOf(p.r);
+  $('#login-family').textContent = p.f;
+  $('#login-role-pill').textContent = ROLES[role].label;
+  $('#login-role-pill').className = 'pill role-' + role;
+  $('#login-role-name').textContent = ROLES[role].label;
+  $('#login-role-note').textContent = ROLES[role].note;
+  $('#login-can').innerHTML = ROLES[role].tabs
+    .map(t=>`<span class="chip static">${TAB_LABEL[t]}</span>`).join('');
+  $('#l-name').value = p.n || '';
+  show('login');
+  $('#l-name').focus();
+}
+
+// Step 2: prove possession of H to the server, then enter with the invited role.
+async function doLogin(){
+  const p = pendingInvite; if(!p) return;
+  const role = roleOf(p.r);
+  const pinned = !!p.m;                       // seed codes pin an existing member
+  const name = ($('#l-name').value.trim() || p.n || '').trim();
+  if(!name) return toast('Enter your name');
+  const member_id = pinned ? p.m : uuid();
+  KEY = await importKeyRaw(p.h);
   const kc = await keyCheck(KEY);
   try{
-    await api('/families/'+payload.f+'/join', { method:'POST', body: JSON.stringify({
+    await api('/families/'+p.f+'/join', { method:'POST', body: JSON.stringify({
       key_check: kc, member:{ id:member_id, role } }) });
-  }catch(e){ return toast('Join failed: wrong key or no family'); }
-  ME = { family_id: payload.f, member_id, role, h: payload.h, my_name: name };
+  }catch{ return toast('Login failed: wrong key, or no such family'); }
+  ME = { family_id:p.f, member_id, role, h:p.h, my_name:name };
   if(!pinned) await postEncEvent('MemberJoined', { name }, { actor_id: member_id });
   save();
+  // Keep H out of the address bar and out of history once we are in.
+  history.replaceState(null, '', location.pathname);
+  pendingInvite = null;
   enterApp();
+}
+
+function logout(){
+  if(pollTimer) clearInterval(pollTimer);
+  localStorage.removeItem('amanah');
+  ME = null; KEY = null;
+  history.replaceState(null, '', location.pathname);
+  location.reload();
 }
 
 // encrypt a payload then post with clear routing fields
@@ -157,8 +212,20 @@ async function postEncEvent(type, payloadObj, clear={}){
 }
 
 // ---- app boot ----
+function applyRole(){
+  const cfg = ROLES[roleOf(ME.role)];
+  $$('.tabs button').forEach(b=>
+    b.classList.toggle('hide', !cfg.tabs.includes(b.dataset.tab)));
+  $('#who-name').textContent = ME.my_name;
+  $('#who-role').textContent = cfg.label;
+  $('#who-role').className = 'pill role-' + roleOf(ME.role);
+  return cfg;
+}
+
 async function enterApp(){
-  show('app'); tab('log');
+  show('app');
+  const cfg = applyRole();
+  tab(cfg.tabs[0]);
   buildChipsets();
   await loadNames();
   await renderStrip();
@@ -383,7 +450,14 @@ async function renderFlow(){
 
 // ---- wire up ----
 $('#btn-create').onclick = ()=>createFamily().catch(e=>toast(e.message));
-$('#btn-join').onclick   = ()=>joinFamily().catch(e=>toast(e.message));
+$('#btn-join').onclick   = ()=>{
+  const p = decodeInvite($('#j-code').value);
+  p ? showLogin(p) : toast('That code is not readable');
+};
+$('#btn-login').onclick  = ()=>doLogin().catch(e=>toast(e.message));
+$('#btn-login-back').onclick = ()=>{ pendingInvite=null; show('landing'); };
+$('#btn-logout').onclick = ()=>logout();
+$('#inv-role').onchange  = ()=>renderInviteTab();
 $('#btn-enter').onclick  = ()=>enterApp();
 $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
 $('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };
@@ -394,4 +468,9 @@ $('#btn-proof').onclick  = ()=>refreshProof().catch(e=>toast(e.message));
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
 // resume session if present
-loadSession().then(ok=>{ if(ok) enterApp(); else show('landing'); });
+loadSession().then(ok=>{
+  if(ok) return enterApp();
+  const p = location.hash.length > 1 && decodeInvite(location.hash);
+  if(p) return showLogin(p);
+  show('landing');
+});
