@@ -50,12 +50,14 @@ CREATE TABLE IF NOT EXISTS handoffs (
 CREATE INDEX IF NOT EXISTS handoffs_to_idx ON handoffs(family_id, to_id, status);
 
 -- Workload = metadata counts only. No ciphertext touched. History, not roster.
+-- count(CASE ...) rather than count(*) FILTER: same result in Postgres, and it
+-- also runs unchanged in the in-memory Postgres the test suite uses.
 CREATE OR REPLACE VIEW workload_view AS
 SELECT family_id,
        actor_id AS member_id,
        date_trunc('day', occurred_at)::date AS day,
-       count(*) FILTER (WHERE type = 'CareLogged')    AS care_count,
-       count(*) FILTER (WHERE type = 'HandoffAcknowledged') AS handoff_count
+       count(CASE WHEN type = 'CareLogged' THEN 1 END)          AS care_count,
+       count(CASE WHEN type = 'HandoffAcknowledged' THEN 1 END) AS handoff_count
 FROM events
 WHERE actor_id IS NOT NULL
 GROUP BY family_id, actor_id, date_trunc('day', occurred_at)::date;
