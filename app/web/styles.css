@@ -151,3 +151,54 @@ label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 #invite-code,#invite-code-app,#j-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:12px;line-height:1.5;min-height:96px}
+
+/* ---- handoff preview ---- */
+.preview{background:var(--chip,#eef4f2);border:1.5px solid var(--line);border-radius:12px;
+  padding:10px 12px;margin:8px 0}
+.pv-row{display:flex;gap:10px;font-size:14px;padding:2px 0}
+.pv-row span{color:var(--muted);min-width:110px}
+.pv-row b{flex:1}
+
+/* ---- sender record: sent handoffs ---- */
+.sent-group{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}
+.sent-head{font-size:15px;margin-bottom:6px}
+.sent-row{border-top:1px solid var(--line);padding:8px 0}
+.sent-row:first-of-type{border-top:0}
+.sent-top{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.sent-what{font-size:14px;line-height:1.4}
+.sent-row.flash{animation:flash 1.4s ease}
+@keyframes flash{0%{background:#dff0ec}100%{background:transparent}}
+.pill.acknowledged{background:#dff0ec;color:var(--ok,#0b7a6b)}
+.pill.open{background:#fdeede;color:var(--warn,#b4451f)}
+
+/* ---- send animation overlay ---- */
+.sendfx{position:fixed;inset:0;background:rgba(10,20,18,.55);display:flex;
+  align-items:center;justify-content:center;z-index:60;backdrop-filter:blur(2px)}
+.sendfx-inner{background:#fff;border-radius:18px;padding:22px 20px;max-width:420px;width:90%;
+  box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.sendfx-title{font-weight:700;text-align:center;margin-bottom:18px}
+.pipe{display:flex;align-items:center;gap:6px}
+.node{flex:1;text-align:center;font-weight:700;font-size:13px;color:#9aa;
+  border:2px solid var(--line);border-radius:12px;padding:10px 4px;transition:.3s}
+.node span{display:block;font-weight:500;font-size:11px;color:#bbb;margin-top:3px}
+.node.on{color:var(--brand-ink,#063f38);border-color:var(--brand,#0b7a6b);background:#eef7f4}
+.node.on span{color:var(--muted,#6b6b6b)}
+.seg{position:relative;flex:0 0 42px;height:3px;background:var(--line)}
+.seg .packet{position:absolute;top:-11px;left:-6px;font-size:16px;opacity:0}
+.seg.go{background:linear-gradient(90deg,var(--brand) 0%,var(--line) 100%)}
+.seg.go .packet{animation:travel .7s ease forwards}
+@keyframes travel{0%{left:-6px;opacity:1}100%{left:calc(100% - 8px);opacity:1}}
+.sendfx-done{text-align:center;margin-top:16px;color:var(--ok,#0b7a6b);font-weight:600}
+
+/* ---- flow hops light up in sequence ---- */
+#flow .hop{opacity:.35;transition:opacity .3s, transform .3s}
+#flow .hop.lit{opacity:1}
+#flow .hop.lit .dot{box-shadow:0 0 0 4px rgba(11,122,107,.18)}
+
+/* who is signed in on this window */
+.whoami{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:6px;
+  background:var(--card,#fff);border:1.5px solid var(--line);border-radius:12px;position:sticky;top:0;z-index:6}
+.who-dot{width:14px;height:14px;border-radius:50%;background:#999;flex:0 0 auto}
+.who-name{font-weight:800;font-size:15px}
+.who-role{font-size:12px;color:var(--muted,#6b6b6b);text-transform:uppercase;letter-spacing:.04em;
+  background:var(--chip,#eef4f2);padding:2px 8px;border-radius:999px}

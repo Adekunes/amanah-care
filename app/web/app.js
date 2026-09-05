@@ -157,8 +157,20 @@ async function postEncEvent(type, payloadObj, clear={}){
 }
 
 // ---- app boot ----
+// Show who is signed in on THIS window (tabs otherwise look identical).
+function renderWhoAmI(){
+  if(!ME) return;
+  const name = ME.my_name || 'Me';
+  const role = ME.role || '';
+  const el = document.getElementById('who-name'); if(el) el.textContent = name;
+  const rl = document.getElementById('who-role'); if(rl) rl.textContent = role;
+  const dot = document.getElementById('who-dot');
+  let hsh=0; for(const c of name) hsh=(hsh*31 + c.charCodeAt(0))>>>0;
+  if(dot) dot.style.background = `hsl(${hsh % 360} 60% 45%)`;
+  document.title = `${name} \u00b7 Amanah Care`;
+}
 async function enterApp(){
-  show('app'); tab('log');
+  show('app'); renderWhoAmI(); tab('log');
   buildChipsets();
   await loadNames();
   await renderStrip();
@@ -249,24 +261,100 @@ async function renderCareToday(){
 
 // ---- handoff ----
 async function buildHandoff(){
+  await loadNames().catch(()=>{});
   const members = await api(`/families/${ME.family_id}/members`);
   const sel = $('#ho-member'); sel.innerHTML='';
   members.filter(m=>m.id!==ME.member_id).forEach(m=>{
     const o=document.createElement('option'); o.value=m.id; o.textContent=`${nameOf(m.id)} (${m.role})`; sel.appendChild(o); });
+  $('#ho-summary').value = 'composing…';
   const items = await careSince(lastHandoffAt || new Date(Date.now()-12*3600e3).toISOString());
   $('#ho-summary').value = items.length
     ? items.map(i=>i.text).join(', ')
-    : 'No items logged this turn.';
+    : 'Nothing new since your last handoff.';
+  updateHandoffPreview();
+  await renderSent(false);
 }
 async function openHandoff(){
   const to = $('#ho-member').value;
   if(!to) return toast('Pick a member');
   const handoff_id = uuid();
-  const payload = { summary: $('#ho-summary').value, next: $('#ho-next').value.trim() };
+  let summary = $('#ho-summary').value.trim();
+  if(!summary || summary === 'composing…'){
+    const items = await careSince(lastHandoffAt || new Date(Date.now()-12*3600e3).toISOString());
+    summary = items.length ? items.map(i=>i.text).join(', ') : 'Nothing new since your last handoff.';
+  }
+  const payload = { summary, next: $('#ho-next').value.trim() };
+  await sendAnimation(nameOf(to));   // show the data moving
   await postEncEvent('HandoffOpened', payload,
     { actor_id: ME.member_id, from_id: ME.member_id, to_id: to, handoff_id });
-  lastHandoffAt = now(); $('#ho-next').value='';
-  toast('Handoff sent'); tab('inbox');
+  lastHandoffAt = now(); $('#ho-next').value=''; $('#ho-preview').classList.add('hide');
+  toast('Handoff sent to ' + nameOf(to));
+  await renderSent(true);            // land in the sender's record, highlighted
+}
+
+// live preview of what will be sent, so it is never a mystery
+function updateHandoffPreview(){
+  const sel=$('#ho-member'); const to=sel.value;
+  const toName = to ? (sel.options[sel.selectedIndex]?.textContent || nameOf(to)) : '—';
+  const summ=$('#ho-summary').value, next=$('#ho-next').value.trim();
+  const p=$('#ho-preview');
+  p.innerHTML = `<div class="pv-row"><span>To</span><b>${esc(toName)}</b></div>
+    <div class="pv-row"><span>What happened</span><b>${esc(summ||'—')}</b></div>
+    <div class="pv-row"><span>What is next</span><b>${esc(next||'—')}</b></div>`;
+  p.classList.remove('hide');
+}
+
+// the data-movement overlay: You -> Server -> Recipient
+function sendAnimation(toName){
+  return new Promise(res=>{
+    const fx=$('#sendfx'); $('#sendfx-to').childNodes[0].nodeValue = toName;
+    $('#sendfx-done').classList.add('hide');
+    fx.classList.remove('hide');
+    const nodes=[...fx.querySelectorAll('.node')], segs=[...fx.querySelectorAll('.seg')];
+    nodes.forEach(n=>n.classList.remove('on')); segs.forEach(s=>s.classList.remove('go'));
+    let i=0;
+    nodes[0].classList.add('on');
+    const step=()=>{
+      if(i<segs.length){ segs[i].classList.add('go');
+        setTimeout(()=>{ nodes[i+1].classList.add('on'); i++; step(); }, 700); }
+      else { $('#sendfx-done').classList.remove('hide');
+        setTimeout(()=>{ fx.classList.add('hide'); res(); }, 900); }
+    };
+    setTimeout(step, 350);
+  });
+}
+
+// ---- sender record: handoffs I sent, grouped by recipient ----
+async function renderSent(flash){
+  const box=$('#sent'); if(!box) return;
+  await loadNames().catch(()=>{});
+  const rows = await api(`/families/${ME.family_id}/handoffs`).catch(()=>[]);
+  const mine = rows.filter(h=>h.from_id===ME.member_id);
+  $('#sent-count').textContent = mine.length;
+  if(!mine.length){ box.innerHTML='<p class="muted">You have not sent any handoffs yet.</p>'; return; }
+  // group by recipient
+  const byTo={};
+  for(const h of mine){ (byTo[h.to_id]=byTo[h.to_id]||[]).push(h); }
+  const groups=[];
+  for(const to of Object.keys(byTo)){
+    const list = byTo[to].sort((a,b)=>new Date(b.opened_at)-new Date(a.opened_at));
+    const rowsHtml=[];
+    for(const h of list){
+      const p = await decryptJSON(KEY, h.iv, h.summary_cipher) || {};
+      const when=new Date(h.opened_at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      rowsHtml.push(`<div class="sent-row ${flash&&h===list[0]?'flash':''}">
+        <div class="sent-top"><span class="pill ${h.status}">${h.status==='acknowledged'?'accepted':'delivered'}</span>
+          <span class="muted">${when}</span></div>
+        <div class="sent-what"><b>Sent:</b> ${esc(p.summary||'—')}</div>
+        <div class="sent-what"><b>Next:</b> ${esc(p.next||'—')}</div>
+      </div>`);
+    }
+    groups.push(`<div class="sent-group">
+      <div class="sent-head">To <b>${esc(nameOf(to))}</b><span class="muted"> · ${list.length} handoff${list.length>1?'s':''}</span></div>
+      ${rowsHtml.join('')}
+    </div>`);
+  }
+  box.innerHTML=groups.join('');
 }
 
 // ---- inbox / poll (FR-05) ----
@@ -279,6 +367,7 @@ async function refreshInbox(){
   const sig = rows.map(r=>r.id+r.status).join('|');
   if(sig!==inboxSig){ inboxSig=sig; renderInbox(rows); }
   renderWorkload();
+  try{ if(typeof renderSent==='function') await renderSent(false); }catch(e){}
 }
 async function renderInbox(rows){
   const box=$('#inbox');
@@ -353,6 +442,13 @@ function hop(n, cls, name, where, holds, tags){
       <div class="holds">${holds}</div>
     </div></div>`;
 }
+function animateHops(){
+  const hops=[...document.querySelectorAll('#flow .hop')];
+  hops.forEach(h=>h.classList.remove('lit'));
+  let i=0; const tick=()=>{ if(i>=hops.length) return;
+    hops[i].classList.add('lit'); i++; setTimeout(tick, 260); };
+  tick();
+}
 async function renderFlow(){
   const box = $('#flow'), t = lastTrace;
   $('#flow-what').textContent = t ? t.type : 'nothing yet';
@@ -379,6 +475,7 @@ async function renderFlow(){
     hop(6,'readable','Family phones','decrypt with H',
       `${members.length} member${members.length===1?'':'s'} hold H and can read this. Nobody else can.`, read),
   ].join('');
+  animateHops();
 }
 
 // ---- wire up ----
@@ -389,6 +486,8 @@ $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code'
 $('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };
 $('#btn-log').onclick    = ()=>logItem().catch(e=>toast(e.message));
 $('#btn-handoff').onclick= ()=>openHandoff().catch(e=>toast(e.message));
+$('#ho-member').onchange = updateHandoffPreview;
+$('#ho-next').oninput    = updateHandoffPreview;
 $('#btn-prefs').onclick  = ()=>savePrefs().catch(e=>toast(e.message));
 $('#btn-proof').onclick  = ()=>refreshProof().catch(e=>toast(e.message));
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
