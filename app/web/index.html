@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0b7a6b">
 <title>Amanah Care</title>
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,128 +12,199 @@
 
   <!-- LANDING -->
   <section id="view-landing">
-    <h1>Amanah Care</h1>
-    <p class="muted">A private handoff log for families caring for an elder. Only your family holds the key. The server sees scrambled text.</p>
+    <div class="group">
+      <h1>Amanah Care</h1>
+      <p class="muted">A private handoff log for families caring for an elder. Only your family holds the key. The server sees scrambled text.</p>
+    </div>
+
     <div class="card">
-      <h2>Start a family</h2>
-      <label>Elder's name (stays encrypted)</label>
-      <input id="c-elder" placeholder="e.g. Ammi">
-      <label>Your name</label>
-      <input id="c-name" placeholder="e.g. Sister A">
-      <label>Your role</label>
-      <select id="c-role"><option value="family">Family</option><option value="elder">Elder</option></select>
-      <div style="height:10px"></div>
+      <div class="group">
+        <h2>Start a family</h2>
+        <p class="muted">Makes the key on this device. It never leaves.</p>
+      </div>
+      <div class="stack tight">
+        <div class="field"><label for="c-elder">Elder's name</label>
+          <input id="c-elder" placeholder="e.g. Ammi"></div>
+        <div class="field"><label for="c-name">Your name</label>
+          <input id="c-name" placeholder="e.g. Sister A"></div>
+        <div class="field"><label for="c-role">Your role</label>
+          <select id="c-role"><option value="family">Family</option><option value="elder">Elder</option></select></div>
+      </div>
       <button id="btn-create">Create family + key</button>
     </div>
+
     <div class="card">
-      <h2>Join your family</h2>
-      <p class="muted">Scan the family QR, or paste the invite code someone shared with you in person.</p>
-      <label>Invite code</label>
-      <textarea id="j-code" placeholder="paste code"></textarea>
-      <label>Your name</label>
-      <input id="j-name" placeholder="e.g. Brother B">
-      <label>Your role</label>
-      <select id="j-role"><option value="family">Family</option><option value="support">Support worker</option><option value="elder">Elder</option></select>
-      <div style="height:10px"></div>
+      <div class="group">
+        <h2>Join your family</h2>
+        <p class="muted">Scan the family QR, or paste the invite code someone gave you in person.</p>
+      </div>
+      <div class="stack tight">
+        <div class="field"><label for="j-code">Invite code</label>
+          <textarea id="j-code" placeholder="paste code"></textarea></div>
+        <div class="field"><label for="j-name">Your name</label>
+          <input id="j-name" placeholder="e.g. Brother B"></div>
+        <div class="field"><label for="j-role">Your role</label>
+          <select id="j-role"><option value="family">Family</option><option value="support">Support worker</option><option value="elder">Elder</option></select></div>
+      </div>
       <button id="btn-join" class="ghost">Join with key</button>
     </div>
   </section>
 
   <!-- INVITE (after create) -->
   <section id="view-invite" class="hide">
-    <h1>Family ready</h1>
-    <div class="card">
-      <h2>Add your family, in person</h2>
-      <p class="muted">Show this QR to another family member's phone, or copy the code. The key is inside it, so share it face to face, never in a chat.</p>
-      <div id="qr"></div>
-      <label>Invite code</label>
-      <textarea id="invite-code" readonly></textarea>
-      <button id="btn-copy" class="ghost small">Copy code</button>
-      <div style="height:12px"></div>
-      <button id="btn-enter">Enter the app</button>
+    <div class="group">
+      <h1>Family ready</h1>
+      <p class="muted">Add the rest of your family in person.</p>
     </div>
+    <div class="card">
+      <div class="group">
+        <h2>Show this to their phone</h2>
+        <p class="muted">The key is inside the code. Share it face to face, never in a chat.</p>
+      </div>
+      <div id="qr"></div>
+      <div class="field"><label for="invite-code">Invite code</label>
+        <textarea id="invite-code" readonly></textarea></div>
+      <button id="btn-copy" class="ghost small">Copy code</button>
+    </div>
+    <button id="btn-enter">Enter the app</button>
   </section>
 
   <!-- APP -->
   <section id="view-app" class="hide">
-    <div class="tabs">
+    <nav class="tabs">
       <button data-tab="log" class="on">Log</button>
       <button data-tab="handoff">Hand off</button>
       <button data-tab="inbox">Inbox</button>
       <button data-tab="prefs">Prefs</button>
-      <button data-tab="proof">Proof</button>
       <button data-tab="invite">Invite</button>
-    </div>
+      <button data-tab="flow">Flow</button>
+    </nav>
 
     <div id="strip" class="strip hide"></div>
 
     <!-- LOG -->
     <div id="tab-log" class="tabview">
-      <h2>Log care</h2>
-      <p class="muted">Tap a chip. Add a note only if you want.</p>
-      <div id="chipsets"></div>
-      <label>Optional note</label>
-      <input id="log-note" placeholder="e.g. ate half">
-      <div style="height:10px"></div>
-      <button id="btn-log" disabled>Log item</button>
-      <h2>Today so far</h2>
-      <div id="care-today" class="card"><p class="muted">Nothing logged yet.</p></div>
+      <div class="card">
+        <div class="group">
+          <h2>Log care</h2>
+          <p class="muted">Pick a category, then what happened. A note is optional.</p>
+        </div>
+        <div class="group">
+          <span class="eyebrow">Category</span>
+          <div id="cat-row" class="chips"></div>
+        </div>
+        <div class="group">
+          <span class="eyebrow" id="preset-label">What happened</span>
+          <div id="preset-row" class="chips"></div>
+        </div>
+        <div class="field"><label for="log-note">Note (optional)</label>
+          <input id="log-note" placeholder="e.g. ate half"></div>
+        <button id="btn-log" disabled>Log item</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Today so far</h2><span class="pill" id="today-count">0</span></div>
+        <div id="care-today"><p class="muted">Nothing logged yet.</p></div>
+      </div>
     </div>
 
     <!-- HANDOFF -->
     <div id="tab-handoff" class="tabview hide">
-      <h2>Hand off to</h2>
-      <select id="ho-member"></select>
-      <label>Summary (auto from what you logged)</label>
-      <textarea id="ho-summary" readonly></textarea>
-      <label>Next steps (you type this)</label>
-      <textarea id="ho-next" placeholder="e.g. Dhuhr meds at 1pm, physio at 3pm"></textarea>
-      <div style="height:10px"></div>
-      <button id="btn-handoff">Open handoff</button>
+      <div class="card">
+        <div class="group">
+          <h2>Hand off</h2>
+          <p class="muted">The summary is built from what you logged. You only write what comes next.</p>
+        </div>
+        <div class="field"><label for="ho-member">Hand off to</label>
+          <select id="ho-member"></select></div>
+        <div class="field"><label for="ho-summary">What happened (auto)</label>
+          <textarea id="ho-summary" readonly></textarea></div>
+        <div class="field"><label for="ho-next">What is next (you write this)</label>
+          <textarea id="ho-next" placeholder="e.g. Dhuhr meds at 1pm, physio at 3pm"></textarea></div>
+        <button id="btn-handoff">Open handoff</button>
+      </div>
     </div>
 
     <!-- INBOX -->
     <div id="tab-inbox" class="tabview hide">
-      <h2>Handoffs to you</h2>
-      <p class="muted">Checks every few seconds.</p>
-      <div id="inbox"></div>
-      <h2>Workload this week</h2>
-      <div id="workload" class="card"><p class="muted">Loading…</p></div>
+      <div class="group">
+        <div class="card-head"><h2>Handoffs to you</h2><span class="muted">checks every 4s</span></div>
+        <div id="inbox"></div>
+      </div>
+      <div class="card">
+        <div class="group">
+          <h2>Workload this week</h2>
+          <p class="muted">Counted from event metadata. The server never reads a note to build this.</p>
+        </div>
+        <div id="workload"><p class="muted">Loading…</p></div>
+      </div>
     </div>
 
     <!-- PREFS -->
     <div id="tab-prefs" class="tabview hide">
-      <h2>Elder preferences</h2>
-      <p class="muted">Shown on top of every handoff card. Encrypted.</p>
-      <label>Language</label>
-      <input id="p-lang" placeholder="e.g. Urdu">
-      <label>Diet</label>
-      <input id="p-diet" placeholder="e.g. halal, no gelatin">
-      <label>Prayer</label>
-      <input id="p-prayer" placeholder="e.g. prayer times matter">
-      <label>Modesty / caregiver gender</label>
-      <input id="p-modesty" placeholder="e.g. female caregiver for personal care">
-      <div style="height:10px"></div>
-      <button id="btn-prefs">Save preferences</button>
+      <div class="card">
+        <div class="group">
+          <h2>Elder preferences</h2>
+          <p class="muted">Rides on top of every handoff card. Encrypted like everything else.</p>
+        </div>
+        <div class="stack tight">
+          <div class="field"><label for="p-lang">Language</label>
+            <input id="p-lang" placeholder="e.g. Urdu"></div>
+          <div class="field"><label for="p-diet">Diet</label>
+            <input id="p-diet" placeholder="e.g. halal, no gelatin"></div>
+          <div class="field"><label for="p-prayer">Prayer</label>
+            <input id="p-prayer" placeholder="e.g. prayer times matter"></div>
+          <div class="field"><label for="p-modesty">Modesty / caregiver gender</label>
+            <input id="p-modesty" placeholder="e.g. female caregiver for personal care"></div>
+        </div>
+        <button id="btn-prefs">Save preferences</button>
+      </div>
     </div>
 
-    <!-- PROOF (kill switch) -->
-    <div id="tab-proof" class="tabview hide">
-      <h2>What the server actually stores</h2>
-      <p class="muted">Live from the database. Names, notes, summaries: all ciphertext. This is what we, the operators, can see.</p>
-      <button id="btn-proof" class="ghost small">Refresh from DB</button>
-      <div id="proof" class="mono" style="margin-top:10px">tap refresh</div>
-    </div>
     <!-- INVITE (in-app: add members at any time) -->
     <div id="tab-invite" class="tabview hide">
-      <h2>Add someone to this family</h2>
-      <p class="muted">Hold this QR up to their phone, or copy the code and hand it over in person. The family key is inside it, so never paste it into a chat.</p>
-      <div id="qr-app"></div>
-      <label>Invite code</label>
-      <textarea id="invite-code-app" readonly></textarea>
-      <button id="btn-copy-app" class="ghost small">Copy code</button>
-      <div style="height:14px"></div>
-      <div class="warnbox">They choose their own name and role on the Join screen. A support worker holds the same key as family, so the card is not filtered for them yet.</div>
+      <div class="card">
+        <div class="group">
+          <h2>Add someone to this family</h2>
+          <p class="muted">Hold this QR up to their phone, or copy the code and hand it over in person. The family key is inside it, so never paste it into a chat.</p>
+        </div>
+        <div id="qr-app"></div>
+        <div class="field"><label for="invite-code-app">Invite code</label>
+          <textarea id="invite-code-app" readonly></textarea></div>
+        <button id="btn-copy-app" class="ghost small">Copy code</button>
+        <div class="warnbox">They choose their own name and role on the Join screen. A support worker holds the same key as family, so the card is not filtered for them yet.</div>
+      </div>
+    </div>
+
+    <!-- FLOW -->
+    <div id="tab-flow" class="tabview hide">
+      <div class="card">
+        <div class="group">
+          <h2>Where your data goes</h2>
+          <p class="muted">Every write takes the same six hops. The tag on each one says whether that hop can actually read what it is holding.</p>
+        </div>
+        <div class="legend">
+          <span class="tag read">Readable</span>
+          <span class="tag seal">Sealed · ciphertext only</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Your last write</h2>
+          <span class="pill" id="flow-what">nothing yet</span>
+        </div>
+        <div id="flow" class="flow"></div>
+      </div>
+
+      <div class="card">
+        <div class="group">
+          <h2>What the database actually stores</h2>
+          <p class="muted">Live rows from Postgres. This is what we, the operators, can see.</p>
+        </div>
+        <button id="btn-proof" class="ghost small">Refresh from DB</button>
+        <div id="proof" class="mono">tap refresh</div>
+      </div>
     </div>
 
   </section>
