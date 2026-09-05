@@ -67,6 +67,7 @@ async function plain(type, who, payload, day, h, m) {
 }
 
 const handoffs = [];
+const notifs = [];
 async function handoff(day, h, m, from, to, summary, next, ackAfterMin) {
   const hid = `demo-${FAM}-ho-${String(handoffs.length + 1).padStart(2, '0')}`;
   const { iv, cipher } = await enc({ summary, next });
@@ -75,6 +76,11 @@ async function handoff(day, h, m, from, to, summary, next, ackAfterMin) {
     evs.push(`  (${q(eid())}, ${q(FAM)}, 'HandoffAcknowledged', ${q(to.id)}, NULL, NULL, NULL, ${q(hid)}, ${at(day, h, m + ackAfterMin)}, 1, NULL, NULL)`);
   }
   handoffs.push(`  (${q(hid)}, ${q(FAM)}, ${q(from.id)}, ${q(to.id)}, ${ackAfterMin != null ? "'acknowledged'" : "'open'"}, ${at(day,h,m)}, ${ackAfterMin != null ? at(day, h, m + ackAfterMin) : 'NULL'}, ${q(iv)}, ${q(cipher)})`);
+  // These rows go straight to Postgres, so the notifier never sees them on the
+  // stream. Write what it would have written, or a seeded handoff arrives with
+  // no notification behind it.
+  const nid = `${evs.length}-${hid}`;
+  notifs.push(`  (${q(nid + ':' + to.id)}, ${q(FAM)}, ${q(to.id)}, 'handoff_opened', ${q(hid)}, ${q(from.id)}, NULL, ${at(day,h,m)}, ${ackAfterMin != null ? at(day, h, m + ackAfterMin) : 'NULL'})`);
 }
 
 // --- identity and preferences, dated at the start of the week ---
@@ -139,9 +145,11 @@ out.push(`-- Amanah Care demo seed: one week of care for family ${FAM}.
 
 BEGIN;
 
-DELETE FROM handoffs WHERE family_id = ${q(FAM)};
-DELETE FROM events   WHERE family_id = ${q(FAM)};
-DELETE FROM members  WHERE family_id = ${q(FAM)};
+DELETE FROM notifications WHERE family_id = ${q(FAM)};
+DELETE FROM subscriptions WHERE family_id = ${q(FAM)};
+DELETE FROM handoffs      WHERE family_id = ${q(FAM)};
+DELETE FROM events        WHERE family_id = ${q(FAM)};
+DELETE FROM members       WHERE family_id = ${q(FAM)};
 
 INSERT INTO families (id, key_check, key_version) VALUES
   (${q(FAM)}, ${q(keyCheck)}, 1)
@@ -155,6 +163,9 @@ ${evs.join(',\n')};
 
 INSERT INTO handoffs (id, family_id, from_id, to_id, status, opened_at, acked_at, iv, summary_cipher) VALUES
 ${handoffs.join(',\n')};
+
+INSERT INTO notifications (id, family_id, member_id, signal, event_id, actor_id, category, occurred_at, read_at) VALUES
+${notifs.join(',\n')};
 
 COMMIT;`);
 console.log(out.join('\n'));
