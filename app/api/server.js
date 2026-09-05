@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json({ limit: '256kb' }));
 app.use((req, res, next) => { res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'content-type');
-  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204); next(); });
 
 const uuid = () => (globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + Math.random().toString(16).slice(2));
@@ -26,6 +26,12 @@ const uuid = () => (globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + Ma
 const BOOTSTRAP = new Set(['FamilyCreated', 'MemberJoined']);
 // Only the elder may change consent (SR-07, Deferred but guard kept honest).
 const ELDER_ONLY = new Set(['ConsentChanged']);
+// Clear routing keys the notifier will act on. Same list as notifier/index.js:
+// an unknown signal is stored but never fans out.
+const SIGNALS = new Set([
+  'pickup_needed', 'meds_skipped', 'meds_refused',
+  'food_refused', 'mood_agitated', 'handoff_opened',
+]);
 
 async function isMember(familyId, memberId) {
   if (!familyId || !memberId) return null;
@@ -81,6 +87,7 @@ app.post('/events', async (req, res) => {
     from_id: e.from_id ?? '', to_id: e.to_id ?? '', handoff_id: e.handoff_id ?? '',
     key_version: String(e.key_version ?? 1),
     iv: e.iv ?? '', payload_cipher: e.payload_cipher ?? '',
+    signal: e.signal ?? '',          // clear, enumerated, opt-in (see notifier)
     occurred_at: e.occurred_at || new Date().toISOString(),
   };
   const streamId = await redis.xAdd(STREAM, '*', fields);
@@ -150,6 +157,64 @@ app.get('/families/:id/events', async (req, res) => {
        FROM events WHERE ${cond.join(' AND ')}
        ORDER BY occurred_at DESC LIMIT ${limit}`, args);
   res.json(r.rows);
+});
+
+// Subscriptions: which signals a member wants to hear about.
+app.get('/families/:id/subscriptions', async (req, res) => {
+  const { member_id } = req.query;
+  if (!member_id) return res.status(400).json({ error: 'member_id required' });
+  const r = await db.query(
+    'SELECT signal FROM subscriptions WHERE family_id=$1 AND member_id=$2',
+    [req.params.id, member_id]);
+  res.json(r.rows.map(x => x.signal));
+});
+
+app.put('/families/:id/subscriptions', async (req, res) => {
+  const { member_id, signals } = req.body || {};
+  const m = await isMember(req.params.id, member_id);
+  if (!m) return res.status(403).json({ error: 'not a member of this family' });
+  if (!Array.isArray(signals)) return res.status(400).json({ error: 'signals array required' });
+  const wanted = signals.filter(s => SIGNALS.has(s));
+  await db.query('DELETE FROM subscriptions WHERE family_id=$1 AND member_id=$2',
+    [req.params.id, member_id]);
+  for (const sig of wanted) {
+    await db.query(
+      `INSERT INTO subscriptions(family_id,member_id,signal) VALUES($1,$2,$3)
+       ON CONFLICT DO NOTHING`, [req.params.id, member_id, sig]);
+  }
+  res.json(wanted);
+});
+
+// Notifications addressed to one member. Metadata only: no ciphertext leaves here,
+// the client already holds the event body.
+app.get('/families/:id/notifications', async (req, res) => {
+  const { to, unread } = req.query;
+  if (!to) return res.status(400).json({ error: 'to required' });
+  const cond = ['family_id=$1', 'member_id=$2'];
+  if (unread === '1') cond.push('read_at IS NULL');
+  const r = await db.query(
+    `SELECT id, signal, event_id, actor_id, category, occurred_at, read_at
+       FROM notifications WHERE ${cond.join(' AND ')}
+       ORDER BY occurred_at DESC LIMIT 100`, [req.params.id, to]);
+  res.json(r.rows);
+});
+
+app.post('/families/:id/notifications/read', async (req, res) => {
+  const { member_id, ids } = req.body || {};
+  const m = await isMember(req.params.id, member_id);
+  if (!m) return res.status(403).json({ error: 'not a member of this family' });
+  if (Array.isArray(ids) && ids.length) {
+    await db.query(
+      `UPDATE notifications SET read_at=now()
+         WHERE family_id=$1 AND member_id=$2 AND id = ANY($3) AND read_at IS NULL`,
+      [req.params.id, member_id, ids]);
+  } else {
+    await db.query(
+      `UPDATE notifications SET read_at=now()
+         WHERE family_id=$1 AND member_id=$2 AND read_at IS NULL`,
+      [req.params.id, member_id]);
+  }
+  res.status(204).end();
 });
 
 // Kill-switch view: raw rows so judges see only ciphertext (FR-18).

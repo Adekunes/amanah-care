@@ -31,8 +31,11 @@ CREATE TABLE IF NOT EXISTS events (
   occurred_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   key_version   INT NOT NULL DEFAULT 1,
   iv            TEXT,                   -- base64 96-bit nonce, unique per ciphertext (SR-10)
-  payload_cipher TEXT                   -- base64 AES-GCM ciphertext. Server cannot read.
+  payload_cipher TEXT,                  -- base64 AES-GCM ciphertext. Server cannot read.
+  signal        TEXT                    -- clear, enumerated, opt-in. Routes notifications
+                                        -- without a key. Extends SR-05 by one value.
 );
+CREATE INDEX IF NOT EXISTS events_signal_idx ON events(family_id, signal);
 CREATE INDEX IF NOT EXISTS events_family_idx ON events(family_id, occurred_at);
 CREATE INDEX IF NOT EXISTS events_type_idx   ON events(family_id, type);
 
@@ -59,3 +62,27 @@ SELECT family_id,
 FROM events
 WHERE actor_id IS NOT NULL
 GROUP BY family_id, actor_id, date_trunc('day', occurred_at)::date;
+
+-- Notification fan-out (AR-05). See migrate-notify.sql for the reasoning.
+CREATE TABLE IF NOT EXISTS subscriptions (
+  family_id  TEXT NOT NULL REFERENCES families(id),
+  member_id  TEXT NOT NULL REFERENCES members(id),
+  signal     TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (family_id, member_id, signal)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id          TEXT PRIMARY KEY,   -- <event_id>:<member_id>, so replays cannot duplicate
+  family_id   TEXT NOT NULL,
+  member_id   TEXT NOT NULL,
+  signal      TEXT NOT NULL,
+  event_id    TEXT NOT NULL,
+  actor_id    TEXT,
+  category    TEXT,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS notifications_inbox_idx
+  ON notifications(family_id, member_id, read_at, occurred_at DESC);

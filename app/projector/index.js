@@ -25,13 +25,13 @@ try {
 async function applyEvent(id, f) {
   // Idempotent: same event id replays harmlessly (AR-04, crash-safe upsert).
   await db.query(
-    `INSERT INTO events(id,stream_id,family_id,type,actor_id,category,from_id,to_id,handoff_id,key_version,iv,payload_cipher,occurred_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    `INSERT INTO events(id,stream_id,family_id,type,actor_id,category,from_id,to_id,handoff_id,key_version,iv,payload_cipher,occurred_at,signal)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      ON CONFLICT (id) DO NOTHING`,
     [f.id, id, f.family_id, f.type, f.actor_id || null, f.category || null,
      f.from_id || null, f.to_id || null, f.handoff_id || null,
      parseInt(f.key_version || '1', 10), f.iv || null, f.payload_cipher || null,
-     f.occurred_at || new Date().toISOString()]);
+     f.occurred_at || new Date().toISOString(), f.signal || null]);
 
   if (f.type === 'HandoffOpened') {
     await db.query(

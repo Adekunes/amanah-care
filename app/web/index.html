@@ -119,6 +119,7 @@
       <button data-tab="inbox">Inbox</button>
       <button data-tab="prefs">Prefs</button>
       <button data-tab="invite">Invite</button>
+      <button data-tab="alerts">Alerts <span id="alert-dot" class="dot hide"></span></button>
       <button data-tab="flow">Flow</button>
     </nav>
 
@@ -230,6 +231,29 @@
           <textarea id="invite-code-app" readonly></textarea></div>
         <button id="btn-copy-app" class="ghost small">Copy code</button>
         <div class="warnbox">The role is set here, not by them, but the server still trusts what the browser declares (KL-02). A support worker also holds the same key as family, so their card is filtered in the UI only (KL-01).</div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="tab-alerts" class="tabview hide">
+      <div class="card">
+        <div class="card-head"><h2>What you get told about</h2>
+          <button id="btn-mark-read" class="ghost small">Mark all read</button>
+        </div>
+        <p class="muted">Tick a signal to be notified when anyone in the family logs it. You are never notified about your own entries.</p>
+        <div id="sub-list" class="group"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Notifications</h2><span class="pill" id="notif-count">0</span></div>
+        <div id="notif-list"><p class="muted">Nothing yet.</p></div>
+      </div>
+
+      <div class="card">
+        <div class="group">
+          <h2>How this travels</h2>
+          <p class="muted">The event goes on the same Redis stream as everything else. A second consumer group, the notifier, reads it and writes one row per subscriber. It routes on a short clear label, never on your note, so the server knows a pickup was asked for and not a word about it.</p>
+        </div>
       </div>
     </div>
 

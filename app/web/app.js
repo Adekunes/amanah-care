@@ -26,16 +26,37 @@ const CATS = [
 
 let pick = { category: null, preset: null };
 
+// Presets that raise a notification. The label is clear and enumerated; the note
+// stays encrypted, so the server routes on "pickup_needed" and never reads why.
+const SIGNAL_OF = {
+  'pickup needed': 'pickup_needed',
+  'meds skipped':  'meds_skipped',
+  'meds refused':  'meds_refused',
+  'refused food':  'food_refused',
+  'agitated':      'mood_agitated',
+};
+const SIGNALS = [
+  ['pickup_needed', 'Pickup needed',      'someone needs collecting'],
+  ['meds_skipped',  'Meds skipped',       'a dose was not given'],
+  ['meds_refused',  'Meds refused',       'she would not take them'],
+  ['food_refused',  'Food refused',       'a meal was turned down'],
+  ['mood_agitated', 'Agitated',           'mood logged as agitated'],
+  ['handoff_opened','Handoff to you',     'always on, cannot be turned off'],
+];
+const SIGNAL_LABEL = Object.fromEntries(SIGNALS.map(([k,l])=>[k,l]));
+let mySignals = new Set();
+let notifs = [];
+
 // What each role may open. The invite carries the role, so nobody self-assigns.
 // Server-side this is still client-declared (KL-02): a UI boundary, not a guard.
 const TAB_LABEL = { log:'Log', handoff:'Hand off', inbox:'Inbox', prefs:'Prefs',
                     invite:'Invite', flow:'Flow' };
 const ROLES = {
-  family:  { label:'Family', tabs:['log','handoff','inbox','prefs','invite','flow'],
+  family:  { label:'Family', tabs:['log','handoff','inbox','prefs','alerts','invite','flow'],
              note:'Full access: log care, hand off, and add other members.' },
-  support: { label:'Support worker', tabs:['log','inbox','flow'],
+  support: { label:'Support worker', tabs:['log','inbox','alerts','flow'],
              note:'Logs care and reads handoffs. Cannot change preferences or add members.' },
-  elder:   { label:'Elder', tabs:['inbox','prefs','flow'],
+  elder:   { label:'Elder', tabs:['inbox','prefs','alerts','flow'],
              note:'Reads what was handed over and owns the preferences. Care is not logged about them by them.' },
 };
 const roleOf = (r)=> ROLES[r] ? r : 'family';
@@ -114,6 +135,7 @@ function tab(name){
   if(name==='handoff') buildHandoff();
   if(name==='inbox') refreshInbox();
   if(name==='invite') renderInviteTab();
+  if(name==='alerts') renderAlerts();
   if(name==='flow') renderFlow();
 }
 
@@ -354,11 +376,14 @@ async function logItem(){
   if(!pick.preset) return;
   const note = $('#log-note').value.trim();
   const text = note ? `${pick.preset} (${note})` : pick.preset;
-  await postEncEvent('CareLogged', { text }, { actor_id: ME.member_id, category: pick.category });
+  const signal = SIGNAL_OF[pick.preset];
+  await postEncEvent('CareLogged', { text },
+    { actor_id: ME.member_id, category: pick.category, ...(signal ? { signal } : {}) });
+  toast(signal ? `Logged · ${SIGNAL_LABEL[signal]} sent` : 'Logged');
   $('#log-note').value='';
   $$('#preset-row .chip').forEach(x=>x.classList.remove('on'));
   pick.preset=null; $('#btn-log').disabled=true;
-  toast('Logged'); await renderCareLog();
+  await renderCareLog(); refreshNotifs();
 }
 async function careSince(since){
   const rows = await api(`/families/${ME.family_id}/care?since=${encodeURIComponent(since||'1970-01-01')}`);
@@ -495,6 +520,7 @@ async function refreshInbox(){
   const sig = rows.map(r=>r.id+r.status).join('|');
   if(sig!==inboxSig){ inboxSig=sig; renderInbox(rows); }
   renderWorkload();
+  refreshNotifs();
 }
 async function renderInbox(rows){
   const box=$('#inbox');
@@ -538,6 +564,64 @@ async function renderWorkload(){
         <span class="muted tnum">${r.care_count} logs · ${r.handoff_count} accepted</span></div>
       <div class="bar"><span style="width:${Math.round(total/max*100)}%"></span></div>
     </div>`; }).join('');
+}
+
+// ---- alerts ----
+async function loadSubs(){
+  const list = await api(`/families/${ME.family_id}/subscriptions?member_id=${ME.member_id}`)
+    .catch(()=>[]);
+  mySignals = new Set(list);
+}
+async function saveSubs(){
+  await api(`/families/${ME.family_id}/subscriptions`, { method:'PUT', body: JSON.stringify({
+    member_id: ME.member_id, signals: [...mySignals] }) });
+}
+async function renderAlerts(){
+  await loadSubs();
+  $('#sub-list').innerHTML = SIGNALS.map(([key,label,note])=>{
+    const always = key === 'handoff_opened';
+    const on = always || mySignals.has(key);
+    return `<label class="sub${always?' fixed':''}">
+      <input type="checkbox" data-sig="${key}" ${on?'checked':''} ${always?'disabled':''}>
+      <span><b>${label}</b><i>${note}</i></span>
+    </label>`;
+  }).join('');
+  $$('#sub-list input[data-sig]').forEach(cb=>cb.onchange = async ()=>{
+    cb.checked ? mySignals.add(cb.dataset.sig) : mySignals.delete(cb.dataset.sig);
+    await saveSubs().catch(e=>toast(e.message));
+    toast(cb.checked ? 'Subscribed' : 'Unsubscribed');
+  });
+  renderNotifs();
+}
+function signalTime(t){
+  const d = new Date(t), today = dayKey(Date.now());
+  return dayKey(t) === today
+    ? d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})
+    : `${dayLabel(dayKey(t))} · ${d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}`;
+}
+function renderNotifs(){
+  const box = $('#notif-list'); if(!box) return;
+  const unread = notifs.filter(n=>!n.read_at).length;
+  $('#notif-count').textContent = unread ? `${unread} new` : String(notifs.length);
+  if(!notifs.length){ box.innerHTML = '<p class="muted">Nothing yet.</p>'; return; }
+  box.innerHTML = notifs.map(n=>`<div class="item${n.read_at?'':' unread'}">
+    <div class="top"><b>${esc(SIGNAL_LABEL[n.signal] || n.signal)}</b>
+      <span class="pill${n.read_at?'':' open'}">${n.read_at?'read':'new'}</span></div>
+    <div class="muted">${esc(nameOf(n.actor_id))} · ${signalTime(n.occurred_at)}</div>
+  </div>`).join('');
+}
+// Rides the same 4s poll as the inbox (FR-05). Delivery is polling, not push.
+async function refreshNotifs(){
+  if(!ME) return;
+  notifs = await api(`/families/${ME.family_id}/notifications?to=${ME.member_id}`).catch(()=>[]);
+  const unread = notifs.filter(n=>!n.read_at).length;
+  $('#alert-dot')?.classList.toggle('hide', unread === 0);
+  if(!$('#tab-alerts').classList.contains('hide')) renderNotifs();
+}
+async function markAllRead(){
+  await api(`/families/${ME.family_id}/notifications/read`, { method:'POST',
+    body: JSON.stringify({ member_id: ME.member_id }) });
+  await refreshNotifs(); renderNotifs();
 }
 
 // ---- prefs ----
@@ -625,6 +709,7 @@ on('#btn-handoff',    ()=>openHandoff().catch(e=>toast(e.message)));
 on('#btn-prefs',      ()=>savePrefs().catch(e=>toast(e.message)));
 on('#btn-proof',      ()=>refreshProof().catch(e=>toast(e.message)));
 on('#btn-collapse-all', ()=>toggleAllDays());
+on('#btn-mark-read',  ()=>markAllRead().catch(e=>toast(e.message)));
 $('#inv-role')?.addEventListener('change', ()=>renderInviteTab());
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
