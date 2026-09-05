@@ -53,6 +53,7 @@ function tab(name){
   if(name==='handoff') buildHandoff();
   if(name==='inbox') refreshInbox();
   if(name==='prefs') {}
+  if(name==='invite') renderInviteTab();
 }
 
 // ---- create / join ----
@@ -79,13 +80,23 @@ function inviteCode(){
   return b64.from(new TextEncoder().encode(JSON.stringify({ f: ME.family_id, h: ME.h })))
     .replace(/\+/g,'-').replace(/\//g,'_');
 }
+function renderQR(el, code){
+  el.innerHTML='';
+  const qr = qrcode(0,'M'); qr.addData(code); qr.make();
+  el.innerHTML = qr.createImgTag(4,8);
+}
 function showInvite(){
   const code = inviteCode();
   $('#invite-code').value = code;
-  $('#qr').innerHTML='';
-  const qr = qrcode(0,'M'); qr.addData(code); qr.make();
-  $('#qr').innerHTML = qr.createImgTag(4,8);
+  renderQR($('#qr'), code);
   show('invite');
+}
+// Same code, reachable from inside the app so a family can grow after day one.
+// H is already in memory for whoever is signed in, so no re-entry of the key.
+function renderInviteTab(){
+  const code = inviteCode();
+  $('#invite-code-app').value = code;
+  renderQR($('#qr-app'), code);
 }
 
 async function joinFamily(){
@@ -286,6 +297,7 @@ $('#btn-create').onclick = ()=>createFamily().catch(e=>toast(e.message));
 $('#btn-join').onclick   = ()=>joinFamily().catch(e=>toast(e.message));
 $('#btn-enter').onclick  = ()=>enterApp();
 $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
+$('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };
 $('#btn-log').onclick    = ()=>logItem().catch(e=>toast(e.message));
 $('#btn-handoff').onclick= ()=>openHandoff().catch(e=>toast(e.message));
 $('#btn-prefs').onclick  = ()=>savePrefs().catch(e=>toast(e.message));
