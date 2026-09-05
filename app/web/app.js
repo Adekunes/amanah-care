@@ -26,6 +26,8 @@ const CATS = [
 
 let pick = { category: null, preset: null };
 
+const esc = (v)=>String(v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
 
@@ -40,8 +42,33 @@ async function api(path, opts={}){
   if(!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.status===204 ? null : r.json();
 }
+let lastTrace = null;     // the last encrypted write, timed hop by hop
+let pendingPlain = null;  // plaintext of the write in flight, for the Flow view only
+
 async function postEvent(ev){
-  return api('/events', { method:'POST', body: JSON.stringify({ id:uuid(), occurred_at:now(), ...ev }) });
+  const body = { id:uuid(), occurred_at:now(), ...ev };
+  const t0 = performance.now();
+  const res = await api('/events', { method:'POST', body: JSON.stringify(body) });
+  const apiMs = Math.round(performance.now() - t0);
+  if(body.iv && body.payload_cipher){
+    lastTrace = { type:body.type, iv:body.iv, plain:pendingPlain,
+                  stream_id:res?.stream_id, apiMs, projMs:null };
+    pendingPlain = null;
+    traceProjection(lastTrace);
+  }
+  return res;
+}
+
+// Poll the raw rows until this event lands, to measure real projector lag.
+// Matched on iv, which is unique per event (SR-10).
+async function traceProjection(tr){
+  const t0 = performance.now();
+  for(let i=0;i<50;i++){
+    await new Promise(r=>setTimeout(r,120));
+    const rows = await api('/debug/events').catch(()=>[]);
+    if(rows.some(r=>r.iv===tr.iv)){ tr.projMs = Math.round(performance.now()-t0); break; }
+  }
+  if(!$('#tab-flow').classList.contains('hide')) renderFlow();
 }
 
 // ---- views ----
@@ -52,7 +79,8 @@ function tab(name){
   $('#tab-'+name).classList.remove('hide');
   if(name==='handoff') buildHandoff();
   if(name==='inbox') refreshInbox();
-  if(name==='prefs') {}
+  if(name==='invite') renderInviteTab();
+  if(name==='flow') renderFlow();
 }
 
 // ---- create / join ----
@@ -79,13 +107,23 @@ function inviteCode(){
   return b64.from(new TextEncoder().encode(JSON.stringify({ f: ME.family_id, h: ME.h })))
     .replace(/\+/g,'-').replace(/\//g,'_');
 }
+function renderQR(el, code){
+  el.innerHTML='';
+  const qr = qrcode(0,'M'); qr.addData(code); qr.make();
+  el.innerHTML = qr.createImgTag(4,8);
+}
 function showInvite(){
   const code = inviteCode();
   $('#invite-code').value = code;
-  $('#qr').innerHTML='';
-  const qr = qrcode(0,'M'); qr.addData(code); qr.make();
-  $('#qr').innerHTML = qr.createImgTag(4,8);
+  renderQR($('#qr'), code);
   show('invite');
+}
+// Same code, reachable from inside the app so a family can grow after day one.
+// H is already in memory for whoever is signed in, so no re-entry of the key.
+function renderInviteTab(){
+  const code = inviteCode();
+  $('#invite-code-app').value = code;
+  renderQR($('#qr-app'), code);
 }
 
 async function joinFamily(){
@@ -114,6 +152,7 @@ async function joinFamily(){
 // encrypt a payload then post with clear routing fields
 async function postEncEvent(type, payloadObj, clear={}){
   const { iv, cipher } = await encryptJSON(KEY, payloadObj);
+  pendingPlain = payloadObj;
   return postEvent({ family_id: ME.family_id, type, iv, payload_cipher: cipher, key_version:1, ...clear });
 }
 
@@ -146,34 +185,47 @@ async function renderStrip(){
   if(!pref){ $('#strip').classList.add('hide'); return; }
   const p = await decryptJSON(KEY, pref.iv, pref.payload_cipher);
   if(!p){ $('#strip').classList.add('hide'); return; }
-  const bits = [p.lang && `<b>${p.lang}</b>`, p.diet, p.prayer, p.modesty].filter(Boolean);
-  $('#strip').innerHTML = '🕌 ' + bits.join(' · ');
+  const bits = [['Language',p.lang],['Diet',p.diet],['Prayer',p.prayer],['Modesty',p.modesty]]
+    .filter(([,v])=>v);
+  $('#strip').innerHTML = bits.map(([k,v])=>
+    `<span class="sbit"><i>${k}</i><b>${esc(v)}</b></span>`).join('');
   $('#strip').classList.remove('hide');
 }
 
 // ---- chips / logging ----
+// Two steps beat one wall of 25 chips: pick the category, then the preset.
 function buildChipsets(){
-  const box = $('#chipsets'); box.innerHTML='';
-  for(const [cat,presets] of CATS){
-    const h = document.createElement('div'); h.className='muted'; h.style.margin='10px 0 4px'; h.textContent=cat;
-    const row = document.createElement('div'); row.className='row wrap';
-    for(const pr of presets){
-      const c = document.createElement('button'); c.className='chip'; c.textContent=pr;
-      c.onclick=()=>{ pick={category:cat,preset:pr};
-        $$('.chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');
-        $('#btn-log').disabled=false; };
-      row.appendChild(c);
-    }
-    box.appendChild(h); box.appendChild(row);
+  const row = $('#cat-row'); row.innerHTML='';
+  for(const [cat] of CATS){
+    const b = document.createElement('button'); b.className='chip'; b.textContent=cat;
+    b.onclick = ()=>selectCategory(cat, b);
+    row.appendChild(b);
   }
+  selectCategory(CATS[0][0], row.firstElementChild);
+}
+function selectCategory(cat, el){
+  pick = { category:cat, preset:null };
+  $$('#cat-row .chip').forEach(x=>x.classList.remove('on'));
+  el?.classList.add('on');
+  const presets = (CATS.find(c=>c[0]===cat) || [,[]])[1];
+  const row = $('#preset-row'); row.innerHTML='';
+  for(const pr of presets){
+    const b = document.createElement('button'); b.className='chip'; b.textContent=pr;
+    b.onclick = ()=>{ pick.preset = pr;
+      $$('#preset-row .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+      $('#btn-log').disabled = false; };
+    row.appendChild(b);
+  }
+  $('#btn-log').disabled = true;
 }
 async function logItem(){
   if(!pick.preset) return;
   const note = $('#log-note').value.trim();
   const text = note ? `${pick.preset} (${note})` : pick.preset;
   await postEncEvent('CareLogged', { text }, { actor_id: ME.member_id, category: pick.category });
-  $('#log-note').value=''; $$('.chip').forEach(x=>x.classList.remove('on'));
-  pick={category:null,preset:null}; $('#btn-log').disabled=true;
+  $('#log-note').value='';
+  $$('#preset-row .chip').forEach(x=>x.classList.remove('on'));
+  pick.preset=null; $('#btn-log').disabled=true;
   toast('Logged'); await renderCareToday();
 }
 async function careSince(since){
@@ -187,9 +239,12 @@ async function renderCareToday(){
   const midnight = new Date(); midnight.setHours(0,0,0,0);
   const items = await careSince(midnight.toISOString());
   const box = $('#care-today');
+  $('#today-count').textContent = items.length;
   if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; return; }
-  box.innerHTML = items.map(i=>`<div class="item"><b>${i.category}</b> · ${i.text}
-    <div class="muted">${nameOf(i.actor_id)} · ${new Date(i.occurred_at).toLocaleTimeString()}</div></div>`).join('');
+  box.innerHTML = items.map(i=>`<div class="item">
+    <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
+    <div class="muted">${esc(nameOf(i.actor_id))} · ${new Date(i.occurred_at).toLocaleTimeString()}</div>
+  </div>`).join('');
 }
 
 // ---- handoff ----
@@ -218,7 +273,7 @@ async function openHandoff(){
 let pollTimer=null;
 function startPolling(){ if(pollTimer) clearInterval(pollTimer);
   refreshInbox(); pollTimer=setInterval(refreshInbox, 4000); }
-let inboxSig='';
+let inboxSig=null;
 async function refreshInbox(){
   const rows = await api(`/families/${ME.family_id}/handoffs?to=${ME.member_id}`).catch(()=>[]);
   const sig = rows.map(r=>r.id+r.status).join('|');
@@ -227,23 +282,25 @@ async function refreshInbox(){
 }
 async function renderInbox(rows){
   const box=$('#inbox');
-  if(!rows.length){ box.innerHTML='<p class="muted">No handoffs waiting.</p>'; return; }
+  if(!rows.length){
+    box.innerHTML='<div class="card flat"><p class="muted">No handoffs waiting for you.</p></div>';
+    return; }
   const cards=[];
   for(const h of rows){
     const p = await decryptJSON(KEY, h.iv, h.summary_cipher) || {};
     const care = await careSince(new Date(new Date(h.opened_at).getTime()-12*3600e3).toISOString());
     const strip = $('#strip').innerHTML;
     cards.push(`<div class="card">
-      <div class="row" style="justify-content:space-between">
-        <b>From ${nameOf(h.from_id)}</b><span class="pill ${h.status}">${h.status}</span></div>
-      ${strip?`<div class="strip" style="margin:10px 0">${strip}</div>`:''}
-      <div class="muted" style="margin-top:6px">What happened</div>
-      <div>${p.summary||'—'}</div>
-      <div class="muted" style="margin-top:6px">What is next</div>
-      <div>${p.next||'—'}</div>
+      <div class="card-head"><h2>From ${esc(nameOf(h.from_id))}</h2>
+        <span class="pill ${h.status}">${h.status}</span></div>
+      ${strip?`<div class="strip">${strip}</div>`:''}
+      <div class="group"><span class="eyebrow">What happened</span>
+        <div>${esc(p.summary||'—')}</div></div>
+      <div class="group"><span class="eyebrow">What is next</span>
+        <div>${esc(p.next||'—')}</div></div>
       ${h.status==='open'
-        ? `<div style="height:10px"></div><button data-ack="${h.id}">Accept handoff</button>`
-        : `<div class="muted" style="margin-top:8px">Accepted ${new Date(h.acked_at).toLocaleTimeString()}</div>`}
+        ? `<button data-ack="${h.id}">Accept handoff</button>`
+        : `<p class="muted">Accepted ${new Date(h.acked_at).toLocaleTimeString()}</p>`}
     </div>`);
   }
   box.innerHTML=cards.join('');
@@ -260,9 +317,11 @@ async function renderWorkload(){
   if(!rows.length){ box.innerHTML='<p class="muted">No activity yet.</p>'; return; }
   const max = Math.max(...rows.map(r=>r.care_count+r.handoff_count),1);
   box.innerHTML = rows.map(r=>{ const total=r.care_count+r.handoff_count;
-    return `<div style="margin:8px 0"><div class="row" style="justify-content:space-between">
-      <span>${nameOf(r.member_id)}</span><span class="muted">${r.care_count} logs · ${r.handoff_count} handoffs</span></div>
-      <div class="bar"><span style="width:${Math.round(total/max*100)}%"></span></div></div>`; }).join('');
+    return `<div class="wl">
+      <div class="top"><b>${esc(nameOf(r.member_id))}</b>
+        <span class="muted tnum">${r.care_count} logs · ${r.handoff_count} accepted</span></div>
+      <div class="bar"><span style="width:${Math.round(total/max*100)}%"></span></div>
+    </div>`; }).join('');
 }
 
 // ---- prefs ----
@@ -275,10 +334,51 @@ async function savePrefs(){
 
 // ---- proof / kill switch ----
 async function refreshProof(){
-  const rows = await api('/debug/events');
-  $('#proof').textContent = rows.slice(0,20).map(r=>
-    `${r.type.padEnd(20)} cat=${r.category||'-'} cipher=${(r.payload_cipher||'').slice(0,40)}...`).join('\n')
-    || 'empty';
+  const rows = (await api('/debug/events')).filter(r=>r.family_id===ME.family_id).slice(0,14);
+  $('#proof').innerHTML = rows.length ? rows.map(r=>
+    `<div class="prow">
+       <div class="clear"><span class="k">${esc(r.type)}</span>${
+         r.category ? `<span class="cat">category=${esc(r.category)}</span>` : ''}</div>
+       <div class="seal">${esc((r.payload_cipher||'(no payload)').slice(0,56))}…</div>
+     </div>`).join('') : 'empty';
+}
+
+// ---- flow: the six hops a write takes ----
+function hop(n, cls, name, where, holds, tags){
+  return `<div class="hop ${cls}">
+    <div class="rail"><div class="dot">${n}</div><div class="line"></div></div>
+    <div class="body">
+      <div class="name">${name}${tags}</div>
+      <div class="where">${where}</div>
+      <div class="holds">${holds}</div>
+    </div></div>`;
+}
+async function renderFlow(){
+  const box = $('#flow'), t = lastTrace;
+  $('#flow-what').textContent = t ? t.type : 'nothing yet';
+  if(!t){
+    box.innerHTML = `<p class="muted">Log an item, save preferences, or open a handoff. Your write is traced here hop by hop, with the real timings.</p>`;
+    return;
+  }
+  const members = await api(`/families/${ME.family_id}/members`).catch(()=>[]);
+  const read = '<span class="tag read">readable</span>';
+  const seal = '<span class="tag seal">sealed</span>';
+  const ms = (v)=> v==null ? '<span class="tag ms">…</span>' : `<span class="tag ms">${v} ms</span>`;
+  const plain = t.plain ? Object.values(t.plain).filter(Boolean).join(' · ') : '—';
+  box.innerHTML = [
+    hop(1,'readable','This phone','browser memory',
+      `<b>${esc(plain)}</b> in the clear, plus the family key H. H is never sent anywhere.`, read),
+    hop(2,'sealed','Over the wire','POST /events',
+      `AES-GCM ciphertext under a fresh IV. Only routing stays clear: type, actor, category, time.`, seal+ms(t.apiMs)),
+    hop(3,'sealed','api container','membership check, then append',
+      `Confirms you belong to this family and appends. It has no key, so it never decrypts.`, seal),
+    hop(4,'sealed','Redis stream','events',
+      `Appended at <b>${esc(t.stream_id||'—')}</b>. Append-only and replayable.`, seal),
+    hop(5,'sealed','projector','writes Postgres events + read models',
+      `Copies the row, then updates handoffs and workload from metadata alone.`, seal+ms(t.projMs)),
+    hop(6,'readable','Family phones','decrypt with H',
+      `${members.length} member${members.length===1?'':'s'} hold H and can read this. Nobody else can.`, read),
+  ].join('');
 }
 
 // ---- wire up ----
@@ -286,6 +386,7 @@ $('#btn-create').onclick = ()=>createFamily().catch(e=>toast(e.message));
 $('#btn-join').onclick   = ()=>joinFamily().catch(e=>toast(e.message));
 $('#btn-enter').onclick  = ()=>enterApp();
 $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
+$('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };
 $('#btn-log').onclick    = ()=>logItem().catch(e=>toast(e.message));
 $('#btn-handoff').onclick= ()=>openHandoff().catch(e=>toast(e.message));
 $('#btn-prefs').onclick  = ()=>savePrefs().catch(e=>toast(e.message));
