@@ -1,0 +1,16 @@
+flowchart TD
+    A([Family signs up]) --> B[Browser makes random key H with WebCrypto]
+    B --> C[H stays on the device only]
+    C --> D[Server gets only a check-value of H]
+    D --> E["Invite link carries H after the # sign"]
+    E --> F[Other family devices save H]
+    F --> G{Someone lost H?}
+    G -- no --> H1[Keep reading and writing with H]
+    H1 --> N([Normal use])
+    G -- yes --> I{Any member still has H?}
+    I -- yes --> J[That member re-shares H by invite link]
+    J --> N
+    I -- no --> K[Family picks: make new key H2]
+    K --> L[Event KeyRotated]
+    L --> M[Old events sealed, new events use H2]
+    M --> O([Fresh start])

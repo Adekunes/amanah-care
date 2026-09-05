@@ -1,0 +1,13 @@
+flowchart TD
+    A([Setup day: family member sits with elder]) --> B[Elder device gets H by invite link]
+    B --> C[Sharing screen read aloud: meds, meals, prayer, mood, appointments, transport, notes]
+    C --> D[Elder decides each toggle, family member taps]
+    D --> E[Event ConsentChanged, actor = elder]
+    E --> F[Projector stores rule]
+    F --> G{Who is reading?}
+    G -- support worker --> H[App hides categories elder blocked]
+    H --> I([Filtered handoff card])
+    G -- family --> J[App shows all]
+    J --> K([Full handoff card])
+    G -- elder --> L[Today view: large text, own language, read only]
+    L --> M([Who is here, who is next, what happened])

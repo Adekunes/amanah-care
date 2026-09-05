@@ -1,0 +1,10 @@
+flowchart LR
+    P1([Caregiver, phone browser]) --> W1[Web page: encrypt with family key H]
+    W1 --> API[API: check member, append event]
+    API --> R[(Redis Stream: event log)]
+    R --> PJ[Projector: read events]
+    PJ --> PG[(Postgres: events + read models)]
+    R --> NT[Notifier: ping next caregiver]
+    NT --> P2([Next caregiver, phone browser])
+    PG --> W2[Web page: decrypt with H]
+    W2 --> P2

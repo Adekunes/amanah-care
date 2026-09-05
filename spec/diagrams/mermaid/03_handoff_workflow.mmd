@@ -1,0 +1,17 @@
+flowchart TD
+    A([Turn ends: Sister A]) --> B[Log care items: meds, meal, prayer, appointment, mood]
+    B --> C[Event CareLogged x N]
+    C --> D[Tap Hand off to Brother B]
+    D --> E[Write 2-line summary]
+    E --> F[Event HandoffOpened]
+    F --> G[Notifier pings B]
+    G --> H[B opens app]
+    H --> I[App pulls read model and decrypts with H]
+    I --> J[B sees: preference strip, what happened, what is next]
+    J --> K{B accepts?}
+    K -- yes --> L[Event HandoffAcknowledged]
+    L --> M[Workload counter +1 for B]
+    M --> N([Handoff done])
+    K -- not yet --> O[Handoff stays open, A still on duty]
+    O --> P[Reminder after 30 min]
+    P --> H

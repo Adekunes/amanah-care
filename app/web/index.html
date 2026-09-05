@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Amanah Care</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LANDING -->
+  <section id="view-landing">
+    <h1>Amanah Care</h1>
+    <p class="muted">A private handoff log for families caring for an elder. Only your family holds the key. The server sees scrambled text.</p>
+    <div class="card">
+      <h2>Start a family</h2>
+      <label>Elder's name (stays encrypted)</label>
+      <input id="c-elder" placeholder="e.g. Ammi">
+      <label>Your name</label>
+      <input id="c-name" placeholder="e.g. Sister A">
+      <label>Your role</label>
+      <select id="c-role"><option value="family">Family</option><option value="elder">Elder</option></select>
+      <div style="height:10px"></div>
+      <button id="btn-create">Create family + key</button>
+    </div>
+    <div class="card">
+      <h2>Join your family</h2>
+      <p class="muted">Scan the family QR, or paste the invite code someone shared with you in person.</p>
+      <label>Invite code</label>
+      <textarea id="j-code" placeholder="paste code"></textarea>
+      <label>Your name</label>
+      <input id="j-name" placeholder="e.g. Brother B">
+      <label>Your role</label>
+      <select id="j-role"><option value="family">Family</option><option value="support">Support worker</option><option value="elder">Elder</option></select>
+      <div style="height:10px"></div>
+      <button id="btn-join" class="ghost">Join with key</button>
+    </div>
+  </section>
+
+  <!-- INVITE (after create) -->
+  <section id="view-invite" class="hide">
+    <h1>Family ready</h1>
+    <div class="card">
+      <h2>Add your family, in person</h2>
+      <p class="muted">Show this QR to another family member's phone, or copy the code. The key is inside it, so share it face to face, never in a chat.</p>
+      <div id="qr"></div>
+      <label>Invite code</label>
+      <textarea id="invite-code" readonly></textarea>
+      <button id="btn-copy" class="ghost small">Copy code</button>
+      <div style="height:12px"></div>
+      <button id="btn-enter">Enter the app</button>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="view-app" class="hide">
+    <div class="tabs">
+      <button data-tab="log" class="on">Log</button>
+      <button data-tab="handoff">Hand off</button>
+      <button data-tab="inbox">Inbox</button>
+      <button data-tab="prefs">Prefs</button>
+      <button data-tab="proof">Proof</button>
+    </div>
+
+    <div id="strip" class="strip hide"></div>
+
+    <!-- LOG -->
+    <div id="tab-log" class="tabview">
+      <h2>Log care</h2>
+      <p class="muted">Tap a chip. Add a note only if you want.</p>
+      <div id="chipsets"></div>
+      <label>Optional note</label>
+      <input id="log-note" placeholder="e.g. ate half">
+      <div style="height:10px"></div>
+      <button id="btn-log" disabled>Log item</button>
+      <h2>Today so far</h2>
+      <div id="care-today" class="card"><p class="muted">Nothing logged yet.</p></div>
+    </div>
+
+    <!-- HANDOFF -->
+    <div id="tab-handoff" class="tabview hide">
+      <h2>Hand off to</h2>
+      <select id="ho-member"></select>
+      <label>Summary (auto from what you logged)</label>
+      <textarea id="ho-summary" readonly></textarea>
+      <label>Next steps (you type this)</label>
+      <textarea id="ho-next" placeholder="e.g. Dhuhr meds at 1pm, physio at 3pm"></textarea>
+      <div style="height:10px"></div>
+      <button id="btn-handoff">Open handoff</button>
+    </div>
+
+    <!-- INBOX -->
+    <div id="tab-inbox" class="tabview hide">
+      <h2>Handoffs to you</h2>
+      <p class="muted">Checks every few seconds.</p>
+      <div id="inbox"></div>
+      <h2>Workload this week</h2>
+      <div id="workload" class="card"><p class="muted">Loading…</p></div>
+    </div>
+
+    <!-- PREFS -->
+    <div id="tab-prefs" class="tabview hide">
+      <h2>Elder preferences</h2>
+      <p class="muted">Shown on top of every handoff card. Encrypted.</p>
+      <label>Language</label>
+      <input id="p-lang" placeholder="e.g. Urdu">
+      <label>Diet</label>
+      <input id="p-diet" placeholder="e.g. halal, no gelatin">
+      <label>Prayer</label>
+      <input id="p-prayer" placeholder="e.g. prayer times matter">
+      <label>Modesty / caregiver gender</label>
+      <input id="p-modesty" placeholder="e.g. female caregiver for personal care">
+      <div style="height:10px"></div>
+      <button id="btn-prefs">Save preferences</button>
+    </div>
+
+    <!-- PROOF (kill switch) -->
+    <div id="tab-proof" class="tabview hide">
+      <h2>What the server actually stores</h2>
+      <p class="muted">Live from the database. Names, notes, summaries: all ciphertext. This is what we, the operators, can see.</p>
+      <button id="btn-proof" class="ghost small">Refresh from DB</button>
+      <div id="proof" class="mono" style="margin-top:10px">tap refresh</div>
+    </div>
+  </section>
+
+</div>
+<script src="vendor/qrcode.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

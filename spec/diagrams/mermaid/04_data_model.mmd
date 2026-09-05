@@ -1,0 +1,5 @@
+flowchart LR
+    FAM[(families: id, key_check, key_version)] --> MEM[(members: id, family_id, role)]
+    FAM --> EV[(events: id, family_id, seq, type, actor_id, at, cipher, key_version)]
+    EV -- projector builds --> HO[(handoffs: id, family_id, from, to, status, cipher)]
+    EV -- SQL view, metadata only --> WL[(workload_view: member, day, count)]

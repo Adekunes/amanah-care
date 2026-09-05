@@ -1,0 +1,50 @@
+# Amanah Care. One command brings up the whole stack: docker compose up.
+# Cut-core scope: web, api, projector, redis, postgres. Notifications by polling,
+# so no separate notifier/SSE container (see REQUIREMENTS FR-05, KL-03).
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: amanah
+      POSTGRES_PASSWORD: amanah
+      POSTGRES_DB: amanah
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U amanah"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./api
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://amanah:amanah@postgres:5432/amanah
+      REDIS_URL: redis://redis:6379
+    ports: ["4000:4000"]
+    depends_on:
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+
+  projector:
+    build: ./projector
+    environment:
+      DATABASE_URL: postgres://amanah:amanah@postgres:5432/amanah
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+
+  web:
+    build: ./web
+    ports: ["8080:8080"]
+    depends_on: [api]
