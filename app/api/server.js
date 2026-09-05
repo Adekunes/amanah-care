@@ -136,6 +136,22 @@ app.get('/families/:id/members', async (req, res) => {
   res.json(r.rows);
 });
 
+// Events for one family, optionally by type. Names live in MemberJoined events,
+// and /debug/events is capped at 50 rows across every family, so a family with a
+// week of care would lose its names. This is the query the client should use.
+app.get('/families/:id/events', async (req, res) => {
+  const { type } = req.query;
+  const args = [req.params.id];
+  const cond = ['family_id=$1'];
+  if (type) { args.push(type); cond.push(`type=$${args.length}`); }
+  const limit = Math.min(parseInt(req.query.limit, 10) || 500, 2000);
+  const r = await db.query(
+    `SELECT id, type, actor_id, category, iv, payload_cipher, key_version, occurred_at
+       FROM events WHERE ${cond.join(' AND ')}
+       ORDER BY occurred_at DESC LIMIT ${limit}`, args);
+  res.json(r.rows);
+});
+
 // Kill-switch view: raw rows so judges see only ciphertext (FR-18).
 app.get('/debug/events', async (req, res) => {
   const r = await db.query(
