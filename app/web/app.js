@@ -449,22 +449,30 @@ async function renderFlow(){
 }
 
 // ---- wire up ----
-$('#btn-create').onclick = ()=>createFamily().catch(e=>toast(e.message));
-$('#btn-join').onclick   = ()=>{
+// One missing element used to throw here and silently skip every handler after
+// it, so a stale cached build could render a button that did nothing.
+function on(sel, fn){
+  const el = $(sel);
+  if(!el) return console.warn('[amanah] no element for', sel);
+  el.onclick = fn;
+}
+
+on('#btn-create',     ()=>createFamily().catch(e=>toast(e.message)));
+on('#btn-join',       ()=>{
   const p = decodeInvite($('#j-code').value);
   p ? showLogin(p) : toast('That code is not readable');
-};
-$('#btn-login').onclick  = ()=>doLogin().catch(e=>toast(e.message));
-$('#btn-login-back').onclick = ()=>{ pendingInvite=null; show('landing'); };
-$('#btn-logout').onclick = ()=>logout();
-$('#inv-role').onchange  = ()=>renderInviteTab();
-$('#btn-enter').onclick  = ()=>enterApp();
-$('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
-$('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };
-$('#btn-log').onclick    = ()=>logItem().catch(e=>toast(e.message));
-$('#btn-handoff').onclick= ()=>openHandoff().catch(e=>toast(e.message));
-$('#btn-prefs').onclick  = ()=>savePrefs().catch(e=>toast(e.message));
-$('#btn-proof').onclick  = ()=>refreshProof().catch(e=>toast(e.message));
+});
+on('#btn-login',      ()=>doLogin().catch(e=>toast(e.message)));
+on('#btn-login-back', ()=>{ pendingInvite=null; show('landing'); });
+on('#btn-logout',     ()=>logout());
+on('#btn-enter',      ()=>enterApp());
+on('#btn-copy',       ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); });
+on('#btn-copy-app',   ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); });
+on('#btn-log',        ()=>logItem().catch(e=>toast(e.message)));
+on('#btn-handoff',    ()=>openHandoff().catch(e=>toast(e.message)));
+on('#btn-prefs',      ()=>savePrefs().catch(e=>toast(e.message)));
+on('#btn-proof',      ()=>refreshProof().catch(e=>toast(e.message)));
+$('#inv-role')?.addEventListener('change', ()=>renderInviteTab());
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
 // resume session if present
