@@ -307,9 +307,7 @@ async function loadNames(){
   for(const e of evs){ const p = await decryptJSON(KEY, e.iv, e.payload_cipher); if(p?.name) nameCache[e.actor_id]=p.name; }
 }
 async function fetchEventsByType(type){
-  // small helper endpoint reuse: /debug/events returns recent rows incl. actor_id
-  const rows = await api('/debug/events').catch(()=>[]);
-  return rows.filter(r=>r.type===type && r.family_id===ME.family_id);
+  return api(`/families/${ME.family_id}/events?type=${encodeURIComponent(type)}`).catch(()=>[]);
 }
 function nameOf(id){ return nameCache[id] || (id===ME.member_id ? ME.my_name : id.slice(0,6)); }
 
@@ -374,6 +372,11 @@ const LOG_DAYS = 30;                      // how far back the grouped log reache
 
 const dayKey = (d)=>{ const x = new Date(d); x.setHours(0,0,0,0); return x.getTime(); };
 
+// Which days are folded shut. Survives re-render, so logging an item does not
+// reopen everything. Seeded on first render: today open, the rest closed.
+const collapsedDays = new Set();
+let logSeeded = false;
+
 function dayLabel(ts){
   const today = dayKey(Date.now());
   if(ts === today) return 'Today';
@@ -385,12 +388,18 @@ function dayLabel(ts){
 }
 
 // One section per day, newest day first, newest entry first inside each day.
+// Each day folds on its own; the header button folds or opens all of them.
 async function renderCareLog(){
   const from = new Date(Date.now() - (LOG_DAYS-1)*DAY_MS); from.setHours(0,0,0,0);
   const items = await careSince(from.toISOString());
   const box = $('#care-log');
   $('#log-count').textContent = items.length;
-  if(!items.length){ box.innerHTML = '<p class="muted">Nothing logged yet.</p>'; return; }
+  if(!items.length){
+    box.innerHTML = '<p class="muted">Nothing logged yet.</p>';
+    $('#btn-collapse-all').classList.add('hide');
+    return;
+  }
+  $('#btn-collapse-all').classList.remove('hide');
 
   const byDay = new Map();
   for(const i of items){
@@ -398,20 +407,60 @@ async function renderCareLog(){
     if(!byDay.has(k)) byDay.set(k, []);
     byDay.get(k).push(i);
   }
+  const days = [...byDay.keys()].sort((a,b)=>b-a);
 
-  box.innerHTML = [...byDay.keys()].sort((a,b)=>b-a).map(k=>{
+  if(!logSeeded){                       // open today, fold the rest
+    days.slice(1).forEach(k=>collapsedDays.add(k));
+    logSeeded = true;
+  }
+
+  box.innerHTML = days.map(k=>{
     const rows = byDay.get(k).slice().reverse();
-    return `<section class="day">
-      <div class="day-head">
+    const shut = collapsedDays.has(k);
+    return `<section class="day${shut?' is-collapsed':''}">
+      <button class="day-head" data-day="${k}" aria-expanded="${!shut}">
+        <span class="chev" aria-hidden="true"></span>
         <span class="day-name">${dayLabel(k)}</span>
         <span class="day-count tnum">${rows.length} ${rows.length===1?'entry':'entries'}</span>
+      </button>
+      <div class="day-items">
+        ${rows.map(i=>`<div class="item">
+          <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
+          <div class="muted">${esc(nameOf(i.actor_id))} · ${new Date(i.occurred_at).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</div>
+        </div>`).join('')}
       </div>
-      ${rows.map(i=>`<div class="item">
-        <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
-        <div class="muted">${esc(nameOf(i.actor_id))} · ${new Date(i.occurred_at).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</div>
-      </div>`).join('')}
     </section>`;
   }).join('');
+
+  $$('#care-log .day-head').forEach(b=>b.onclick = ()=>{
+    const k = +b.dataset.day;
+    collapsedDays.has(k) ? collapsedDays.delete(k) : collapsedDays.add(k);
+    const sec = b.closest('.day');
+    sec.classList.toggle('is-collapsed', collapsedDays.has(k));
+    b.setAttribute('aria-expanded', String(!collapsedDays.has(k)));
+    syncCollapseAll(days);
+  });
+  syncCollapseAll(days);
+}
+
+// The header button says what it will do next, not what the state is.
+function syncCollapseAll(days){
+  const allShut = days.every(k=>collapsedDays.has(k));
+  const btn = $('#btn-collapse-all');
+  if(btn) btn.textContent = allShut ? 'Expand all' : 'Collapse all';
+  btn.dataset.days = days.join(',');
+}
+
+function toggleAllDays(){
+  const btn = $('#btn-collapse-all');
+  const days = (btn.dataset.days||'').split(',').filter(Boolean).map(Number);
+  const allShut = days.every(k=>collapsedDays.has(k));
+  days.forEach(k=> allShut ? collapsedDays.delete(k) : collapsedDays.add(k));
+  $$('#care-log .day').forEach((sec,i)=>{
+    sec.classList.toggle('is-collapsed', collapsedDays.has(days[i]));
+    sec.querySelector('.day-head')?.setAttribute('aria-expanded', String(!collapsedDays.has(days[i])));
+  });
+  syncCollapseAll(days);
 }
 
 // ---- handoff ----
@@ -575,6 +624,7 @@ on('#btn-log',        ()=>logItem().catch(e=>toast(e.message)));
 on('#btn-handoff',    ()=>openHandoff().catch(e=>toast(e.message)));
 on('#btn-prefs',      ()=>savePrefs().catch(e=>toast(e.message)));
 on('#btn-proof',      ()=>refreshProof().catch(e=>toast(e.message)));
+on('#btn-collapse-all', ()=>toggleAllDays());
 $('#inv-role')?.addEventListener('change', ()=>renderInviteTab());
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
