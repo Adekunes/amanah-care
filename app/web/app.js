@@ -1,4 +1,6 @@
 // Amanah Care web app. Vanilla ES module. All plaintext stays in this browser.
+// The Home dashboard, the routine and the record are all computed here, on the
+// phone, from decrypted events. The server only ever sorts ciphertext.
 import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64 }
   from './crypto.js';
 
@@ -12,6 +14,12 @@ let KEY = null;                 // CryptoKey H, memory only
 let ME = null;                  // { family_id, member_id, role, h, my_name }
 let lastHandoffAt = null;       // to auto-compose summary from care since last handoff
 const nameCache = {};           // member_id -> decrypted name (from MemberJoined events)
+let ELDER = 'Elder';            // decrypted from FamilyCreated
+let ROUTINE = [];               // decrypted RoutineSet items: {id,category,label,time,days,who}
+let routineDirty = false;
+let WEEK = [];                  // decrypted CareLogged rows, last 7 days
+let HANDOFFS = [];              // handoff read-model rows for the family
+let MEMBERS = [];               // {id, role}
 
 const CATS = [
   ['meds',        ['meds given','meds skipped','meds refused']],
@@ -20,13 +28,20 @@ const CATS = [
   ['mobility',    ['walked','physio done','rested']],
   ['mood',        ['calm','tired','agitated','cheerful']],
   ['appointment', ['doctor','pharmacy','clinic']],
-  ['transport',   ['drop-off done','pickup needed']],
+  ['transport',   ['drop-off done','pickup done','pickup needed']],
   ['note',        ['note']],
 ];
+const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
+const DAY_LABEL = { daily:'every day', weekdays:'weekdays', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat', sun:'Sun' };
 
 let pick = { category: null, preset: null };
 
-const esc = (v)=>String(v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = (v)=>String(v ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtTime = (iso)=>new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+// time if today, otherwise weekday + time, so a stale handoff never reads as fresh
+const fmtWhen = (iso)=>{ const d=new Date(iso); return d.toDateString()===new Date().toDateString() ? fmtTime(iso)
+  : d.toLocaleString([], {weekday:'short', hour:'2-digit', minute:'2-digit'}); };
+const cap = (s)=>{ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); };
 
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
@@ -77,8 +92,12 @@ function tab(name){
   $$('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
   $$('.tabview').forEach(v=>v.classList.add('hide'));
   $('#tab-'+name).classList.remove('hide');
+  if(name==='home') refreshHome(true);
+  if(name==='log') renderCareToday();
   if(name==='handoff') buildHandoff();
   if(name==='inbox') refreshInbox();
+  if(name==='routine') renderRoutine();
+  if(name==='record') renderRecord();
   if(name==='invite') renderInviteTab();
   if(name==='flow') renderFlow();
 }
@@ -119,7 +138,6 @@ function showInvite(){
   show('invite');
 }
 // Same code, reachable from inside the app so a family can grow after day one.
-// H is already in memory for whoever is signed in, so no re-entry of the key.
 function renderInviteTab(){
   const code = inviteCode();
   $('#invite-code-app').value = code;
@@ -167,29 +185,38 @@ function renderWhoAmI(){
   const dot = document.getElementById('who-dot');
   let hsh=0; for(const c of name) hsh=(hsh*31 + c.charCodeAt(0))>>>0;
   if(dot) dot.style.background = `hsl(${hsh % 360} 60% 45%)`;
-  document.title = `${name} \u00b7 Amanah Care`;
+  document.title = `${name} · Amanah Care`;
 }
 async function enterApp(){
-  show('app'); renderWhoAmI(); tab('log');
-  buildChipsets();
+  show('app'); renderWhoAmI();
+  buildChipsets(); buildRoutineForm();
+  await loadMembers();
   await loadNames();
+  await loadElder();
   await renderStrip();
-  await renderCareToday();
+  await loadRoutine();
+  await loadWeek();
+  tab('home');
   startPolling();
 }
 
-// ---- names ----
+// ---- members / names ----
+async function loadMembers(){ MEMBERS = await api(`/families/${ME.family_id}/members`).catch(()=>[]); }
+async function fetchEventsByType(type){
+  return api(`/families/${ME.family_id}/events?type=${encodeURIComponent(type)}`).catch(()=>[]);
+}
 async function loadNames(){
   // Names live encrypted in MemberJoined events. Decrypt them once into a cache.
   const evs = await fetchEventsByType('MemberJoined');
   for(const e of evs){ const p = await decryptJSON(KEY, e.iv, e.payload_cipher); if(p?.name) nameCache[e.actor_id]=p.name; }
 }
-async function fetchEventsByType(type){
-  // small helper endpoint reuse: /debug/events returns recent rows incl. actor_id
-  const rows = await api('/debug/events').catch(()=>[]);
-  return rows.filter(r=>r.type===type && r.family_id===ME.family_id);
+async function loadElder(){
+  const evs = await fetchEventsByType('FamilyCreated');
+  for(const e of evs){ const p = await decryptJSON(KEY, e.iv, e.payload_cipher); if(p?.elder_name) ELDER=p.elder_name; }
+  $('#routine-title').textContent = `${ELDER}'s routine`;
+  $('#record-title').textContent = `${ELDER}'s record`;
 }
-function nameOf(id){ return nameCache[id] || (id===ME.member_id ? ME.my_name : id.slice(0,6)); }
+function nameOf(id){ if(!id) return 'anyone'; return nameCache[id] || (id===ME.member_id ? ME.my_name : id.slice(0,6)); }
 
 // ---- preference strip ----
 async function renderStrip(){
@@ -197,11 +224,203 @@ async function renderStrip(){
   if(!pref){ $('#strip').classList.add('hide'); return; }
   const p = await decryptJSON(KEY, pref.iv, pref.payload_cipher);
   if(!p){ $('#strip').classList.add('hide'); return; }
+  $('#p-lang').value = p.lang||''; $('#p-diet').value = p.diet||'';
+  $('#p-prayer').value = p.prayer||''; $('#p-modesty').value = p.modesty||'';
   const bits = [['Language',p.lang],['Diet',p.diet],['Prayer',p.prayer],['Modesty',p.modesty]]
     .filter(([,v])=>v);
   $('#strip').innerHTML = bits.map(([k,v])=>
     `<span class="sbit"><i>${k}</i><b>${esc(v)}</b></span>`).join('');
   $('#strip').classList.remove('hide');
+}
+
+// ---- care data (decrypted, cached for the week) ----
+async function careSince(since){
+  const rows = await api(`/families/${ME.family_id}/care?since=${encodeURIComponent(since||'1970-01-01')}`);
+  const out=[];
+  for(const r of rows){ const p = await decryptJSON(KEY, r.iv, r.payload_cipher);
+    out.push({ ...r, text: p?.text ?? '🔒 locked', routine_id: p?.routine_id || null }); }
+  return out;
+}
+async function loadWeek(){
+  const since = new Date(Date.now()-6*86400e3); since.setHours(0,0,0,0);
+  WEEK = await careSince(since.toISOString()).catch(()=>WEEK);
+}
+function midnight(){ const m=new Date(); m.setHours(0,0,0,0); return m; }
+function todayItems(){ const m=midnight(); return WEEK.filter(c=>new Date(c.occurred_at)>=m); }
+
+// ---- routine (the plan) ----
+const hm = (t)=>{ const [h,m]=String(t||'0:0').split(':').map(Number); return (h||0)*60+(m||0); };
+const nowMin = ()=>{ const d=new Date(); return d.getHours()*60+d.getMinutes(); };
+function isOnDay(item, d=new Date()){
+  const ds = item.days; const day = DAYS[d.getDay()];
+  if(!ds || ds==='daily') return true;
+  if(ds==='weekdays') return d.getDay()>=1 && d.getDay()<=5;
+  return Array.isArray(ds) ? ds.includes(day) : ds===day;
+}
+function planFor(d=new Date()){ return ROUTINE.filter(i=>isOnDay(i,d)).sort((a,b)=>hm(a.time)-hm(b.time)); }
+// A routine item is done today if something was logged against it (routine_id),
+// or a same-category log starts with its label (logged from the Log tab).
+function doneFor(item, items){
+  return items.find(c => c.routine_id===item.id ||
+    (c.category===item.category && item.label && String(c.text).toLowerCase().startsWith(item.label.toLowerCase())));
+}
+function planRows(){
+  const today = todayItems(); const nm = nowMin();
+  return planFor().map(it=>{ const d=doneFor(it,today); const t=hm(it.time);
+    const st = d ? 'done' : (t<=nm ? (nm-t>60 ? 'overdue' : 'due') : 'later');
+    return { it, d, st }; });
+}
+async function loadRoutine(){
+  const ev = await api(`/families/${ME.family_id}/routine`).catch(()=>null);
+  const p = ev ? await decryptJSON(KEY, ev.iv, ev.payload_cipher) : null;
+  if(!routineDirty) ROUTINE = Array.isArray(p?.items) ? p.items : [];
+  return ev?.id || null;
+}
+async function saveRoutine(){
+  await postEncEvent('RoutineSet', { items: ROUTINE }, { actor_id: ME.member_id });
+  routineDirty=false; $('#routine-dirty').classList.add('hide');
+  toast('Routine saved'); renderRoutine();
+}
+function buildRoutineForm(){
+  const cat=$('#r-cat'); cat.innerHTML='';
+  for(const [c] of CATS){ const o=document.createElement('option'); o.value=c; o.textContent=c; cat.appendChild(o); }
+}
+function renderRoutine(){
+  const who=$('#r-who'); const cur=who.value; who.innerHTML='<option value="">Anyone</option>';
+  for(const m of MEMBERS){ const o=document.createElement('option'); o.value=m.id; o.textContent=`${nameOf(m.id)} (${m.role})`; who.appendChild(o); }
+  who.value=cur;
+  const box=$('#routine-list');
+  const items=[...ROUTINE].sort((a,b)=>hm(a.time)-hm(b.time));
+  if(!items.length){ box.innerHTML=`<p class="muted">No routine yet. Add ${esc(ELDER)}'s meds, meals, prayers, walks and pickups below.</p>`; return; }
+  box.innerHTML = items.map(it=>`<div class="r-item">
+      <div class="rt">${esc(it.time)}</div>
+      <div class="rb"><b>${esc(it.label)}</b><span>${esc(it.category)} · ${esc(DAY_LABEL[it.days]||(Array.isArray(it.days)?it.days.join(', '):it.days))} · ${esc(nameOf(it.who))}</span></div>
+      <button data-rm="${esc(it.id)}" title="Remove">×</button>
+    </div>`).join('');
+  $$('[data-rm]').forEach(b=>b.onclick=()=>{ ROUTINE=ROUTINE.filter(i=>i.id!==b.dataset.rm); markDirty(); renderRoutine(); });
+}
+function markDirty(){ routineDirty=true; $('#routine-dirty').classList.remove('hide'); }
+function addRoutineItem(){
+  const label=$('#r-label').value.trim(); if(!label) return toast('Say what it is');
+  ROUTINE.push({ id: uuid().slice(0,8), category: $('#r-cat').value, label,
+    time: $('#r-time').value || '08:00', days: $('#r-days').value, who: $('#r-who').value });
+  $('#r-label').value=''; markDirty(); renderRoutine();
+}
+// Tap "Done" on the plan: logs a CareLogged tied to the routine item.
+async function logRoutineItem(id){
+  const it = ROUTINE.find(i=>i.id===id); if(!it) return;
+  await postEncEvent('CareLogged', { text: it.label, routine_id: it.id }, { actor_id: ME.member_id, category: it.category });
+  toast(`Logged: ${it.label}`);
+  await refreshHome(true);
+}
+
+// ---- HOME dashboard ----
+let homeSig = null;
+async function refreshHome(force){
+  if(!force && $('#tab-home').classList.contains('hide')) return;
+  await loadWeek();
+  HANDOFFS = await api(`/families/${ME.family_id}/handoffs`).catch(()=>HANDOFFS);
+  await loadRoutine();
+  const sig = [WEEK.length, WEEK.at(-1)?.id, HANDOFFS.map(h=>h.id+h.status).join(','), JSON.stringify(ROUTINE), Math.floor(nowMin()/5)].join('|');
+  if(sig===homeSig && !force) return;
+  homeSig = sig;
+  renderHome();
+  renderWorkload();
+}
+function nextOf(cat, rows){
+  const nm=nowMin();
+  const t = rows.find(r=>r.it.category===cat && !r.d && hm(r.it.time)>=nm-60);
+  if(t) return { label:t.it.label, when:`today ${t.it.time}`, who:t.it.who };
+  for(let k=1;k<=7;k++){
+    const d=new Date(Date.now()+k*86400e3);
+    const f=planFor(d).find(i=>i.category===cat);
+    if(f) return { label:f.label, when:`${d.toLocaleDateString([], {weekday:'short'})} ${f.time}`, who:f.who };
+  }
+  return null;
+}
+function renderHome(){
+  const today = todayItems();
+  const rows = planRows();
+  const done = rows.filter(r=>r.d).length;
+  const open = HANDOFFS.filter(h=>h.status==='open').sort((a,b)=>new Date(b.opened_at)-new Date(a.opened_at));
+  const acked = HANDOFFS.filter(h=>h.status==='acknowledged').sort((a,b)=>new Date(b.acked_at)-new Date(a.acked_at))[0];
+  const last = today.at(-1);
+
+  // who has the elder right now, from the handoff chain
+  let duty, wait=false;
+  if(acked && (!last || new Date(acked.acked_at) > new Date(last.occurred_at) || acked.to_id===last.actor_id))
+    duty = `<b>${esc(nameOf(acked.to_id))}</b> has ${esc(ELDER)} since ${fmtWhen(acked.acked_at)}`;
+  else if(last) duty = `<b>${esc(nameOf(last.actor_id))}</b> logged last, ${fmtWhen(last.occurred_at)}`;
+  else duty = `No one has logged for ${esc(ELDER)} yet today`;
+  if(open.length){ wait=true; duty += ` · handoff ${esc(nameOf(open[0].from_id))} → <b>${esc(nameOf(open[0].to_id))}</b> waiting`; }
+
+  const cnt = (cat)=>today.filter(c=>c.category===cat).length;
+  const planned = (cat)=>rows.filter(r=>r.it.category===cat).length;
+  const lastOf = (cat)=>today.filter(c=>c.category===cat).at(-1);
+  const tile = (cls, big, lab, sub)=>`<div class="tile ${cls}"><div class="big">${big}</div><div class="tlab">${lab}</div><div class="tsub">${sub}</div></div>`;
+  const ratio = (cat, lab)=>{ const n=cnt(cat), p=planned(cat); const nx=nextOf(cat,rows);
+    return tile(p&&n>=p?'ok':'', `${n}${p?`<span class="of">/${p}</span>`:''}`, lab,
+      nx ? `next: ${esc(nx.label)} ${esc(nx.when)}` : (p?'all done for today':'not in the routine')); };
+  const mood = lastOf('mood');
+  const mob = lastOf('mobility');
+  const tr = nextOf('transport', rows), ap = nextOf('appointment', rows);
+  const tiles = [
+    ratio('meds','Meds today'),
+    ratio('meal','Meals today'),
+    ratio('prayer','Prayers today'),
+    tile('', mob?`<span class="big word">${esc(cap(mob.text.split(' (')[0]))}</span>`:'—', 'Mobility', mob?`${esc(nameOf(mob.actor_id))} · ${fmtTime(mob.occurred_at)}`:'nothing logged today'),
+    tile('', mood?`<span class="big word">${esc(cap(mood.text.split(' (')[0]))}</span>`:'—', 'Mood, last logged', mood?`${esc(nameOf(mood.actor_id))} · ${fmtTime(mood.occurred_at)}`:'nothing logged today'),
+    tile(open.length?'warn':'', String(open.length), 'Handoffs waiting', open.length?`${esc(nameOf(open[0].from_id))} → ${esc(nameOf(open[0].to_id))}`:'everyone is caught up'),
+    tile('', tr?`<span class="big word">${esc(tr.when)}</span>`:'—', 'Next pickup / drop-off', tr?`${esc(tr.label)} · ${esc(nameOf(tr.who))}`:'nothing planned'),
+    tile('', ap?`<span class="big word">${esc(ap.when)}</span>`:'—', 'Next appointment', ap?`${esc(ap.label)} · ${esc(nameOf(ap.who))}`:'nothing planned'),
+  ].join('');
+
+  const plan = rows.length ? rows.map(({it,d,st})=>`<div class="plan-row ${st}">
+      <div class="ptime">${esc(it.time)}</div>
+      <div class="pbody"><b>${esc(it.label)}</b><span>${esc(it.category)}${it.who?` · ${esc(nameOf(it.who))}`:''}</span></div>
+      <div class="pstate">${d ? `<span class="done-by">✓ ${esc(nameOf(d.actor_id))} ${fmtTime(d.occurred_at)}</span>`
+        : (st==='overdue' ? `<span class="pill overdue">not yet</span>` : '') + `<button data-done="${esc(it.id)}">Done</button>`}</div>
+    </div>`).join('')
+    : `<p class="muted">No routine yet. Set it up in the Routine tab and this becomes ${esc(ELDER)}'s daily checklist.</p>`;
+
+  // last 7 days, items per day
+  const days=[]; for(let k=6;k>=0;k--){ const d=midnight(); d.setDate(d.getDate()-k); const e=new Date(d); e.setDate(e.getDate()+1);
+    days.push({ d, n: WEEK.filter(c=>{ const t=new Date(c.occurred_at); return t>=d && t<e; }).length }); }
+  const max = Math.max(...days.map(x=>x.n), 1);
+  const weekHtml = days.map((x,i)=>`<div class="day ${i===6?'today':''}">
+      <span class="dn">${x.n}</span>
+      <div class="col" style="height:${Math.max(4, Math.round(x.n/max*44))}px"><i style="height:100%"></i></div>
+      <span class="dl">${x.d.toLocaleDateString([], {weekday:'narrow'})}</span>
+    </div>`).join('');
+  const weekTotal = WEEK.length;
+  const people = new Set(WEEK.map(c=>c.actor_id)).size;
+
+  // your part
+  const mine = today.filter(c=>c.actor_id===ME.member_id).length;
+  const myNext = rows.find(r=>!r.d && r.it.who===ME.member_id && hm(r.it.time)>=nowMin()-60);
+  const myWaiting = open.filter(h=>h.to_id===ME.member_id).length;
+  const badge=$('#inbox-badge'); badge.textContent=myWaiting; badge.classList.toggle('hide', !myWaiting);
+
+  $('#home').innerHTML = `
+    <div class="hero">
+      <div class="date">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
+      <h1>${esc(ELDER)}'s day</h1>
+      <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
+      <div class="progress"><div class="top"><span>Today's plan</span><b class="tnum">${done} of ${rows.length} done</b></div>
+        <div class="bar"><span style="width:${rows.length?Math.round(done/rows.length*100):0}%;background:#7fe3cd"></span></div></div>
+    </div>
+    <div class="tiles">${tiles}</div>
+    <div class="card"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
+      <div class="plan">${plan}</div></div>
+    <div class="card"><div class="card-head"><h2>Your part today</h2><span class="muted">${esc(ME.my_name)}</span></div>
+      <div class="mine">
+        <div><b>${mine}</b><span>items you logged</span></div>
+        <div><b>${myNext?esc(myNext.it.time):'—'}</b><span>${myNext?esc(myNext.it.label):'nothing assigned to you next'}</span></div>
+        <div><b>${myWaiting}</b><span>handoff${myWaiting===1?'':'s'} waiting for you</span></div>
+      </div></div>
+    <div class="card"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekTotal} items · ${people} ${people===1?'person':'people'}</span></div>
+      <div class="days">${weekHtml}</div></div>`;
+  $$('[data-done]').forEach(b=>b.onclick=()=>{ b.disabled=true; logRoutineItem(b.dataset.done).catch(e=>{ toast(e.message); b.disabled=false; }); });
 }
 
 // ---- chips / logging ----
@@ -240,37 +459,59 @@ async function logItem(){
   pick.preset=null; $('#btn-log').disabled=true;
   toast('Logged'); await renderCareToday();
 }
-async function careSince(since){
-  const rows = await api(`/families/${ME.family_id}/care?since=${encodeURIComponent(since||'1970-01-01')}`);
-  const out=[];
-  for(const r of rows){ const p = await decryptJSON(KEY, r.iv, r.payload_cipher);
-    out.push({ ...r, text: p?.text ?? '🔒 locked' }); }
-  return out;
-}
 async function renderCareToday(){
-  const midnight = new Date(); midnight.setHours(0,0,0,0);
-  const items = await careSince(midnight.toISOString());
+  await loadWeek();
+  const items = todayItems();
   const box = $('#care-today');
   $('#today-count').textContent = items.length;
   if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; return; }
-  box.innerHTML = items.map(i=>`<div class="item">
+  box.innerHTML = [...items].reverse().map(i=>`<div class="item">
     <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
-    <div class="muted">${esc(nameOf(i.actor_id))} · ${new Date(i.occurred_at).toLocaleTimeString()}</div>
+    <div class="muted">${esc(nameOf(i.actor_id))} · ${fmtTime(i.occurred_at)}</div>
   </div>`).join('');
+}
+
+// ---- RECORD: everything by day ----
+let recFilter = 'all';
+async function renderRecord(){
+  const since = new Date(Date.now()-30*86400e3); since.setHours(0,0,0,0);
+  const all = await careSince(since.toISOString()).catch(()=>[]);
+  const cats = ['all', ...new Set(all.map(c=>c.category).filter(Boolean))];
+  $('#rec-filter').innerHTML = cats.map(c=>`<button class="chip ${c===recFilter?'on':''}" data-rf="${esc(c)}">${esc(c)}</button>`).join('');
+  $$('[data-rf]').forEach(b=>b.onclick=()=>{ recFilter=b.dataset.rf; renderRecord(); });
+  const items = all.filter(c=>recFilter==='all' || c.category===recFilter).reverse();
+  $('#rec-count').textContent = items.length;
+  const box=$('#record');
+  if(!items.length){ box.innerHTML='<p class="muted">Nothing here yet.</p>'; return; }
+  const byDay = {};
+  for(const c of items){ const k=new Date(c.occurred_at).toDateString(); (byDay[k]=byDay[k]||[]).push(c); }
+  box.innerHTML = Object.entries(byDay).map(([k,list])=>{
+    const d=new Date(k); const lab = k===new Date().toDateString() ? 'Today' : d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+    return `<div class="rec-day"><b>${esc(lab)}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div>` +
+      list.map(c=>`<div class="rec-row"><span class="rt">${fmtTime(c.occurred_at)}</span>
+        <div class="rx">${esc(c.text)}<span>${esc(nameOf(c.actor_id))}</span></div><span class="pill">${esc(c.category)}</span></div>`).join('');
+  }).join('');
 }
 
 // ---- handoff ----
 async function buildHandoff(){
   await loadNames().catch(()=>{});
-  const members = await api(`/families/${ME.family_id}/members`);
+  await loadMembers();
   const sel = $('#ho-member'); sel.innerHTML='';
-  members.filter(m=>m.id!==ME.member_id).forEach(m=>{
+  MEMBERS.filter(m=>m.id!==ME.member_id).forEach(m=>{
     const o=document.createElement('option'); o.value=m.id; o.textContent=`${nameOf(m.id)} (${m.role})`; sel.appendChild(o); });
   $('#ho-summary').value = 'composing…';
   const items = await careSince(lastHandoffAt || new Date(Date.now()-12*3600e3).toISOString());
   $('#ho-summary').value = items.length
     ? items.map(i=>i.text).join(', ')
     : 'Nothing new since your last handoff.';
+  // What is next comes from the routine: everything still open today, in order.
+  if(!$('#ho-next').value.trim()){
+    await loadWeek();
+    const rest = planRows().filter(r=>!r.d && hm(r.it.time)>=nowMin()-60)
+      .map(r=>`${r.it.label} ${r.it.time}${r.it.who?` (${nameOf(r.it.who)})`:''}`);
+    $('#ho-next').value = rest.join(', ');
+  }
   updateHandoffPreview();
   await renderSent(false);
 }
@@ -332,7 +573,6 @@ async function renderSent(flash){
   const mine = rows.filter(h=>h.from_id===ME.member_id);
   $('#sent-count').textContent = mine.length;
   if(!mine.length){ box.innerHTML='<p class="muted">You have not sent any handoffs yet.</p>'; return; }
-  // group by recipient
   const byTo={};
   for(const h of mine){ (byTo[h.to_id]=byTo[h.to_id]||[]).push(h); }
   const groups=[];
@@ -366,8 +606,10 @@ async function refreshInbox(){
   const rows = await api(`/families/${ME.family_id}/handoffs?to=${ME.member_id}`).catch(()=>[]);
   const sig = rows.map(r=>r.id+r.status).join('|');
   if(sig!==inboxSig){ inboxSig=sig; renderInbox(rows); }
-  renderWorkload();
-  try{ if(typeof renderSent==='function') await renderSent(false); }catch(e){}
+  const waiting = rows.filter(r=>r.status==='open').length;
+  const badge=$('#inbox-badge'); badge.textContent=waiting; badge.classList.toggle('hide', !waiting);
+  await refreshHome(false).catch(()=>{});
+  if(!$('#tab-handoff').classList.contains('hide')) await renderSent(false).catch(()=>{});
 }
 async function renderInbox(rows){
   const box=$('#inbox');
@@ -377,7 +619,6 @@ async function renderInbox(rows){
   const cards=[];
   for(const h of rows){
     const p = await decryptJSON(KEY, h.iv, h.summary_cipher) || {};
-    const care = await careSince(new Date(new Date(h.opened_at).getTime()-12*3600e3).toISOString());
     const strip = $('#strip').innerHTML;
     cards.push(`<div class="card">
       <div class="card-head"><h2>From ${esc(nameOf(h.from_id))}</h2>
@@ -389,7 +630,7 @@ async function renderInbox(rows){
         <div>${esc(p.next||'—')}</div></div>
       ${h.status==='open'
         ? `<button data-ack="${h.id}">Accept handoff</button>`
-        : `<p class="muted">Accepted ${new Date(h.acked_at).toLocaleTimeString()}</p>`}
+        : `<p class="muted">Accepted ${fmtTime(h.acked_at)}</p>`}
     </div>`);
   }
   box.innerHTML=cards.join('');
@@ -401,7 +642,9 @@ async function ack(handoff_id){
   toast('Accepted'); setTimeout(refreshInbox, 600);
 }
 async function renderWorkload(){
-  const rows = await api(`/families/${ME.family_id}/workload`).catch(()=>[]);
+  const since = new Date(Date.now()-6*86400e3); since.setHours(0,0,0,0);
+  const rows = (await api(`/families/${ME.family_id}/workload?since=${since.toISOString().slice(0,10)}`).catch(()=>[]))
+    .filter(r=>r.care_count+r.handoff_count>0);
   const box=$('#workload');
   if(!rows.length){ box.innerHTML='<p class="muted">No activity yet.</p>'; return; }
   const max = Math.max(...rows.map(r=>r.care_count+r.handoff_count),1);
@@ -460,10 +703,10 @@ async function renderFlow(){
   const read = '<span class="tag read">readable</span>';
   const seal = '<span class="tag seal">sealed</span>';
   const ms = (v)=> v==null ? '<span class="tag ms">…</span>' : `<span class="tag ms">${v} ms</span>`;
-  const plain = t.plain ? Object.values(t.plain).filter(Boolean).join(' · ') : '—';
+  const plain = t.plain ? Object.values(t.plain).filter(Boolean).map(v=>typeof v==='string'?v:JSON.stringify(v)).join(' · ') : '—';
   box.innerHTML = [
     hop(1,'readable','This phone','browser memory',
-      `<b>${esc(plain)}</b> in the clear, plus the family key H. H is never sent anywhere.`, read),
+      `<b>${esc(plain.slice(0,160))}</b> in the clear, plus the family key H. H is never sent anywhere.`, read),
     hop(2,'sealed','Over the wire','POST /events',
       `AES-GCM ciphertext under a fresh IV. Only routing stays clear: type, actor, category, time.`, seal+ms(t.apiMs)),
     hop(3,'sealed','api container','membership check, then append',
@@ -490,6 +733,8 @@ $('#ho-member').onchange = updateHandoffPreview;
 $('#ho-next').oninput    = updateHandoffPreview;
 $('#btn-prefs').onclick  = ()=>savePrefs().catch(e=>toast(e.message));
 $('#btn-proof').onclick  = ()=>refreshProof().catch(e=>toast(e.message));
+$('#btn-r-add').onclick  = addRoutineItem;
+$('#btn-r-save').onclick = ()=>saveRoutine().catch(e=>toast(e.message));
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
 // resume session if present

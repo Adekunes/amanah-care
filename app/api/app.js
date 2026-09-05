@@ -149,13 +149,15 @@ export function createApp({ db, redis, stream = 'events' }) {
   }));
 
   // Workload counts per member. Metadata only, no decryption (FR-09, AR-08).
+  // Optional ?since=YYYY-MM-DD narrows it to recent days (the dashboard asks for the week).
   app.get('/families/:id/workload', wrap(async (req, res) => {
+    const since = req.query.since || '1970-01-01';
     const r = await db.query(
       `SELECT member_id,
               sum(care_count)::int    AS care_count,
               sum(handoff_count)::int AS handoff_count
-         FROM workload_view WHERE family_id=$1
-         GROUP BY member_id ORDER BY care_count DESC`, [req.params.id]);
+         FROM workload_view WHERE family_id=$1 AND day >= $2
+         GROUP BY member_id ORDER BY care_count DESC`, [req.params.id, since]);
     res.json(r.rows);
   }));
 

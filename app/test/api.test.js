@@ -200,6 +200,11 @@ describe('api', () => {
       const bySis = rows.find((r) => r.member_id === f.sis), byElder = rows.find((r) => r.member_id === f.elder);
       assert.deepEqual([bySis.care_count, bySis.handoff_count], [2, 0]);
       assert.deepEqual([byElder.care_count, byElder.handoff_count], [0, 1]);
+      // ?since narrows to recent days; a date in the future returns nothing
+      const later = await (await t.get(`/families/${f.fid}/workload?since=2099-01-01`)).json();
+      assert.deepEqual(later, []);
+      const all = await (await t.get(`/families/${f.fid}/workload?since=2000-01-01`)).json();
+      assert.equal(all.length, 2);
     });
 
     test('members lists ids and roles, never names (names live encrypted in events)', async () => {

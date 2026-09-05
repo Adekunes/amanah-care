@@ -14,7 +14,7 @@
   <section id="view-landing">
     <div class="group">
       <h1>Amanah Care</h1>
-      <p class="muted">A private handoff log for families caring for an elder. Only your family holds the key. The server sees scrambled text.</p>
+      <p class="muted">A private care record for families looking after an elder. Only your family holds the key. The server sees scrambled text.</p>
     </div>
 
     <div class="card">
@@ -77,9 +77,12 @@
       <span class="who-role" id="who-role"></span>
     </div>
     <nav class="tabs">
-      <button data-tab="log" class="on">Log</button>
+      <button data-tab="home" class="on">Home</button>
+      <button data-tab="log">Log</button>
       <button data-tab="handoff">Hand off</button>
-      <button data-tab="inbox">Inbox</button>
+      <button data-tab="inbox">Inbox<span id="inbox-badge" class="badge hide">0</span></button>
+      <button data-tab="routine">Routine</button>
+      <button data-tab="record">Record</button>
       <button data-tab="prefs">Prefs</button>
       <button data-tab="invite">Invite</button>
       <button data-tab="flow">Flow</button>
@@ -87,8 +90,20 @@
 
     <div id="strip" class="strip hide"></div>
 
+    <!-- HOME: the dashboard, computed on this phone from decrypted events -->
+    <div id="tab-home" class="tabview">
+      <div id="home"><p class="muted">Loading…</p></div>
+      <div class="card">
+        <div class="group">
+          <h2>Who carried the week</h2>
+          <p class="muted">Counted from event metadata. The server never reads a note to build this.</p>
+        </div>
+        <div id="workload"><p class="muted">Loading…</p></div>
+      </div>
+    </div>
+
     <!-- LOG -->
-    <div id="tab-log" class="tabview">
+    <div id="tab-log" class="tabview hide">
       <div class="card">
         <div class="group">
           <h2>Log care</h2>
@@ -118,13 +133,13 @@
       <div class="card">
         <div class="group">
           <h2>Hand off</h2>
-          <p class="muted">The summary is built from what you logged. You only write what comes next.</p>
+          <p class="muted">What happened is built from your log. What is next is built from the routine. Edit either.</p>
         </div>
         <div class="field"><label for="ho-member">Hand off to</label>
           <select id="ho-member"></select></div>
-        <div class="field"><label for="ho-summary">What happened (auto)</label>
+        <div class="field"><label for="ho-summary">What happened (from your log)</label>
           <textarea id="ho-summary" readonly></textarea></div>
-        <div class="field"><label for="ho-next">What is next (you write this)</label>
+        <div class="field"><label for="ho-next">What is next (from the routine, edit freely)</label>
           <textarea id="ho-next" placeholder="e.g. Dhuhr meds at 1pm, physio at 3pm"></textarea></div>
         <div id="ho-preview" class="preview hide"></div>
         <button id="btn-handoff">Send handoff</button>
@@ -143,12 +158,48 @@
         <div class="card-head"><h2>Handoffs to you</h2><span class="muted">checks every 4s</span></div>
         <div id="inbox"></div>
       </div>
+    </div>
+
+    <!-- ROUTINE: the elder's recurring plan -->
+    <div id="tab-routine" class="tabview hide">
+      <div class="card">
+        <div class="card-head"><h2 id="routine-title">Routine</h2><span class="pill hide" id="routine-dirty">unsaved</span></div>
+        <p class="muted">Meds, meals, prayers, walks, pickups, appointments. The plan every day is measured against. Stored encrypted like everything else.</p>
+        <div id="routine-list"><p class="muted">No routine yet.</p></div>
+        <button id="btn-r-save">Save routine</button>
+      </div>
       <div class="card">
         <div class="group">
-          <h2>Workload this week</h2>
-          <p class="muted">Counted from event metadata. The server never reads a note to build this.</p>
+          <h2>Add to the routine</h2>
         </div>
-        <div id="workload"><p class="muted">Loading…</p></div>
+        <div class="stack tight">
+          <div class="field"><label for="r-cat">Category</label><select id="r-cat"></select></div>
+          <div class="field"><label for="r-label">What</label><input id="r-label" placeholder="e.g. morning meds"></div>
+          <div class="row2">
+            <div class="field"><label for="r-time">Time</label><input id="r-time" type="time" value="08:00"></div>
+            <div class="field"><label for="r-days">Days</label>
+              <select id="r-days">
+                <option value="daily">Every day</option>
+                <option value="weekdays">Weekdays</option>
+                <option value="mon">Mondays</option><option value="tue">Tuesdays</option>
+                <option value="wed">Wednesdays</option><option value="thu">Thursdays</option>
+                <option value="fri">Fridays</option><option value="sat">Saturdays</option>
+                <option value="sun">Sundays</option>
+              </select></div>
+          </div>
+          <div class="field"><label for="r-who">Who does it</label><select id="r-who"><option value="">Anyone</option></select></div>
+        </div>
+        <button id="btn-r-add" class="ghost">Add item</button>
+      </div>
+    </div>
+
+    <!-- RECORD: everything, by day -->
+    <div id="tab-record" class="tabview hide">
+      <div class="card">
+        <div class="card-head"><h2 id="record-title">Record</h2><span class="pill" id="rec-count">0</span></div>
+        <p class="muted">Everything logged in the last 30 days, newest first. Decrypted on this phone only.</p>
+        <div id="rec-filter" class="chips"></div>
+        <div id="record"><p class="muted">Loading…</p></div>
       </div>
     </div>
 
@@ -157,7 +208,7 @@
       <div class="card">
         <div class="group">
           <h2>Elder preferences</h2>
-          <p class="muted">Rides on top of every handoff card. Encrypted like everything else.</p>
+          <p class="muted">Recorded with the elder. Rides on top of every handoff card. Encrypted like everything else.</p>
         </div>
         <div class="stack tight">
           <div class="field"><label for="p-lang">Language</label>
