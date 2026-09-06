@@ -105,44 +105,13 @@ Elder consent filter + audience filtering (needs a scoped support key); RTL Urdu
 
 ## 6. Repo state (IMPORTANT)
 
-GitHub `main` is still at `48f7ee0`. Local `main` is **30 commits ahead** after the docs commit below, all authored as the owner with the Fable co-author line, working tree clean:
+**Pushed.** GitHub `main` = local `main` (merge commit `1b8532d` on top of the owner's docs commits `75c258c` CLAUDE.md and `b4d231e` FULL-CODEBASE.md, pushed from the other Mac at 09:52 and 09:56 on 6 Sep). On this Mac `gh` holds two accounts, `Adekunes` (active) and `Rselectronic`; remote is `https://github.com/Adekunes/amanah-care.git`. Pushing again is `git push origin main`.
 
-```
-(docs commit for tonight's features, see git log)
-3bab805 style: visual pass on phone and desktop; deck: cost model and who carries it
-2f209f4 feat: desktop layout, richer log, multi-select and undo, role themes, one login across families
-cc4117c seed: fasting and care contact in the demo preferences
-d213c69 feat(web): recommendations for today, rules engine over the record on the phone
-754ee17 docs(pitch): rewrite the deck around amanah, ten slides, Q&A as a separate backup PDF
-79eb6ce feat: hospital sheet, patterns not predictions, emergency button
-d128ee5 docs: Server view in the demo script, close, Q&A and handoff
-23e6d8a feat(web): Server view, one tap shows any screen as the server sees it
-dae8017 feat(web): care log grouped by day, week or month, foldable groups, collapse all
-2936296 feat(web): log page shows the care log day by day, live
-93a3a85 feat: live updates over server-sent events, polling kept as the safety net
-9cf24f1 docs(pitch): fit the evidence slide
-a1b5cd3 docs(pitch): cut the talk to 8 slides, diagnosis then cure, Q&A as backup
-7c93143 docs: handoff repo state, push status, late additions
-8e683db feat(web): family name wiring in app.js and seed (follow-up)
-6e375de feat(web): family name on top of every screen
-9e518a8 fix(api): allow PUT and DELETE in CORS so the browser can save subscriptions
-0cb8429 feat: alerts with per-member event subscriptions, notifier service, logout
-e327fc2 chore: contract for alerts + logout (schema, route mounts, web hooks, spec)
-deb8627 docs: Docker stack verified on the demo Mac
-46e9165 docs(pitch): wording, add the real-product question to the appendix
-af4b2aa docs(pitch): login and elder view on the slides and in the explainer
-78d409d docs(pitch): login and elder view on the deck and explainer, PDFs regenerated
-a4b97b2 docs: login and elder view in deck, explainer, README and handoff
-19403e3 feat: login after the first code join, elder view, one session per tab
-d8e7ac4 docs: refresh agent handoff, owner notes and README for the current state
-6034913 docs(pitch): slide deck, simple-English explainer, judge Q&A, sources
-b7ec6b2 feat(web): Home dashboard, elder routine, record tab, one-process dev stack
-538d8d2 test: in-process suite with coverage for api, projector and client crypto
-```
+Two things to decide with the owner and safio:
+- `FULL-CODEBASE.md` was generated from the code at `48f7ee0` (last night, before the 40 commits) and says "use THIS". It is stale. Regenerate from current main or delete it; do not let an agent treat it as the source of truth.
+- Branch `origin/demo-prep` (safio, 5 Sep 18:44 to 19:02): their own day-grouped log, notifier, events endpoint and demo seed. Not merged, no conflict with main, overlapping features built differently on main. Keep as history or close.
 
-Push status: the owner approved the push (2026-09-05 ~22:15) but has not completed the GitHub device login for the Adekunes account on this Mac (two codes expired unused). `gh` here is `Rselectronic`, which cannot see the private repo. Remote is `https://github.com/Adekunes/amanah-care.git`. To push: `gh auth login -h github.com -p https -w` (owner enters the code as Adekunes), then `gh auth switch -u Adekunes && gh auth setup-git && git fetch origin && git push origin main`. If the remote moved (safio), rebase or merge by hand first. A one-shot watcher exists at the session scratchpad `push-when-ready.sh` but the scratchpad does not survive the session; re-create if needed.
-
-Late additions (03:00 to 03:40): visual pass on phone and desktop (`styles.css` "visual pass" block); slide 9 is the cost model (year-one monthly estimate $27,300; agencies $30 per elder, sponsors $3 per family, Family Plus $4, families $0; break-even about 900 elders; EÉSAD 2024 figures sourced); slide 8 the database diagram; slide 10 the timeline. Deck stays 10 pages plus unprinted backup; Q&A backup PDF separate.
+The repo now carries a root `CLAUDE.md` with anti-slop rules (smallest diff, nothing extra, no new files or docs unless asked, match the codebase). It loads automatically; follow it.
 
 ## 7. Architecture + deviations (unchanged in substance)
 
