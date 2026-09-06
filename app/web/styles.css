@@ -393,3 +393,18 @@ body.elder input{font-size:19px}
 .grp-head{cursor:pointer;user-select:none}
 .grp-head .chev{font-style:normal;display:inline-block;width:16px;color:var(--muted)}
 .grp.closed .rec-day{border-bottom-color:var(--line)}
+
+/* ---- recommendations for today ---- */
+.rec{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;display:flex;flex-direction:column;gap:8px}
+.rec-head{display:flex;align-items:center;gap:10px}
+.rec-head b{font-size:15px;line-height:1.3}
+.rec .because{font-size:14px;color:var(--ink)}
+.rec ul{margin:0;padding-left:20px;font-size:14px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+.rec .note{font-size:12.5px;color:var(--ink-2);background:var(--brand-soft);border-radius:8px;padding:8px 10px;line-height:1.4}
+.rec .esc{font-size:12.5px;color:var(--muted);line-height:1.4}
+.rec-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rec .prov{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rec-foot button{width:auto}
+.pill.notice{background:var(--line);color:var(--ink-2)}
+.pill.attention{background:var(--seal-soft);color:var(--seal)}
+.pill.contact{background:var(--warn-soft);color:var(--warn)}

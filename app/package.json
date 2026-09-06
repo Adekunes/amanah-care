@@ -6,7 +6,7 @@
   "description": "Test suite for the Amanah Care api, projector and client crypto. Runs in-process on an in-memory Postgres and a fake stream, no Docker needed.",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "coverage": "node --test --experimental-test-coverage --test-coverage-include='api/app.js' --test-coverage-include='projector/apply.js' --test-coverage-include='web/crypto.js' --test-coverage-include='api/routes/*.js' --test-coverage-include='notifier/match.js' --test-coverage-include='notifier/apply.js' --test-coverage-include='api/bus.js' test/*.test.js"
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include='api/app.js' --test-coverage-include='projector/apply.js' --test-coverage-include='web/crypto.js' --test-coverage-include='api/routes/*.js' --test-coverage-include='notifier/match.js' --test-coverage-include='notifier/apply.js' --test-coverage-include='api/bus.js' --test-coverage-include='web/patterns.js' test/*.test.js"
   },
   "devDependencies": {
     "pg-mem": "^3.0.14"

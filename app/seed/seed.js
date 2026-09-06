@@ -74,7 +74,7 @@ const ROUTINE = [
 await ev('RoutineSet',{items:ROUTINE},{actor_id:sisA}, week);
 
 // Six days of history. Morning / afternoon / evening shifts rotate.
-const shifts = { 6:[sisA,fat,fat], 5:[sisA,sisA,fat], 4:[fat,fat,abd], 3:[abd,abd,sisA], 2:[sisA,sisA,fat], 1:[fat,sisA,sisA] };
+const shifts = { 6:[sisA,sisA,fat], 5:[sisA,sisA,sisA], 4:[sisA,fat,sisA], 3:[sisA,sisA,abd], 2:[sisA,sisA,sisA], 1:[sisA,sisA,sisA] };  // Sister A carries the week
 const who = (k, hhmm)=>{ const h=+hhmm.split(':')[0]; const s=shifts[k]; return h<12?s[0]:(h<18?s[1]:s[2]); };
 const care = async (k, hhmm, category, text, routine_id, actor)=>ev('CareLogged',{ text, ...(routine_id?{routine_id}:{}) },{ actor_id: actor||who(k,hhmm), category }, at(k,hhmm));
 const MOODS = { 6:'calm', 5:'cheerful', 4:'tired (slept badly)', 3:'calm', 2:'agitated (missed her nap)', 1:'calm' };
@@ -84,12 +84,11 @@ for (let k=6; k>=1; k--) {
   await care(k,'08:35','meal', k===4?'breakfast (ate half)':'breakfast','meal1');
   await care(k,'10:00','mood', MOODS[k]);
   await care(k,'13:10','prayer','Dhuhr','dhuhr');
-  await care(k,'13:35','meal', (k===2||k===4)?'lunch (refused food, had tea and dates)':'lunch','meal2');
+  await care(k,'13:35','meal', (k===1||k===2)?'lunch (refused food, had tea and dates)':'lunch','meal2');
   if (k===5||k===3||k===1) await care(k,'18:40','mood','agitated (restless before Maghrib, settled after)');
   await care(k,'14:05','meds','afternoon meds','meds2');
   if (k!==5) await care(k,'16:50','prayer','Asr','asr');
-  if (k!==2) await care(k,'17:20','mobility', k===4?'walk after Asr (short, knee sore)':'walk after Asr','walk');
-  else await care(k,'17:20','mobility','rested');
+  if (k>2) await care(k,'17:20','mobility', k===4?'walk after Asr (short, knee sore)':'walk after Asr','walk');   // nothing logged for 48 h
   await care(k,'19:05','meal','dinner','meal3');
   await care(k,'19:30','prayer','Maghrib','maghrib');
   await care(k,'21:05','meds','night meds','meds3');

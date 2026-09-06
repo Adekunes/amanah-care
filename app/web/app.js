@@ -317,6 +317,7 @@ async function renderStrip(){
   $('#p-prayer').value = p.prayer||''; $('#p-modesty').value = p.modesty||'';
   $('#p-conditions').value = p.conditions||''; $('#p-allergies').value = p.allergies||'';
   $('#p-doctor').value = p.doctor||''; $('#p-contacts').value = p.contacts||'';
+  $('#p-fasting').value = p.fasting||''; $('#p-carecontact').value = p.care_contact||'';
   const bits = [['Language',p.lang],['Diet',p.diet],['Prayer',p.prayer],['Modesty',p.modesty]]
     .filter(([,v])=>v);
   $('#strip').innerHTML = bits.map(([k,v])=>
@@ -417,6 +418,7 @@ async function refreshHome(force){
   homeSig = sig;
   renderHome();
   renderWorkload();
+  runHooks(homeHooks);
 }
 function nextOf(cat, rows){
   const nm=nowMin();
@@ -553,7 +555,7 @@ function renderElderHome(){
       <div class="erow"><span class="etime">${ap?esc(ap.when.split(' ')[0]):'—'}</span><span class="elabel">${ap?esc(cap(ap.label)):'No appointment planned'}</span><span class="ewho">${ap?esc(nameOf(ap.who)):''}</span></div>
       <div class="erow"><span class="etime">${tr?esc(tr.when.split(' ')[0]):'—'}</span><span class="elabel">${tr?esc(cap(tr.label)):'No pickup planned'}</span><span class="ewho">${tr?esc(nameOf(tr.who)):''}</span></div></div>
     <div class="ecard"><h2>What your family knows about you</h2>
-      ${PREFS ? `<div class="eprefs">${[['Language',PREFS.lang],['Food',PREFS.diet],['Prayer',PREFS.prayer],['Personal care',PREFS.modesty]].filter(([,v])=>v).map(([k,v])=>`<div><span>${k}</span><br>${esc(v)}</div>`).join('')}</div><p class="muted" style="font-size:15px">Shown to whoever looks after you, on every handoff.</p>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
+      ${PREFS ? `<div class="eprefs">${[['Language',PREFS.lang],['Food',PREFS.diet],['Prayer',PREFS.prayer],['Personal care',PREFS.modesty],['Fasting',PREFS.fasting]].filter(([,v])=>v).map(([k,v])=>`<div><span>${k}</span><br>${esc(v)}</div>`).join('')}</div><p class="muted" style="font-size:15px">Shown to whoever looks after you, on every handoff.</p>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
     <div class="ecard"><h2>Who can read your record</h2><p style="font-size:21px;margin:0">${family.length?esc(family.join(', ')):'Only you'}</p>
       <p class="muted" style="font-size:15px">They hold your family key. Nobody else can read it, not even the people who run this app.</p></div>`;
   wireEmergencyButtons();
@@ -982,7 +984,8 @@ async function savePrefs(){
   const payload={ lang:$('#p-lang').value.trim(), diet:$('#p-diet').value.trim(),
     prayer:$('#p-prayer').value.trim(), modesty:$('#p-modesty').value.trim(),
     conditions:$('#p-conditions').value.trim(), allergies:$('#p-allergies').value.trim(),
-    doctor:$('#p-doctor').value.trim(), contacts:$('#p-contacts').value.trim() };
+    doctor:$('#p-doctor').value.trim(), contacts:$('#p-contacts').value.trim(),
+    fasting:$('#p-fasting').value.trim(), care_contact:$('#p-carecontact').value.trim() };
   await postEncEvent('PreferenceSet', payload, { actor_id: ME.member_id });
   toast('Preferences saved'); await renderStrip();
 }
@@ -1059,7 +1062,7 @@ async function toggleServerView(){
 }
 
 // ---- hooks for sibling modules (alerts.js). Kept tiny on purpose. ----
-const enterHooks=[], pollHooks=[], tabHooks={};
+const enterHooks=[], pollHooks=[], tabHooks={}, homeHooks=[];
 window.amanah = {
   get me(){ return ME; }, get key(){ return KEY; },
   api, decryptJSON, nameOf, toast, esc, fmtWhen, isElder, tab,
@@ -1067,6 +1070,10 @@ window.amanah = {
   onPoll(fn){ pollHooks.push(fn); },
   onTab(name, fn){ (tabHooks[name]=tabHooks[name]||[]).push(fn); },
   onLive(fn){ liveHooks.push(fn); },
+  onHome(fn){ homeHooks.push(fn); },
+  get prefs(){ return PREFS; }, get routine(){ return ROUTINE; }, get weekItems(){ return WEEK; },
+  get handoffs(){ return HANDOFFS; }, get members(){ return MEMBERS; }, get elderName(){ return ELDER; },
+  planFor, doneFor, isServerView: ()=>SERVER_VIEW, postEncEvent,
 };
 async function runHooks(list){ for(const fn of list){ try{ await fn(); }catch(e){ console.warn('[hook]', e.message); } } }
 

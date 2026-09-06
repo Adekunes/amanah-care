@@ -39,6 +39,10 @@ cd app/seed && npm install && API=http://localhost:4000 node seed.js
 
 Open http://localhost:8080 in as many tabs as you have family members (each tab is its own session). Log in as `sistera`, `abdullah`, `fatima` or `ammi` with password 333, or paste a printed code into the Join box. The first join is always by code (it proves you were handed the key); after that, a login and password. The elder (`ammi`) gets her own large-type view.
 
+## Recommendations for today
+
+A recommendation table (`app/web/recommendations.json`, French and English, Arabic labels) and a rules engine (`app/web/patterns.js`) run on the phone over the decrypted record: two meals in a row not logged, food refused twice in 48 hours, a medication slot not logged yesterday, no movement logged in 48 hours, agitated evenings three times in a week, a past appointment not logged, a handoff waiting more than 30 minutes, one person carrying 70% of the week, nobody logging for 48 hours. Each match shows a "because" line built from the counts, two to four actions for the member's role, the cultural note from the stored preferences, and the escalation path. Counts and time windows only: no learning, no model, never a diagnosis, never a medication instruction. A caregiver can acknowledge a pattern for 24 hours (an encrypted event). The server never learns which pattern fired.
+
 ## Tests
 
 ```bash

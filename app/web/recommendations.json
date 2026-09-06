@@ -1,0 +1,272 @@
+/* Amanah Care recommendation table. Rules over the family's own record, run on the phone.
+   Schema per row: pattern_id, pattern_label{fr,en,ar}, signal_source[], detection_rule, confidence_caveats,
+   tier (NOTICE|ATTENTION|URGENT_CONTACT: contact urgency, never medical urgency), recommendation_family{fr,en},
+   recommendation_pro{fr,en}, cultural_adaptation, escalation_path, suppression_rule, provenance.
+   Rows the author was unsure about (provenance label or wording), for review by the team:
+   - MEAL_REFUSED_REPEAT: "smaller portions, more often" is widely given caregiver guidance; labelled geriatric care best practice, not cited.
+   - MOBILITY_NONE_LOGGED: "offer gentle movement daily" is general public health guidance for older adults; labelled as such, not cited.
+   - CAREGIVER_LOAD_CONCENTRATED: respite wording; labelled team judgement.
+   - MED_ROUTINE_LATE: kept strictly to "record and report", no timing advice; please re-read.
+   Loader: patterns.js parseTable() strips this leading comment before JSON.parse. Rows with only unconnected signals are shown nowhere yet. */
+[
+  {
+    "pattern_id": "MEAL_SKIPPED_CONSECUTIVE",
+    "pattern_label": { "fr": "Deux repas de suite non notés", "en": "Two meals in a row not logged", "ar": "وجبتان متتاليتان غير مسجّلتين" },
+    "signal_source": ["meal_log", "routine"],
+    "detection_rule": "Two consecutive routine meal slots within the last 24 hours, each more than 90 minutes past its planned time, with no meal log matching either slot.",
+    "confidence_caveats": "A meal may have happened and simply not been logged. Check with whoever was there before acting.",
+    "tier": "ATTENTION",
+    "recommendation_family": {
+      "fr": ["Demandez à la personne qui était là si les repas ont eu lieu, et notez-les.", "Proposez maintenant quelque chose de léger qu'elle aime, sans insister.", "Décidez ensemble qui s'occupe du prochain repas et notez-le dans le plan."],
+      "en": ["Ask whoever was there whether the meals happened, and log them.", "Offer something light she likes now, without pressing.", "Agree who covers the next meal and note it in the plan."]
+    },
+    "recommendation_pro": {
+      "fr": ["Vérifiez auprès de la famille avant de conclure qu'un repas a été sauté.", "Documentez l'heure, ce qui a été offert et ce qui a été pris.", "Observez le prochain repas : appétit, boisson, confort. Notez-le tel quel."],
+      "en": ["Check with the family before concluding a meal was skipped.", "Document the time, what was offered and what was taken.", "Observe the next meal: appetite, fluids, comfort. Record it plainly."]
+    },
+    "cultural_adaptation": "Suppressed on a day the stored preferences mark as a fasting day. The stored diet preference (for example soft food, halal, no gelatin) shapes what to offer. Prayer times from the routine can shape when to offer. Text in the stored language when available.",
+    "escalation_path": "If meals stay unlogged or declined for two days, contact the care team (the stored care contact when present).",
+    "suppression_rule": "Cooldown 12 hours after it shows. Suppressed on a stored fasting day. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "MEAL_REFUSED_REPEAT",
+    "pattern_label": { "fr": "Repas refusés à répétition", "en": "Food refused more than once", "ar": "رفض الطعام أكثر من مرة" },
+    "signal_source": ["meal_log"],
+    "detection_rule": "Two or more meal logs containing 'refused' (or 'refusé') in the last 48 hours.",
+    "confidence_caveats": "A refusal can be taste, timing, tiredness, a visitor, or simply not being hungry. Two refusals are a reason to ask, not a conclusion.",
+    "tier": "ATTENTION",
+    "recommendation_family": {
+      "fr": ["Proposez de plus petites portions, plus souvent, et des plats qu'elle choisit elle-même.", "Offrez de l'eau ou du thé entre les repas et notez ce qu'elle prend.", "Demandez-lui comment elle se sent par rapport aux repas aujourd'hui ; notez sa réponse dans ses mots.", "Dites-le au prochain aidant dans la passation."],
+      "en": ["Offer smaller portions more often, and dishes she chooses herself.", "Offer water or tea between meals and log what she takes.", "Ask her how she feels about eating today; write her answer in her own words.", "Tell the next caregiver in the handoff."]
+    },
+    "recommendation_pro": {
+      "fr": ["Documentez ce qui a été offert, ce qui a été pris, à quelle heure.", "Observez le confort à mâcher et à avaler et les liquides pris ; notez-le simplement, sans interpréter.", "Demandez à la famille ce qu'elle aime d'habitude et proposez-le."],
+      "en": ["Document what was offered, what was taken, and when.", "Observe chewing and swallowing comfort and fluids taken; note it plainly, without interpreting.", "Ask the family what she usually enjoys and offer that."]
+    },
+    "cultural_adaptation": "Suppressed on a stored fasting day. The stored diet preference decides what is offered. If a language is stored, ask in that language. Meals can be placed around prayer times from the routine.",
+    "escalation_path": "If refusals continue beyond 48 hours, contact the care team (the stored care contact when present).",
+    "suppression_rule": "Cooldown 24 hours. Suppressed on a stored fasting day. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "geriatric care best practice"
+  },
+  {
+    "pattern_id": "MED_ROUTINE_NOT_LOGGED",
+    "pattern_label": { "fr": "Un créneau de médicaments non noté hier", "en": "A medication slot not logged yesterday", "ar": "موعد دواء لم يُسجّل أمس" },
+    "signal_source": ["med_log", "routine"],
+    "detection_rule": "A routine medication slot from yesterday has no matching medication log, on a day where the family logged at least one item.",
+    "confidence_caveats": "Given but not logged is the most common reason. This is about the record, not about what she took.",
+    "tier": "NOTICE",
+    "recommendation_family": {
+      "fr": ["Demandez à la personne qui était là hier si ce créneau a eu lieu, et notez-le.", "Décidez qui s'occupe de ce créneau aujourd'hui et mettez son nom dans le plan.", "Ne changez rien vous-mêmes ; en cas de doute, demandez à son pharmacien ou à l'équipe de soins."],
+      "en": ["Ask whoever was there yesterday whether that slot happened, and log it.", "Decide who covers that slot today and put their name in the plan.", "Do not change anything yourselves; if in doubt, ask her pharmacist or care team."]
+    },
+    "recommendation_pro": {
+      "fr": ["Confirmez auprès de la famille ; documentez la réponse.", "Notez le créneau aujourd'hui au moment où il a lieu.", "Si elle refuse, notez-le dans ses mots."],
+      "en": ["Confirm with the family; document the answer.", "Log today's slot at the moment it happens.", "If she declines, record it in her own words."]
+    },
+    "cultural_adaptation": "If a fasting day is stored, the note reminds the family to record what she decided with her pharmacist or care team, without suggesting any change. Text in the stored language when available.",
+    "escalation_path": "If a slot is missed two days in a row, contact the care team (the stored care contact when present).",
+    "suppression_rule": "Shows once per missed slot. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "MED_ROUTINE_LATE",
+    "pattern_label": { "fr": "Médicaments notés en retard plusieurs fois", "en": "Medication logged late several times", "ar": "تسجيل الدواء متأخرًا عدة مرات" },
+    "signal_source": ["med_log", "routine"],
+    "detection_rule": "A medication log tied to a routine item recorded more than 60 minutes after that item's planned time, on 2 or more occasions in the last 7 days.",
+    "confidence_caveats": "Late logging is not the same as late giving. The record only shows when the tap happened.",
+    "tier": "NOTICE",
+    "recommendation_family": {
+      "fr": ["Notez au moment même plutôt qu'après coup.", "Mettez un nom sur ce créneau dans le plan.", "Si sa journée a changé (sommeil, repas, sorties), demandez à son pharmacien ou à l'équipe de soins avant de changer quoi que ce soit."],
+      "en": ["Log at the moment it happens rather than afterwards.", "Put a name on that slot in the plan.", "If her day has changed (sleep, meals, outings), ask her pharmacist or care team before changing anything."]
+    },
+    "recommendation_pro": {
+      "fr": ["Documentez les heures réelles pendant une semaine.", "Observez ce qui retarde le créneau (sommeil, repas, sorties) et notez-le.", "Rapportez le constat à l'équipe de soins ; ne proposez pas de changement."],
+      "en": ["Document the actual times for a week.", "Observe what delays the slot (sleep, meals, outings) and note it.", "Report the observation to the care team; do not propose a change."]
+    },
+    "cultural_adaptation": "Prayer times and a stored fasting day often explain the shape of her day; the family records it, the care team decides. Text in the stored language when available.",
+    "escalation_path": "Bring the week's times to her pharmacist or care team.",
+    "suppression_rule": "Cooldown 7 days. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "MOBILITY_NONE_LOGGED",
+    "pattern_label": { "fr": "Aucune activité physique notée depuis 48 h", "en": "No movement logged in 48 hours", "ar": "لم يُسجّل أي نشاط حركي منذ 48 ساعة" },
+    "signal_source": ["mobility_log", "routine"],
+    "detection_rule": "The routine has at least one mobility item and there is no mobility log of any kind in the last 48 hours.",
+    "confidence_caveats": "Walks happen and go unlogged. Rest is also worth logging so the record shows what happened.",
+    "tier": "NOTICE",
+    "recommendation_family": {
+      "fr": ["Proposez une courte marche ou quelques minutes debout, à un moment qu'elle aime, sans insister.", "Demandez si quelque chose la gêne (douleur, peur de tomber) et notez ses mots.", "Notez aussi le repos, pour que le dossier montre ce qui s'est passé."],
+      "en": ["Offer a short walk or a few minutes standing, at a time she likes, without pressing.", "Ask whether something is bothering her (pain, fear of falling) and note her words.", "Log rest as well, so the record shows what happened."]
+    },
+    "recommendation_pro": {
+      "fr": ["Observez comment elle passe de la chaise à debout et notez-le simplement.", "Documentez l'activité proposée, acceptée ou refusée, et pourquoi dans ses mots.", "Signalez si elle refuse encore deux jours."],
+      "en": ["Observe how she moves from chair to standing and note it plainly.", "Document the activity offered, accepted or declined, and why in her words.", "Report if she declines for two more days."]
+    },
+    "cultural_adaptation": "The stored caregiver-gender and modesty preferences apply to any physical assistance. Walks can be placed around prayer times from the routine.",
+    "escalation_path": "If she declines for four days in a row, contact the care team (the stored care contact when present).",
+    "suppression_rule": "Cooldown 48 hours. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "public health guidance"
+  },
+  {
+    "pattern_id": "MOOD_AGITATED_EVENINGS",
+    "pattern_label": { "fr": "Soirées agitées à répétition", "en": "Agitated evenings, repeated", "ar": "أمسيات متكررة من الانفعال" },
+    "signal_source": ["mood_log"],
+    "detection_rule": "Mood logs containing 'agitated' or 'upset' (or 'agitée', 'contrariée') recorded after 17:00 on 3 or more distinct days in the last 7.",
+    "confidence_caveats": "Evenings vary. A missed nap, visitors, noise or light explain many of them. The app counts; it does not explain.",
+    "tier": "ATTENTION",
+    "recommendation_family": {
+      "fr": ["Notez ce qui s'est passé avant chaque soirée (sieste, visiteurs, bruit, lumière) pour en parler avec son médecin.", "Gardez les soirées calmes : moins de visiteurs, lumière douce, une routine familière.", "Demandez-lui ce qui l'apaise et écrivez-le dans la passation."],
+      "en": ["Note what happened before each evening (nap, visitors, noise, light) so you can discuss it with her doctor.", "Keep evenings calm: fewer visitors, soft light, a familiar routine.", "Ask her what helps and write it in the handoff."]
+    },
+    "recommendation_pro": {
+      "fr": ["Documentez l'heure, ce qui a précédé, ce qui l'a apaisée.", "Observez les trois prochaines soirées et notez-les.", "Partagez le journal avec la famille et l'équipe de soins, sans interprétation."],
+      "en": ["Document the time, what preceded it, what calmed her.", "Observe the next three evenings and record them.", "Share the log with the family and the care team, without interpretation."]
+    },
+    "cultural_adaptation": "The stored language may matter most in the evening. Maghrib and Isha from the routine can anchor a calm evening routine.",
+    "escalation_path": "Bring the log to her doctor or care team (the stored care contact when present). The app never interprets it.",
+    "suppression_rule": "Cooldown 7 days. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "APPOINTMENT_NOT_LOGGED",
+    "pattern_label": { "fr": "Un rendez-vous passé non noté", "en": "A past appointment not logged", "ar": "موعد سابق لم يُسجّل" },
+    "signal_source": ["appointment_log", "routine"],
+    "detection_rule": "A routine appointment item on a past day within the last 14 days, on a day where the family logged at least one item, has no matching appointment log.",
+    "confidence_caveats": "The visit may have happened and gone unlogged, or been moved.",
+    "tier": "NOTICE",
+    "recommendation_family": {
+      "fr": ["Confirmez si le rendez-vous a eu lieu ; notez-le ou marquez-le manqué.", "S'il a été manqué, rappelez pour le reprendre et mettez la nouvelle date dans la routine.", "Dites dans la passation qui l'accompagnera la prochaine fois."],
+      "en": ["Confirm whether the appointment happened; log it or mark it missed.", "If missed, call to rebook and put the new date in the routine.", "Say in the handoff who takes her next time."]
+    },
+    "recommendation_pro": {
+      "fr": ["Documentez ce qui s'est passé et les consignes reçues, dans ses mots ou ceux de la famille.", "Vérifiez que la prochaine date est dans la routine."],
+      "en": ["Document what happened and any instructions given, in her words or the family's.", "Check the next date is in the routine."]
+    },
+    "cultural_adaptation": "Transport and accompaniment respect the stored caregiver-gender preference. Text in the stored language when available.",
+    "escalation_path": "If it cannot be rebooked, contact the care team (the stored care contact when present).",
+    "suppression_rule": "Shows once per appointment. Acknowledged by a caregiver: hidden for 24 hours for the whole family.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "HANDOFF_NOT_ACCEPTED",
+    "pattern_label": { "fr": "Une passation attend depuis plus de 30 minutes", "en": "A handoff has waited more than 30 minutes", "ar": "تسليم رعاية بانتظار القبول منذ أكثر من 30 دقيقة" },
+    "signal_source": ["handoff"],
+    "detection_rule": "A handoff is still open (not accepted) and was opened more than 30 minutes ago.",
+    "confidence_caveats": "The recipient may already be with her and not have tapped accept.",
+    "tier": "URGENT_CONTACT",
+    "recommendation_family": {
+      "fr": ["Appelez la personne à qui la passation a été envoyée.", "Si vous ne la joignez pas, vérifiez qui est avec elle en ce moment.", "Acceptez ou réassignez la passation pour que le dossier soit juste."],
+      "en": ["Call the person the handoff went to.", "If you cannot reach them, check who is with her right now.", "Accept or reassign the handoff so the record is right."]
+    },
+    "recommendation_pro": {
+      "fr": ["Confirmez qui est de service et documentez-le."],
+      "en": ["Confirm who is on duty and document it."]
+    },
+    "cultural_adaptation": "None from the profile.",
+    "escalation_path": "If nobody can be reached within an hour, contact the stored care contact.",
+    "suppression_rule": "Cooldown 30 minutes. Clears as soon as the handoff is accepted. Acknowledged by a caregiver: hidden for 2 hours.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "CAREGIVER_LOAD_CONCENTRATED",
+    "pattern_label": { "fr": "Une seule personne porte la semaine", "en": "One person is carrying the week", "ar": "شخص واحد يتحمّل عبء الأسبوع" },
+    "signal_source": ["workload"],
+    "detection_rule": "In the last 7 days there are 20 or more care logs and one member logged 70% or more of them.",
+    "confidence_caveats": "Logging is not the same as caring; someone may log for others. Talk before concluding.",
+    "tier": "ATTENTION",
+    "recommendation_family": {
+      "fr": ["Regardez ensemble qui a porté la semaine et parlez-en en famille.", "Offrez une journée de repos au principal aidant et mettez-la dans le plan.", "Mettez au moins un élément de la routine au nom de quelqu'un d'autre."],
+      "en": ["Look together at who carried the week and talk about it as a family.", "Offer the main caregiver a day off and put it in the plan.", "Put at least one routine item under someone else's name."]
+    },
+    "recommendation_pro": {
+      "fr": ["Notez l'organisation de la famille telle qu'elle est.", "Demandez au principal aidant ce qui l'aiderait cette semaine et rapportez-le à l'équipe de soins."],
+      "en": ["Note the family's arrangement as it is.", "Ask the main caregiver what would help this week and pass it to the care team."]
+    },
+    "cultural_adaptation": "None from the profile; how the family shares the load is the family's decision.",
+    "escalation_path": "If the family cannot share the load, contact the care team about respite options (the stored care contact when present).",
+    "suppression_rule": "Cooldown 7 days. Acknowledged by a caregiver: hidden for 7 days for the whole family.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "NO_CONTACT_LOGGED",
+    "pattern_label": { "fr": "Aucune note de personne depuis 48 h", "en": "No care log from anyone in 48 hours", "ar": "لا تسجيل من أي أحد منذ 48 ساعة" },
+    "signal_source": ["meal_log", "med_log", "mobility_log", "mood_log", "appointment_log", "transport_log", "note_log"],
+    "detection_rule": "No care log of any category from any member in the last 48 hours.",
+    "confidence_caveats": "Logging may have lapsed while care continued. Ask first.",
+    "tier": "URGENT_CONTACT",
+    "recommendation_family": {
+      "fr": ["Appelez la personne qui devait être avec elle.", "Si personne n'y était, passez la voir ou appelez-la aujourd'hui.", "Reprenez le journal avec ce que vous trouvez."],
+      "en": ["Call whoever was due to be with her.", "If nobody was, visit or call her today.", "Restart the log with what you find."]
+    },
+    "recommendation_pro": {
+      "fr": ["Confirmez le dernier contact et documentez-le."],
+      "en": ["Confirm the last contact and document it."]
+    },
+    "cultural_adaptation": "If a language is stored, call in that language. None otherwise.",
+    "escalation_path": "If she cannot be reached today, contact the stored care contact.",
+    "suppression_rule": "Cooldown 24 hours. Clears when any log arrives. Acknowledged by a caregiver: hidden for 12 hours.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "SENSOR_NIGHT_ACTIVITY",
+    "pattern_label": { "fr": "Activité nocturne inhabituelle (capteur, non connecté)", "en": "Unusual night activity (sensor, not connected)", "ar": "نشاط ليلي غير معتاد (مستشعر، غير متصل)" },
+    "signal_source": ["sensor"],
+    "detection_rule": "Not connected. Would fire when a door or motion sensor, installed with her consent, reports activity between 00:00 and 05:00 on 3 or more nights in 7.",
+    "confidence_caveats": "Not connected. Kept in the table to show where sensor signals would enter. Fajr explains early activity on many nights.",
+    "tier": "NOTICE",
+    "recommendation_family": {
+      "fr": ["Demandez-lui comment se passent ses nuits et notez ses mots.", "Regardez si la lumière ou le bruit la réveillent."],
+      "en": ["Ask her how her nights are and note her words.", "Check whether light or noise wakes her."]
+    },
+    "recommendation_pro": {
+      "fr": ["Documentez ce qu'elle rapporte de ses nuits."],
+      "en": ["Document what she reports about her nights."]
+    },
+    "cultural_adaptation": "Fajr from the routine explains early activity. Sensors only with her explicit consent, shown on her screen.",
+    "escalation_path": "Bring the pattern to the care team.",
+    "suppression_rule": "Not active. Would use a 7-day cooldown.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "SLEEP_SHORT_REPEAT",
+    "pattern_label": { "fr": "Nuits courtes à répétition (sommeil, non connecté)", "en": "Short nights, repeated (sleep, not connected)", "ar": "ليالٍ قصيرة متكررة (النوم، غير متصل)" },
+    "signal_source": ["sleep"],
+    "detection_rule": "Not connected. Would fire when a sleep source she agreed to reports under 5 hours on 3 or more nights in 7.",
+    "confidence_caveats": "Not connected. Sleep devices are approximate and she decides whether to wear one.",
+    "tier": "NOTICE",
+    "recommendation_family": {
+      "fr": ["Demandez-lui comment elle dort et ce qui l'aiderait.", "Gardez la même heure de coucher quand c'est possible."],
+      "en": ["Ask her how she sleeps and what would help.", "Keep the same bedtime when you can."]
+    },
+    "recommendation_pro": {
+      "fr": ["Documentez ce qu'elle dit de son sommeil, sans interpréter."],
+      "en": ["Document what she says about her sleep, without interpreting."]
+    },
+    "cultural_adaptation": "Isha and Fajr from the routine frame the night. Only with her consent.",
+    "escalation_path": "Bring the pattern to the care team.",
+    "suppression_rule": "Not active. Would use a 7-day cooldown.",
+    "provenance": "team judgement"
+  },
+  {
+    "pattern_id": "PHONE_UNANSWERED",
+    "pattern_label": { "fr": "Appels sans réponse (téléphone, non connecté)", "en": "Calls unanswered (phone, not connected)", "ar": "مكالمات دون رد (الهاتف، غير متصل)" },
+    "signal_source": ["phone"],
+    "detection_rule": "Not connected. Would fire when her phone, with her consent, shows no answered call in 48 hours while family calls were placed.",
+    "confidence_caveats": "Not connected. A phone left in another room explains most of it.",
+    "tier": "URGENT_CONTACT",
+    "recommendation_family": {
+      "fr": ["Passez la voir ou appelez un voisin de confiance.", "Convenez avec elle d'un moment d'appel quotidien."],
+      "en": ["Visit her, or call a trusted neighbour.", "Agree with her on a daily call time."]
+    },
+    "recommendation_pro": {
+      "fr": ["Confirmez le contact et documentez-le."],
+      "en": ["Confirm contact and document it."]
+    },
+    "cultural_adaptation": "If a language is stored, call in that language. Only with her consent.",
+    "escalation_path": "If she cannot be reached today, contact the stored care contact.",
+    "suppression_rule": "Not active. Would clear on any answered call.",
+    "provenance": "team judgement"
+  }
+]

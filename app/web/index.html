@@ -137,6 +137,7 @@
     <!-- HOME: the dashboard, computed on this phone from decrypted events -->
     <div id="tab-home" class="tabview">
       <div id="home"><p class="muted">Loading…</p></div>
+      <div id="recs" class="hide"></div>
       <div class="card">
         <div class="group">
           <h2>Who carried the week</h2>
@@ -299,6 +300,10 @@
             <input id="p-doctor" placeholder="e.g. Dr. Rahman, 514 555 0100"></div>
           <div class="field"><label for="p-contacts">Family contacts, one per line</label>
             <textarea id="p-contacts" placeholder="Fatima 514 555 0101&#10;Abdullah 514 555 0102"></textarea></div>
+          <div class="field"><label for="p-fasting">Fasting days</label>
+            <input id="p-fasting" placeholder="e.g. Mondays and Thursdays, Ramadan, or none"></div>
+          <div class="field"><label for="p-carecontact">Care contact</label>
+            <input id="p-carecontact" placeholder="e.g. CLSC nurse 514 555 0199"></div>
         </div>
         <button id="btn-prefs">Save preferences</button>
       </div>
@@ -379,5 +384,6 @@
 <script src="vendor/qrcode.js"></script>
 <script type="module" src="app.js"></script>
 <script type="module" src="alerts.js"></script>
+<script type="module" src="recs.js"></script>
 </body>
 </html>
