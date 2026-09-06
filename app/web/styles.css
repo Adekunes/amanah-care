@@ -363,7 +363,8 @@ body.elder #home-side{display:none}   /* recs.js already self-hides for elder */
 .sheet h1{font-size:20px;margin:0}
 .sheet .meta{font-size:12px;color:#555}
 .sheet h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#555;margin:0 0 4px;border-bottom:1px solid #ddd;padding-bottom:3px}
-.sheet .kv{grid-template-columns:130px 1fr;gap:3px 12px;font-size:13px}
+.sheet .kv{display:grid;grid-template-columns:130px 1fr;gap:4px 12px;font-size:13px;align-items:baseline}
+.sheet .kv b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#666}
 .sheet table{border-collapse:collapse;width:100%;font-size:12.5px}
 .sheet th,.sheet td{text-align:left;vertical-align:top;padding:4px 6px;border-bottom:1px solid #e5e5e5}
 .sheet th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#666;white-space:nowrap}
@@ -372,12 +373,18 @@ body.elder #home-side{display:none}   /* recs.js already self-hides for elder */
 .sheet .foot{font-size:11.5px;color:#666;border-top:1px solid #ddd;padding-top:8px}
 .sheet ul{margin:0;padding-left:18px}
 @media print{
-  body{background:#fff}
-  .wrap{max-width:none;padding:0}
-  #view-landing,#view-invite,#view-app,.sendfx,.toast,.sheet-bar{display:none !important}
+  @page{size:letter;margin:14mm}
+  html,body{background:#fff !important;background-image:none !important;color:#000}
+  .wrap{max-width:none;padding:0;min-height:0}
+  #view-landing,#view-invite,#view-setlogin,#view-app,.sendfx,.toast,.sheet-bar,.topbar{display:none !important}
   #view-sheet{display:flex !important}
-  .sheet{border:0;padding:0;font-size:12px}
-  @page{margin:14mm}
+  .sheet{border:0;padding:0;font-size:12px;box-shadow:none;max-width:none}
+  .sheet section{break-inside:avoid;page-break-inside:avoid}
+  .sheet table{break-inside:auto} .sheet tr{break-inside:avoid;page-break-inside:avoid}
+  .sheet thead,.sheet tr:first-child{display:table-header-group}
+  .sheet a{color:#000;text-decoration:none}
+  .sheet .flag{color:#b3261e !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sheet .foot{margin-top:8px}
 }
 
 /* ---- server view: the same screen, as the server sees it ---- */

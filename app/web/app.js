@@ -857,7 +857,10 @@ async function openSheet(){
     <section><h2>Patterns, last 7 days (counts, not conclusions)</h2>${patternsHtml(7)}</section>
     ${table('Medication', ['meds'])}
     ${table('Meals', ['meal'])}
-    ${table('Mood and mobility', ['mood', 'mobility'])}
+    ${table('Prayers, personal care and walks', ['prayer', 'personal care', 'mobility'])}
+    ${items.some(c => c.category === 'mood' || c.category === 'readings') ? table('Mood and readings', ['mood', 'readings']) : ''}
+    <section><h2>Not done, with the reason given, last 14 days</h2>${(() => { const b = items.filter(c => c.blocked).sort((x, y) => new Date(y.occurred_at) - new Date(x.occurred_at));
+      return b.length ? `<table><tr><th>When</th><th>Card</th><th>Reason</th><th>Who</th></tr>${b.map(c => `<tr><td class="d">${dlab(new Date(c.occurred_at).toDateString())} ${fmtTime(c.occurred_at)}</td><td>${esc(cap(c.category))}</td><td class="flag">${esc(cap(c.reason || c.text))}</td><td>${esc(nameOf(c.actor_id))}</td></tr>`).join('')}</table>` : '<p class="muted">Nothing was marked as not done.</p>'; })()}</section>
     <section><h2>Appointments</h2>
       <p><b>Logged, last 14 days:</b> ${items.filter(c => c.category === 'appointment').map(c => `${dlab(new Date(c.occurred_at).toDateString())} ${esc(c.text)}`).join(' · ') || '—'}</p>
       <p><b>Upcoming, next 14 days:</b> ${upcoming.join(' · ') || '—'}</p></section>
