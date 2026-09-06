@@ -10,6 +10,7 @@ const CANONICAL_KINDS = [
   'handoff.to_me', 'handoff.accepted',
   'care.meds', 'care.meal', 'care.prayer', 'care.mobility', 'care.mood', 'care.appointment', 'care.transport', 'care.note',
   'care.*', 'prefs', 'routine', 'member',
+  'emergency',
 ];
 
 describe('notifier/match', () => {
@@ -38,6 +39,9 @@ describe('notifier/match', () => {
     });
     test('MemberJoined -> member', () => {
       assert.deepEqual(kindsFor({ type: 'MemberJoined' }), ['member']);
+    });
+    test('EmergencyRaised -> emergency', () => {
+      assert.deepEqual(kindsFor({ type: 'EmergencyRaised' }), ['emergency']);
     });
     test('unknown event type -> []', () => {
       assert.deepEqual(kindsFor({ type: 'ConsentChanged' }), []);
@@ -108,6 +112,13 @@ describe('notifier/match', () => {
       const fields = { type: 'CareLogged', category: 'meds', actor_id: 'a' };
       const subs = [{ member_id: 'b', kind: 'prefs' }, { member_id: 'c', kind: 'routine' }];
       assert.deepEqual(recipients(fields, subs), []);
+    });
+
+    test('emergency reaches every extra.members id except the actor, even with no subscriptions', () => {
+      const fields = { type: 'EmergencyRaised', actor_id: 'a' };
+      const rec = recipients(fields, [], { members: ['a', 'b', 'c'] });
+      assert.deepEqual(rec.map((r) => r.member_id).sort(), ['b', 'c']);
+      assert.ok(rec.every((r) => r.kind === 'emergency'));
     });
   });
 });
@@ -273,5 +284,31 @@ describe('notifier/apply notify()', () => {
     const r = await db.query('SELECT count(*)::int AS n FROM notifications');
     assert.equal(r.rows[0].n, 0);
     assert.equal(n, 0);
+  });
+
+  test('EmergencyRaised writes one notification row per other member, regardless of subscriptions', async () => {
+    const db = makeDb();
+    const fid = 'fam-notify-7';
+    await seedFamily(db, fid);
+    const actor = uuid(), m1 = uuid(), m2 = uuid();
+    await seedMember(db, fid, actor, 'family');
+    await seedMember(db, fid, m1, 'family');
+    await seedMember(db, fid, m2, 'elder'); // elder, no subscriptions at all: still must be notified
+    // m1 is subscribed to something else entirely; must not matter for emergency.
+    await seedSub(db, fid, m1, 'prefs');
+
+    const eventId = uuid();
+    const fields = {
+      id: eventId, family_id: fid, type: 'EmergencyRaised', actor_id: actor,
+      category: '', from_id: '', to_id: '', handoff_id: '', occurred_at: new Date().toISOString(),
+    };
+    const n = await notify(db, '7-0', fields);
+    const rows = (await db.query('SELECT * FROM notifications WHERE event_id=$1', [eventId])).rows;
+    assert.equal(n, 2);
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows.map((r) => r.member_id).sort(), [m1, m2].sort());
+    assert.ok(rows.every((r) => r.kind === 'emergency'));
+    assert.ok(rows.every((r) => r.type === 'EmergencyRaised'));
+    assert.ok(rows.every((r) => r.from_id === actor));
   });
 });

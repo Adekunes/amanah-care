@@ -39,7 +39,16 @@ export async function notify(db, streamId, fields) {
     handoffFromId = rows[0]?.from_id || null;
   }
 
-  const recips = recipients(f, subs, { handoff_from_id: handoffFromId });
+  // Emergency alerts reach every family member regardless of subscriptions
+  // (spec/NOTIFY-SPEC.md §1); look up the family's full member roster.
+  let members = null;
+  if (f.type === 'EmergencyRaised') {
+    const { rows } = await db.query(
+      `SELECT id FROM members WHERE family_id = $1`, [f.family_id]);
+    members = rows.map((row) => row.id);
+  }
+
+  const recips = recipients(f, subs, { handoff_from_id: handoffFromId, members });
 
   for (const r of recips) {
     // ON CONFLICT DO NOTHING: replaying the same event is harmless, same

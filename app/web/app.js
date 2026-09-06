@@ -66,6 +66,7 @@ const isElder = ()=> ME?.role === 'elder';
 
 // Wipe every trace of this session from this tab and drop back to the landing card.
 function logout(){
+  $('#emg-banner').classList.add('hide');
   if(SERVER_VIEW){ SERVER_VIEW=false; document.body.classList.remove('serverview'); $('#sv-banner').classList.add('hide'); $('#btn-serverview').textContent='Server view'; }
   stopLive();
   clearInterval(pollTimer); pollTimer = null;
@@ -123,7 +124,7 @@ async function traceProjection(tr){
 }
 
 // ---- views ----
-function show(id){ ['landing','setlogin','invite','app'].forEach(v=>$('#view-'+v).classList.toggle('hide', v!==id)); }
+function show(id){ ['landing','setlogin','invite','app','sheet'].forEach(v=>$('#view-'+v).classList.toggle('hide', v!==id)); }
 function tab(name){
   $$('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
   $$('.tabview').forEach(v=>v.classList.add('hide'));
@@ -314,6 +315,8 @@ async function renderStrip(){
   PREFS = p;
   $('#p-lang').value = p.lang||''; $('#p-diet').value = p.diet||'';
   $('#p-prayer').value = p.prayer||''; $('#p-modesty').value = p.modesty||'';
+  $('#p-conditions').value = p.conditions||''; $('#p-allergies').value = p.allergies||'';
+  $('#p-doctor').value = p.doctor||''; $('#p-contacts').value = p.contacts||'';
   const bits = [['Language',p.lang],['Diet',p.diet],['Prayer',p.prayer],['Modesty',p.modesty]]
     .filter(([,v])=>v);
   $('#strip').innerHTML = bits.map(([k,v])=>
@@ -497,8 +500,12 @@ function renderHome(){
       <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
       <div class="progress"><div class="top"><span>Today's plan</span><b class="tnum">${done} of ${rows.length} done</b></div>
         <div class="bar"><span style="width:${rows.length?Math.round(done/rows.length*100):0}%;background:#7fe3cd"></span></div></div>
+      <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
     </div>
     <div class="tiles">${tiles}</div>
+    <div class="card"><div class="card-head"><h2>Patterns, not predictions</h2><span class="muted">last 7 days</span></div>
+      ${patternsHtml(7)}
+      <p class="muted" style="font-size:12.5px">Counted from the record. The family and the doctor decide what it means.</p></div>
     <div class="card"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
       <div class="plan">${plan}</div></div>
     <div class="card"><div class="card-head"><h2>Your part today</h2><span class="muted">${esc(ME.my_name)}</span></div>
@@ -510,6 +517,7 @@ function renderHome(){
     <div class="card"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekTotal} items · ${people} ${people===1?'person':'people'}</span></div>
       <div class="days">${weekHtml}</div></div>`;
   $$('[data-done]').forEach(b=>b.onclick=()=>{ b.disabled=true; logRoutineItem(b.dataset.done).catch(e=>{ toast(e.message); b.disabled=false; }); });
+  wireEmergencyButtons();
 }
 
 // ---- ELDER view: what Ammi needs to know, in large type, nothing to operate ----
@@ -534,6 +542,7 @@ function renderElderHome(){
       <div class="edate">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
       <h1>Assalamu alaykum, ${esc(ME.my_name)}</h1>
       <div class="ewith">${withNow?`<b>${esc(withNow)}</b> is looking after you today.`:'Your family is here for you today.'}${open.length?` <b>${esc(nameOf(open[0].to_id))}</b> is coming next.`:''}</div>
+      <div class="hero-actions" style="flex-direction:column"><button class="emg-btn big" data-emg type="button">I need help</button><button class="ghost" data-sheet type="button">Hospital sheet, for the ambulance</button></div>
     </div>
     <div class="ecard"><h2>Coming up</h2>
       ${coming.length ? coming.map(erow).join('') : '<p class="elabel" style="font-size:22px;margin:0">Nothing more today. Rest well.</p>'}</div>
@@ -547,7 +556,111 @@ function renderElderHome(){
       ${PREFS ? `<div class="eprefs">${[['Language',PREFS.lang],['Food',PREFS.diet],['Prayer',PREFS.prayer],['Personal care',PREFS.modesty]].filter(([,v])=>v).map(([k,v])=>`<div><span>${k}</span><br>${esc(v)}</div>`).join('')}</div><p class="muted" style="font-size:15px">Shown to whoever looks after you, on every handoff.</p>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
     <div class="ecard"><h2>Who can read your record</h2><p style="font-size:21px;margin:0">${family.length?esc(family.join(', ')):'Only you'}</p>
       <p class="muted" style="font-size:15px">They hold your family key. Nobody else can read it, not even the people who run this app.</p></div>`;
+  wireEmergencyButtons();
 }
+
+// ---- patterns, not predictions: counts over the record, shown as facts ----
+const has = (c, w) => String(c.text || '').toLowerCase().includes(w);
+const daysOf = (list) => new Set(list.map(c => new Date(c.occurred_at).toDateString())).size;
+function computePatterns(days = 7){
+  const since = midnight(); since.setDate(since.getDate() - (days - 1));
+  const items = LOG_ITEMS.filter(c => new Date(c.occurred_at) >= since);
+  const lines = [];
+  for(const w of ['agitated', 'confused', 'tired', 'cheerful', 'calm']){
+    const m = items.filter(c => c.category === 'mood' && has(c, w)); const d = daysOf(m);
+    if(d >= 2){
+      const evening = m.every(c => new Date(c.occurred_at).getHours() >= 18);
+      const morning = m.every(c => new Date(c.occurred_at).getHours() < 12);
+      lines.push(`${cap(w)} on ${d} of the last ${days} days${evening ? ', every time after 18:00' : (morning ? ', every time before noon' : '')}.`);
+    }
+  }
+  const refused = items.filter(c => c.category === 'meal' && has(c, 'refused'));
+  if(refused.length) lines.push(`Refused food on ${daysOf(refused)} of the last ${days} days (${refused.length} meal${refused.length > 1 ? 's' : ''}).`);
+  const half = items.filter(c => c.category === 'meal' && has(c, 'half'));
+  if(daysOf(half) >= 2) lines.push(`Ate half on ${daysOf(half)} of the last ${days} days.`);
+  const missed = items.filter(c => c.category === 'meds' && (has(c, 'skipped') || has(c, 'refused')));
+  if(missed.length) lines.push(`Meds skipped or refused ${missed.length} time${missed.length > 1 ? 's' : ''} in the last ${days} days.`);
+  const walks = items.filter(c => c.category === 'mobility' && (has(c, 'walk') || has(c, 'physio')));
+  if(items.some(c => c.category === 'mobility')) lines.push(`Walked or did physio on ${daysOf(walks)} of the last ${days} days.`);
+  const rested = items.filter(c => c.category === 'mobility' && has(c, 'rested'));
+  if(daysOf(rested) >= 2) lines.push(`Rested instead of walking on ${daysOf(rested)} days.`);
+  return lines;
+}
+function patternsHtml(days){
+  const lines = computePatterns(days);
+  return lines.length ? `<ul class="patterns">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+    : `<p class="muted">Nothing repeated enough to mention in the last ${days} days.</p>`;
+}
+
+// ---- hospital sheet: the last 14 days, decrypted here, printable ----
+async function openSheet(){
+  await loadLog(); await loadMembers(); await loadNames(); await loadRoutine();
+  HANDOFFS = await api(`/families/${ME.family_id}/handoffs`).catch(()=>HANDOFFS);
+  const since = midnight(); since.setDate(since.getDate() - 13);
+  const items = LOG_ITEMS.filter(c => new Date(c.occurred_at) >= since);
+  const byDay = {};
+  for(const c of items){ const k = new Date(c.occurred_at).toDateString(); (byDay[k] = byDay[k] || []).push(c); }
+  const days = Object.keys(byDay).sort((a, b) => new Date(b) - new Date(a));
+  const dlab = (k) => new Date(k).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  const cell = (k, cat) => (byDay[k] || []).filter(c => c.category === cat)
+    .map(c => { const flag = /refused|skipped|agitated|confused|fall|fell/i.test(c.text); return `<span class="${flag ? 'flag' : ''}">${fmtTime(c.occurred_at)} ${esc(c.text)}</span>`; }).join('<br>') || '<span class="muted">—</span>';
+  const table = (title, cats) => `<section><h2>${title}, last 14 days</h2><table><tr><th>Day</th>${cats.map(c => `<th>${c}</th>`).join('')}</tr>
+    ${days.map(k => `<tr><td class="d">${dlab(k)}</td>${cats.map(c => `<td>${cell(k, c)}</td>`).join('')}</tr>`).join('')}</table></section>`;
+  const p = PREFS || {};
+  const contacts = String(p.contacts || '').split('\n').map(l => l.trim()).filter(Boolean)
+    .map(l => { const m = l.match(/(\+?\d[\d\s().-]{6,})/); return m ? `${esc(l.replace(m[1], '').trim())} <a href="tel:${m[1].replace(/[^\d+]/g, '')}">${esc(m[1].trim())}</a>` : esc(l); });
+  const recent = [...HANDOFFS].sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at)).slice(0, 3);
+  const hos = [];
+  for(const h of recent){ const d = await decryptJSON(KEY, h.iv, h.summary_cipher) || {};
+    hos.push(`<tr><td class="d">${new Date(h.opened_at).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</td><td>${esc(nameOf(h.from_id))} → ${esc(nameOf(h.to_id))}</td><td>${esc(d.summary || '—')}</td><td>${esc(d.next || '—')}</td></tr>`); }
+  const upcoming = [];
+  for(let k = 0; k <= 14; k++){ const d = new Date(); d.setDate(d.getDate() + k);
+    for(const it of planFor(d).filter(i => i.category === 'appointment')) upcoming.push(`${d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} ${it.time} ${esc(it.label)}${it.who ? ` (${esc(nameOf(it.who))})` : ''}`); }
+  const meds = ROUTINE.filter(i => i.category === 'meds').sort((a, b) => hm(a.time) - hm(b.time)).map(i => `${i.time} ${esc(i.label)}`);
+  $('#sheet').innerHTML = `
+    <header><h1>Hospital sheet · ${esc(ELDER)}</h1>
+      <div class="meta">Generated ${new Date().toLocaleString([], { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} by ${esc(ME.my_name)} · ${esc(FAMILY)} · Amanah Care</div></header>
+    <section><h2>About ${esc(ELDER)}</h2><div class="kv">
+      <b>Language</b><span>${esc(p.lang || '—')}</span><b>Diet</b><span>${esc(p.diet || '—')}</span>
+      <b>Prayer</b><span>${esc(p.prayer || '—')}</span><b>Personal care</b><span>${esc(p.modesty || '—')}</span>
+      <b>Conditions</b><span>${esc(p.conditions || 'not recorded')}</span><b>Allergies</b><span>${esc(p.allergies || 'not recorded')}</span>
+      <b>Doctor</b><span>${esc(p.doctor || 'not recorded')}</span>
+      <b>Usual meds times</b><span>${meds.length ? meds.join(' · ') : 'no routine recorded'}</span></div></section>
+    <section><h2>Family contacts</h2>${contacts.length ? `<ul>${contacts.map(c => `<li>${c}</li>`).join('')}</ul>` : `<p class="muted">Not recorded. Members: ${esc(MEMBERS.map(m => nameOf(m.id)).join(', '))}</p>`}</section>
+    <section><h2>Patterns, last 7 days (counts, not conclusions)</h2>${patternsHtml(7)}</section>
+    ${table('Medication', ['meds'])}
+    ${table('Meals', ['meal'])}
+    ${table('Mood and mobility', ['mood', 'mobility'])}
+    <section><h2>Appointments</h2>
+      <p><b>Logged, last 14 days:</b> ${items.filter(c => c.category === 'appointment').map(c => `${dlab(new Date(c.occurred_at).toDateString())} ${esc(c.text)}`).join(' · ') || '—'}</p>
+      <p><b>Upcoming, next 14 days:</b> ${upcoming.join(' · ') || '—'}</p></section>
+    <section><h2>Last handoffs</h2><table><tr><th>When</th><th>Who</th><th>What happened</th><th>What was next</th></tr>${hos.join('') || '<tr><td colspan="4">—</td></tr>'}</table></section>
+    <div class="foot">Generated on the family's phone from the family's own record. Not a medical record and not medical advice. Nothing is inferred: every line was written by a family member at the time shown. The server holds only ciphertext.</div>`;
+  show('sheet'); window.scrollTo(0, 0);
+}
+
+// ---- emergency: one tap alerts every phone in the family, then opens the sheet ----
+async function raiseEmergency(){
+  const ask = isElder() ? 'Tell your family you need help now?' : `Alert everyone in ${FAMILY} now?`;
+  if(!confirm(ask)) return;
+  await postEvent({ family_id: ME.family_id, type: 'EmergencyRaised', actor_id: ME.member_id, occurred_at: now(), id: uuid() });
+  toast(isElder() ? 'Your family has been told' : 'Family alerted');
+  if(navigator.vibrate) navigator.vibrate(200);
+  await openSheet();
+}
+function showEmergencyBanner(ev){
+  const who = ev.actor_id;
+  const elderRaised = MEMBERS.find(m => m.id === who)?.role === 'elder';
+  $('#emg-text').textContent = (elderRaised ? `${ELDER} pressed "I need help"` : `${nameOf(who)} needs help with ${ELDER}`) + ` · ${fmtTime(ev.occurred_at)}`;
+  $('#emg-banner').classList.remove('hide');
+  if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  window.scrollTo(0, 0);
+}
+function wireEmergencyButtons(){
+  $$('[data-emg]').forEach(b => b.onclick = () => raiseEmergency().catch(e => toast(e.message)));
+  $$('[data-sheet]').forEach(b => b.onclick = () => openSheet().catch(e => toast(e.message)));
+}
+
 
 // ---- chips / logging ----
 // Two steps beat one wall of 25 chips: pick the category, then the preset.
@@ -772,7 +885,7 @@ async function renderSent(flash){
 // open tab refetches what it is showing. The 4 s poll below stays as the net.
 let live = null, liveTimer = null, liveQueue = [];
 const liveHooks = [];
-const VERB = { HandoffOpened:'sent a handoff', HandoffAcknowledged:'accepted a handoff', PreferenceSet:'updated the preferences',
+const VERB = { EmergencyRaised:'raised an EMERGENCY', HandoffOpened:'sent a handoff', HandoffAcknowledged:'accepted a handoff', PreferenceSet:'updated the preferences',
                RoutineSet:'changed the routine', MemberJoined:'joined', CareLogged:'logged' };
 function startLive(){
   stopLive();
@@ -786,6 +899,7 @@ function stopLive(){ if(live){ live.close(); live=null; } clearTimeout(liveTimer
 async function flushLive(){
   const evs = liveQueue.splice(0);
   const others = evs.filter(e=>e.actor_id && e.actor_id!==ME?.member_id);
+  const emg = others.find(e=>e.type==='EmergencyRaised'); if(emg) showEmergencyBanner(emg);
   if(others.length){ const e = others.at(-1);
     const what = e.type==='CareLogged' ? `logged ${e.category||'care'}` : (VERB[e.type]||e.type);
     toast(`${nameOf(e.actor_id)} ${what}${others.length>1?` · +${others.length-1} more`:''}`); }
@@ -866,7 +980,9 @@ async function renderWorkload(){
 // ---- prefs ----
 async function savePrefs(){
   const payload={ lang:$('#p-lang').value.trim(), diet:$('#p-diet').value.trim(),
-    prayer:$('#p-prayer').value.trim(), modesty:$('#p-modesty').value.trim() };
+    prayer:$('#p-prayer').value.trim(), modesty:$('#p-modesty').value.trim(),
+    conditions:$('#p-conditions').value.trim(), allergies:$('#p-allergies').value.trim(),
+    doctor:$('#p-doctor').value.trim(), contacts:$('#p-contacts').value.trim() };
   await postEncEvent('PreferenceSet', payload, { actor_id: ME.member_id });
   toast('Preferences saved'); await renderStrip();
 }
@@ -962,6 +1078,10 @@ $('#btn-login').onclick  = ()=>loginWithPassword().catch(e=>toast(e.message));
 $('#l-pass').onkeydown   = (e)=>{ if(e.key==='Enter') loginWithPassword().catch(e=>toast(e.message)); };
 $('#btn-setlogin').onclick = ()=>saveLogin().catch(e=>toast(e.message));
 $('#btn-serverview').onclick = ()=>toggleServerView().catch(e=>toast(e.message));
+$('#btn-sheet-back').onclick = ()=>show('app');
+$('#btn-sheet-print').onclick = ()=>window.print();
+$('#emg-sheet').onclick = ()=>openSheet().catch(e=>toast(e.message));
+$('#emg-dismiss').onclick = ()=>$('#emg-banner').classList.add('hide');
 $('#btn-skiplogin').onclick = afterSetLogin;
 $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
 $('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };

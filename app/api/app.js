@@ -21,6 +21,7 @@ export const ELDER_ONLY = new Set(['ConsentChanged']);
 export const LISTABLE = new Set([
   'FamilyCreated', 'MemberJoined', 'PreferenceSet', 'RoutineSet',
   'CareLogged', 'HandoffOpened', 'HandoffAcknowledged', 'ConsentChanged',
+  'EmergencyRaised',
 ]);
 
 // Express 4 does not catch rejected promises. Every async route goes through this.

@@ -127,6 +127,10 @@
       <button data-tab="flow">Flow</button>
     </nav>
 
+    <div id="emg-banner" class="emg-banner hide">
+      <div class="emg-text"><b>EMERGENCY</b><span id="emg-text"></span></div>
+      <div class="emg-actions"><button id="emg-sheet" type="button">Hospital sheet</button><button id="emg-dismiss" class="ghost small" type="button">Dismiss</button></div>
+    </div>
     <div id="sv-banner" class="sv-banner hide"><b>This is what the server, and we who run it, can see.</b> Who, what kind, when. Every word is sealed with the family key that never left the phones.</div>
     <div id="strip" class="strip hide"></div>
 
@@ -282,6 +286,20 @@
           <div class="field"><label for="p-modesty">Modesty / caregiver gender</label>
             <input id="p-modesty" placeholder="e.g. female caregiver for personal care"></div>
         </div>
+        <div class="group">
+          <h2>For the hospital sheet</h2>
+          <p class="muted">What the ER asks in the first ten minutes. Written by the family, from the doctor. Encrypted like everything else.</p>
+        </div>
+        <div class="stack tight">
+          <div class="field"><label for="p-conditions">Conditions</label>
+            <input id="p-conditions" placeholder="e.g. type 2 diabetes, high blood pressure"></div>
+          <div class="field"><label for="p-allergies">Allergies</label>
+            <input id="p-allergies" placeholder="e.g. penicillin"></div>
+          <div class="field"><label for="p-doctor">Doctor</label>
+            <input id="p-doctor" placeholder="e.g. Dr. Rahman, 514 555 0100"></div>
+          <div class="field"><label for="p-contacts">Family contacts, one per line</label>
+            <textarea id="p-contacts" placeholder="Fatima 514 555 0101&#10;Abdullah 514 555 0102"></textarea></div>
+        </div>
         <button id="btn-prefs">Save preferences</button>
       </div>
     </div>
@@ -332,6 +350,15 @@
       </div>
     </div>
 
+  </section>
+
+  <!-- HOSPITAL SHEET: the last 14 days, decrypted on this phone, printable -->
+  <section id="view-sheet" class="hide">
+    <div class="sheet-bar">
+      <button id="btn-sheet-back" class="ghost small" type="button">← Back</button>
+      <button id="btn-sheet-print" class="small" type="button">Print / save PDF</button>
+    </div>
+    <div id="sheet" class="sheet"></div>
   </section>
 
   <div id="sendfx" class="sendfx hide">

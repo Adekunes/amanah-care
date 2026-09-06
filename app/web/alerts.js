@@ -8,14 +8,14 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 // cross-imports between services (NOTIFY-SPEC §1).
 const KINDS = ['handoff.to_me','handoff.accepted','care.meds','care.meal','care.prayer',
   'care.mobility','care.mood','care.appointment','care.transport','care.note','care.*',
-  'prefs','routine','member'];
+  'prefs','routine','member','emergency'];
 const LABELS = {
   'handoff.to_me':'Handoffs to me', 'handoff.accepted':'My handoff accepted',
   'care.meds':'Meds logged', 'care.meal':'Meals logged', 'care.prayer':'Prayers logged',
   'care.mobility':'Mobility logged', 'care.mood':'Mood logged',
   'care.appointment':'Appointments logged', 'care.transport':'Pickups and drop-offs',
   'care.note':'Notes', 'care.*':'Any care logged', 'prefs':'Preferences changed',
-  'routine':'Routine changed', 'member':'Someone joined',
+  'routine':'Routine changed', 'member':'Someone joined', 'emergency':'Emergency, always on',
 };
 
 let ALERTS = [];   // last loaded notification rows, newest first
@@ -50,13 +50,17 @@ async function loadSubs(){
   const me = A.me;
   const r = await A.api(`/families/${me.family_id}/members/${me.member_id}/subscriptions`).catch(()=>({kinds:[]}));
   const on = new Set(r?.kinds || []);
-  $('#alerts-subs').innerHTML = KINDS.map(k =>
-    `<label><input type="checkbox" value="${A.esc(k)}" ${on.has(k)?'checked':''}> ${A.esc(LABELS[k])}</label>`
-  ).join('');
+  $('#alerts-subs').innerHTML = KINDS.map(k => {
+    // emergency is always on: checked and disabled, can't be turned off (NOTIFY-SPEC §1).
+    const forced = k === 'emergency';
+    const checked = forced || on.has(k);
+    return `<label><input type="checkbox" value="${A.esc(k)}" ${checked?'checked':''} ${forced?'disabled':''}> ${A.esc(LABELS[k])}</label>`;
+  }).join('');
 }
 async function saveSubs(){
   const me = A.me;
   const kinds = $$('#alerts-subs input:checked').map(i => i.value);
+  if(!kinds.includes('emergency')) kinds.push('emergency'); // always-on, even though its checkbox is disabled
   await A.api(`/families/${me.family_id}/members/${me.member_id}/subscriptions`,
     { method:'PUT', body: JSON.stringify({ kinds }) });
   A.toast('Alerts saved');

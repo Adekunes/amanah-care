@@ -151,6 +151,8 @@
     <b style="color:#7fe3cd">Hand off</b><span>"What happened" written from the log, "what is next" written from the routine. You type nothing.</span>
     <b style="color:#7fe3cd">Alerts</b><span>Each person picks what they want to hear about. Fatima: meds and appointments. Abdullah: pickups.</span>
     <b style="color:#7fe3cd">Ammi's screen</b><span>Her own view in big type: who is with her, what is coming, her prayers, who can read her record.</span>
+    <b style="color:#7fe3cd">Hospital sheet</b><span>One tap: the last 14 days as a printable sheet for the ER. Meds by day, meals, mood, allergies, doctor, contacts. Nothing inferred.</span>
+    <b style="color:#7fe3cd">Emergency</b><span>One tap alerts every phone in the family and opens the sheet. Ammi has her own "I need help" button.</span>
     <b style="color:#7fe3cd">Family key</b><span>Made on the phone, shared by QR in person. The server stores scrambled text. Not even we can read it.</span>
   </div>
   <div class="foot"><span>Amanah Care</span><span>4</span></div>
@@ -165,7 +167,7 @@
       <li>She taps <b>Done</b> on dinner. The tiles move.</li>
       <li>She hands off to <b>Fatima</b>. Summary and "what is next" are already written. Send.</li>
       <li><b>Fatima's phone</b>: alert badge, the card with Ammi's preferences on top. Accept.</li>
-      <li><b>Ammi's screen</b> now says "Fatima is looking after you today", in big type.</li>
+      <li><b>Ammi's screen</b> now says "Fatima is looking after you today", in big type. She taps <b>I need help</b>: every phone lights up red, and the <b>hospital sheet</b> opens, 14 days ready for the paramedic.</li>
       <li>We tap <b>Server view</b>. Same screen, as the server sees it: ids, kinds, times, sealed text. Then the raw database rows, same thing.</li>
     </ol>
     <div class="card" style="gap:12px">
@@ -205,12 +207,13 @@
   <div class="cols">
     <div class="card"><h3>Others built reminders, task lists, or a chatbot. We built the record.</h3><ul>
       <li><b>Plan versus actual.</b> Adherence, not alarms. The handoff writes itself from the record.</li>
+      <li><b>The record becomes the doctor's history.</b> Hospital sheet in one tap, patterns as counts, never a diagnosis.</li>
       <li><b>Cryptographic privacy.</b> The server cannot read the data. One tap shows any screen the way the server sees it, and a test proves it. Not a policy.</li>
       <li><b>The elder is in it.</b> Her own screen. Her preferences on every card. She sees who can read her record.</li>
       <li><b>Real architecture.</b> Event sourced, two consumer groups, replayable, tested.</li>
       <li><b>Grounded in the data.</b> Categories match what caregivers report doing.</li></ul></div>
     <div class="card"><h3>Honest scope</h3>
-      <p><span class="tag read">real</span> create, join, login, log, routine, handoff, alerts, dashboard, record, elder view, encryption, tests</p>
+      <p><span class="tag read">real</span> create, join, login, log, routine, handoff, alerts, live updates, dashboard, record, elder view, hospital sheet, emergency, encryption, tests</p>
       <p><span class="tag seal">simplified</span> live updates over server-sent events, no mobile push yet · demo default password 333 · one stream for all families · support workers share the family key</p>
       <p><span class="tag warn">not built</span> elder consent filter (needs a scoped key) · key rotation · reminders · Urdu and Arabic · native apps · AI (edge only, roadmap)</p></div>
   </div>
@@ -266,7 +269,7 @@
   <div class="eyebrow">Appendix · Demo, functionality, business</div>
   <div class="qa">
     <div><b>Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Login is real, with a demo default password. Updates are live over server-sent events, with polling as the safety net. The consent filter is not built. Nothing on stage is faked.</span></div>
-    <div><b>Most important feature?</b><span>The handoff, composed from the record: what happened from the log, what is next from the routine, the elder's preferences on top.</span></div>
+    <div><b>Most important feature?</b><span>The record itself, private by construction. From it: the handoff that writes itself, and the hospital sheet the ER can read in a minute.</span></div>
     <div><b>Hardest part?</b><span>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from client-side decryption.</span></div>
     <div><b>Business model?</b><span>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</span></div>
     <div><b>Scale beyond the prototype?</b><span>Per-family streams, push, scoped keys, password policy, offline. Ciphertext-only storage keeps compliance and hosting light.</span></div>

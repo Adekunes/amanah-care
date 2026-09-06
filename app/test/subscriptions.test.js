@@ -33,11 +33,11 @@ describe('subscriptions + notifications routes', () => {
   const canonical = (kinds) => KINDS.filter((k) => kinds.includes(k));
 
   describe('defaults (ensureDefaults, wired from app.js)', () => {
-    test('POST /families gives a family-role member handoff.to_me + handoff.accepted', async () => {
+    test('POST /families gives a family-role member handoff.to_me + handoff.accepted + emergency', async () => {
       const { fid, mid } = await family('family');
       const body = await (await t.get(`/families/${fid}/members/${mid}/subscriptions`)).json();
       assert.equal(body.member_id, mid);
-      assert.deepEqual(body.kinds, canonical(['handoff.to_me', 'handoff.accepted']));
+      assert.deepEqual(body.kinds, canonical(['handoff.to_me', 'handoff.accepted', 'emergency']));
     });
 
     test('POST /families gives an elder member no default subscriptions', async () => {
@@ -52,8 +52,19 @@ describe('subscriptions + notifications routes', () => {
       assert.equal((await t.post(`/families/${fid}/join`, { key_check: kc, member: { id: joiner, role: 'family' } })).status, 201);
       assert.equal((await t.post(`/families/${fid}/join`, { key_check: kc, member: { id: elderJoiner, role: 'elder' } })).status, 201);
       const jBody = await (await t.get(`/families/${fid}/members/${joiner}/subscriptions`)).json();
-      assert.deepEqual(jBody.kinds, canonical(['handoff.to_me', 'handoff.accepted']));
+      assert.deepEqual(jBody.kinds, canonical(['handoff.to_me', 'handoff.accepted', 'emergency']));
       const eBody = await (await t.get(`/families/${fid}/members/${elderJoiner}/subscriptions`)).json();
+      assert.deepEqual(eBody.kinds, []);
+    });
+
+    test('ensureDefaults includes emergency for a family member and not for an elder', async () => {
+      const { fid, mid } = await family('family');
+      const body = await (await t.get(`/families/${fid}/members/${mid}/subscriptions`)).json();
+      assert.ok(body.kinds.includes('emergency'));
+
+      const { fid: fid2, mid: eid } = await family('elder');
+      const eBody = await (await t.get(`/families/${fid2}/members/${eid}/subscriptions`)).json();
+      assert.equal(eBody.kinds.includes('emergency'), false);
       assert.deepEqual(eBody.kinds, []);
     });
   });
@@ -92,8 +103,15 @@ describe('subscriptions + notifications routes', () => {
       assert.equal(r.status, 403);
     });
 
+    test('accepts emergency as a known kind (still valid after the always-on rule)', async () => {
+      const { fid, mid } = await family('family');
+      const r = await put(`/families/${fid}/members/${mid}/subscriptions`, { kinds: ['emergency'] });
+      assert.equal(r.status, 200);
+      assert.deepEqual(await r.json(), { member_id: mid, kinds: ['emergency'] });
+    });
+
     test('replaces the whole set and returns kinds in canonical order', async () => {
-      const { fid, mid } = await family('family'); // starts with the two handoff defaults
+      const { fid, mid } = await family('family'); // starts with the default kinds (incl. emergency)
       const chosen = ['care.mood', 'care.meds', 'member']; // deliberately out of canonical order
       const r1 = await put(`/families/${fid}/members/${mid}/subscriptions`, { kinds: chosen });
       assert.equal(r1.status, 200);

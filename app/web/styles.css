@@ -307,6 +307,46 @@ body.elder .famhead #fam-name{font-size:22px}
 .alert-row .who{font-weight:700}
 .alert-row .what{font-size:14px;color:var(--ink-2)}
 
+/* ---- emergency ---- */
+.emg-btn{background:#b3261e;color:#fff;border:0}
+.emg-btn:hover{background:#961d17}
+.emg-btn.big{min-height:64px;font-size:22px;border-radius:18px}
+.hero-actions{display:flex;gap:8px;margin-top:2px}
+.hero-actions button{min-height:40px;font-size:14px}
+.hero-actions .ghost{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.3)}
+.emg-banner{position:sticky;top:0;z-index:20;background:#b3261e;color:#fff;border-radius:var(--r);padding:12px 14px;
+  display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px -10px rgba(179,38,30,.6);animation:emg 1.2s ease-in-out infinite alternate}
+@keyframes emg{from{box-shadow:0 0 0 0 rgba(179,38,30,.35)}to{box-shadow:0 0 0 8px rgba(179,38,30,0)}}
+.emg-text{font-size:15px;line-height:1.4} .emg-text b{letter-spacing:.12em;margin-right:8px}
+.emg-actions{display:flex;gap:8px} .emg-actions button{min-height:38px;font-size:13.5px}
+.emg-actions #emg-sheet{background:#fff;color:#b3261e;width:auto;padding:0 14px}
+.emg-actions .ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.patterns li{font-size:14.5px;line-height:1.4;margin:0 0 4px}
+
+/* ---- hospital sheet ---- */
+.sheet-bar{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sheet-bar button{width:auto;padding:0 16px}
+.sheet{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 18px;font-size:13px;line-height:1.45;color:#111;display:flex;flex-direction:column;gap:14px}
+.sheet h1{font-size:20px;margin:0}
+.sheet .meta{font-size:12px;color:#555}
+.sheet h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#555;margin:0 0 4px;border-bottom:1px solid #ddd;padding-bottom:3px}
+.sheet .kv{grid-template-columns:130px 1fr;gap:3px 12px;font-size:13px}
+.sheet table{border-collapse:collapse;width:100%;font-size:12.5px}
+.sheet th,.sheet td{text-align:left;vertical-align:top;padding:4px 6px;border-bottom:1px solid #e5e5e5}
+.sheet th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#666;white-space:nowrap}
+.sheet td.d{white-space:nowrap;font-weight:700;color:#333;width:92px}
+.sheet .flag{color:#b3261e;font-weight:700}
+.sheet .foot{font-size:11.5px;color:#666;border-top:1px solid #ddd;padding-top:8px}
+.sheet ul{margin:0;padding-left:18px}
+@media print{
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  #view-landing,#view-invite,#view-app,.sendfx,.toast,.sheet-bar{display:none !important}
+  #view-sheet{display:flex !important}
+  .sheet{border:0;padding:0;font-size:12px}
+  @page{margin:14mm}
+}
+
 /* ---- server view: the same screen, as the server sees it ---- */
 .sv-btn{width:auto;min-height:32px;padding:0 10px;font-size:12px;margin-left:auto}
 .whoami #btn-logout{margin-left:6px}

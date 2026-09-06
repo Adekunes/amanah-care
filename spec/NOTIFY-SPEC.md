@@ -13,8 +13,11 @@ Ten agents build this in parallel. Each owns the files listed in §7 and touches
 | `prefs` | `PreferenceSet` | every subscriber |
 | `routine` | `RoutineSet` | every subscriber |
 | `member` | `MemberJoined` | every subscriber |
+| `emergency` | `EmergencyRaised` | every member of the family, always-on (see note) |
 
-Rules: never notify the event's own `actor_id`. One notification row per (event, member) even if several kinds match; store the first matching kind in table order above. Default kinds for a new member: `handoff.to_me`, `handoff.accepted`. Elder members (role `elder`) get no defaults and the UI hides the Alerts tab for them.
+Rules: never notify the event's own `actor_id`. One notification row per (event, member) even if several kinds match; store the first matching kind in table order above. Default kinds for a new member: `handoff.to_me`, `handoff.accepted`, `emergency`. Elder members (role `elder`) get no defaults and the UI hides the Alerts tab for them.
+
+`emergency` is always-on and cannot be turned off: `recipients()` sends it to every member of the event's family (`extra.members`, looked up by `apply.js` from the `members` table) except the actor, regardless of what is in `subscriptions` for them. The subscriptions UI reflects this by rendering its checkbox permanently checked and disabled, and always including `'emergency'` in what it saves, but the API itself does not special-case `PUT`: a caller that omits `emergency` from the body still has it delivered, because delivery for this kind never consults `subscriptions` at all. `EmergencyRaised` carries only routing fields (`family_id`, `type`, `actor_id`, `occurred_at`); its payload may be empty or an encrypted note. It is not a bootstrap event, so the normal membership check applies to whoever raises it.
 
 `KINDS` (the canonical ordered list) is exported from `app/api/routes/subscriptions.js` AND duplicated in `app/notifier/match.js` (no cross-imports between services).
 

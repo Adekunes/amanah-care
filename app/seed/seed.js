@@ -48,7 +48,9 @@ for (const m of [sisA, abd, fat]) await post(`/families/${FAM}/join`,{ key_check
 const week = at(7,'09:00');
 for (const [id,name] of Object.entries(NAMES)) await ev('MemberJoined',{name},{actor_id:id}, week);
 await ev('FamilyCreated',{elder_name:'Ammi', family_name:"Ammi's family"},{actor_id:sisA}, week);
-await ev('PreferenceSet',{lang:'Urdu',diet:'halal, no gelatin, soft food',prayer:'prayer times matter, help with wudu',modesty:'female caregiver for personal care'},{actor_id:elder}, week);
+await ev('PreferenceSet',{lang:'Urdu',diet:'halal, no gelatin, soft food',prayer:'prayer times matter, help with wudu',modesty:'female caregiver for personal care',
+  conditions:'type 2 diabetes, high blood pressure, sore left knee', allergies:'penicillin', doctor:'Dr. Rahman, 514 555 0100',
+  contacts:'Sister A 514 555 0101\nFatima 514 555 0102\nAbdullah 514 555 0103'},{actor_id:elder}, week);
 
 // Ammi's routine. The plan the day is measured against.
 const R = (id, category, label, time, days, who='') => ({ id, category, label, time, days, who });
@@ -82,7 +84,8 @@ for (let k=6; k>=1; k--) {
   await care(k,'08:35','meal', k===4?'breakfast (ate half)':'breakfast','meal1');
   await care(k,'10:00','mood', MOODS[k]);
   await care(k,'13:10','prayer','Dhuhr','dhuhr');
-  await care(k,'13:35','meal', k===2?'lunch (refused food, had tea and dates)':'lunch','meal2');
+  await care(k,'13:35','meal', (k===2||k===4)?'lunch (refused food, had tea and dates)':'lunch','meal2');
+  if (k===5||k===3||k===1) await care(k,'18:40','mood','agitated (restless before Maghrib, settled after)');
   await care(k,'14:05','meds','afternoon meds','meds2');
   if (k!==5) await care(k,'16:50','prayer','Asr','asr');
   if (k!==2) await care(k,'17:20','mobility', k===4?'walk after Asr (short, knee sore)':'walk after Asr','walk');

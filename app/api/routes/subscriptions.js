@@ -6,11 +6,14 @@ export const KINDS = [
   'handoff.to_me', 'handoff.accepted',
   'care.meds', 'care.meal', 'care.prayer', 'care.mobility', 'care.mood', 'care.appointment', 'care.transport', 'care.note',
   'care.*', 'prefs', 'routine', 'member',
+  'emergency',
 ];
 
 const KIND_SET = new Set(KINDS);
 // New member defaults (§1). Elders get none; the UI hides the Alerts tab for them.
-const DEFAULT_KINDS = ['handoff.to_me', 'handoff.accepted'];
+// 'emergency' is always-on (see recipients() in notifier/match.js): every non-elder
+// member gets it by default too, and the UI keeps its checkbox on and disabled.
+const DEFAULT_KINDS = ['handoff.to_me', 'handoff.accepted', 'emergency'];
 
 // Any collection of kinds, ordered the canonical way (table order in §1).
 const canonicalOrder = (kinds) => {
