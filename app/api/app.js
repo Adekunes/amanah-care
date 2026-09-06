@@ -6,6 +6,7 @@
 // Postgres pool and Redis client. The test suite passes an in-memory
 // Postgres and a fake stream, so every route runs in-process.
 import express from 'express';
+import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const uuid = () => (globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + Math.random().toString(16).slice(2));
 
@@ -21,6 +22,9 @@ export const LISTABLE = new Set([
 
 // Express 4 does not catch rejected promises. Every async route goes through this.
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+const normLogin = (l) => String(l || '').trim().toLowerCase();
+const hashPw = (pw, salt) => scryptSync(String(pw), salt, 32).toString('hex');
 
 export function createApp({ db, redis, stream = 'events' }) {
   const app = express();
@@ -100,6 +104,46 @@ export function createApp({ db, redis, stream = 'events' }) {
     };
     const streamId = await redis.xAdd(stream, '*', fields);
     res.status(202).json({ id, stream_id: streamId });
+  }));
+
+  // Login ------------------------------------------------------------------------
+  // First time: join with the code (proves H). Then register a login: the phone
+  // sends H wrapped under the password; the server stores the wrap + a scrypt hash.
+  app.post('/auth/register', wrap(async (req, res) => {
+    const { family_id, member_id, key_check, login, password, wrap_salt, wrap_iv, wrapped_h } = req.body || {};
+    const l = normLogin(login);
+    if (!family_id || !member_id || !key_check || !l || !password || !wrap_salt || !wrap_iv || !wrapped_h)
+      return res.status(400).json({ error: 'family_id, member_id, key_check, login, password, wrap_salt, wrap_iv, wrapped_h required' });
+    if (l.length < 3 || l.length > 120 || /\s/.test(l))
+      return res.status(400).json({ error: 'login must be 3 to 120 characters with no spaces' });
+    const fam = (await db.query('SELECT key_check FROM families WHERE id=$1', [family_id])).rows[0];
+    if (!fam || fam.key_check !== key_check) return res.status(403).json({ error: 'wrong key' });
+    if (!(await isMember(family_id, member_id))) return res.status(403).json({ error: 'not a member of this family' });
+    const taken = (await db.query('SELECT member_id FROM logins WHERE login=$1', [l])).rows[0];
+    if (taken && taken.member_id !== member_id) return res.status(409).json({ error: 'login already taken' });
+    const pw_salt = randomBytes(16).toString('hex');
+    await db.query('DELETE FROM logins WHERE member_id=$1', [member_id]);   // one login per member; re-register replaces it
+    await db.query(
+      `INSERT INTO logins(login,member_id,family_id,pw_salt,pw_hash,wrap_salt,wrap_iv,wrapped_h)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [l, member_id, family_id, pw_salt, hashPw(password, pw_salt), wrap_salt, wrap_iv, wrapped_h]);
+    res.status(201).json({ login: l, member_id });
+  }));
+
+  // Returns the wrapped key material; the phone unwraps it with the password.
+  app.post('/auth/login', wrap(async (req, res) => {
+    const { login, password } = req.body || {};
+    const l = normLogin(login);
+    if (!l || !password) return res.status(400).json({ error: 'login and password required' });
+    const row = (await db.query(
+      `SELECT l.member_id, l.family_id, l.pw_salt, l.pw_hash, l.wrap_salt, l.wrap_iv, l.wrapped_h, m.role, f.key_version
+         FROM logins l JOIN members m ON m.id = l.member_id JOIN families f ON f.id = l.family_id
+        WHERE l.login=$1`, [l])).rows[0];
+    const ok = row && timingSafeEqual(Buffer.from(hashPw(password, row.pw_salt), 'hex'), Buffer.from(row.pw_hash, 'hex'));
+    if (!ok) return res.status(401).json({ error: 'wrong login or password' });
+    await db.query('UPDATE logins SET last_login_at=now() WHERE login=$1', [l]);
+    res.json({ family_id: row.family_id, member_id: row.member_id, role: row.role, key_version: row.key_version,
+               wrap_salt: row.wrap_salt, wrap_iv: row.wrap_iv, wrapped_h: row.wrapped_h });
   }));
 
   // Read models -----------------------------------------------------------------

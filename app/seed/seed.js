@@ -117,6 +117,18 @@ for (const it of ROUTINE) {
 }
 if (nowMin > 10*60) await care(0,'10:00','mood','calm', null, sisA);
 
+// Logins for everyone, password 333, H wrapped under the password like the browser does.
+async function wrapH(password){
+  const salt=wc.getRandomValues(new Uint8Array(16)), iv=wc.getRandomValues(new Uint8Array(12));
+  const base=await subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const k=await subtle.deriveKey({name:'PBKDF2', salt, iterations:310000, hash:'SHA-256'}, base, {name:'AES-GCM',length:256}, false, ['encrypt']);
+  const ct=await subtle.encrypt({name:'AES-GCM', iv}, k, await subtle.exportKey('raw', key));
+  return { wrap_salt:b64(salt), wrap_iv:b64(iv), wrapped_h:b64(ct) };
+}
+const LOGINS = { [sisA]:'sistera', [abd]:'abdullah', [fat]:'fatima', [elder]:'ammi' };
+for (const [m,l] of Object.entries(LOGINS))
+  await post('/auth/register',{ family_id:FAM, member_id:m, key_check:keyCheck, login:l, password:'333', ...(await wrapH('333')) });
+
 function code(m,r,n){ return Buffer.from(JSON.stringify({f:FAM,h:rawH,m,r,n})).toString('base64').replace(/\+/g,'-').replace(/\//g,'_'); }
 console.log('\n=== Amanah Care seeded ===');
 console.log('family_id:', FAM, '| events:', count, '| today already done:', todayDone);
@@ -124,3 +136,4 @@ console.log('\nSISTER_A_CODE='+code(sisA,'family','Sister A'));
 console.log('ABDULLAH_CODE='+code(abd,'family','Abdullah'));
 console.log('FATIMA_CODE='+code(fat,'family','Fatima'));
 console.log('AMMI_CODE='+code(elder,'elder','Ammi'));
+console.log('\nLOGINS (password 333): sistera, abdullah, fatima, ammi');

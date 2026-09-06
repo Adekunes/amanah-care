@@ -19,6 +19,20 @@
 
     <div class="card">
       <div class="group">
+        <h2>Log in</h2>
+        <p class="muted">Already set up? Use your login. First time on this family: join with the code below.</p>
+      </div>
+      <div class="stack tight">
+        <div class="field"><label for="l-login">Email or login</label>
+          <input id="l-login" placeholder="e.g. fatima or fatima@example.com" autocomplete="username"></div>
+        <div class="field"><label for="l-pass">Password</label>
+          <input id="l-pass" type="password" value="333" autocomplete="current-password"></div>
+      </div>
+      <button id="btn-login">Log in</button>
+    </div>
+
+    <div class="card">
+      <div class="group">
         <h2>Start a family</h2>
         <p class="muted">Makes the key on this device. It never leaves.</p>
       </div>
@@ -47,6 +61,25 @@
           <select id="j-role"><option value="family">Family</option><option value="support">Support worker</option><option value="elder">Elder</option></select></div>
       </div>
       <button id="btn-join" class="ghost">Join with key</button>
+    </div>
+  </section>
+
+  <!-- SET LOGIN (after the first join or create) -->
+  <section id="view-setlogin" class="hide">
+    <div class="group">
+      <h1>Set your login</h1>
+      <p class="muted">Next time, log in with this instead of the code. Your family key gets a copy locked with your password. The server keeps the locked copy and cannot open it.</p>
+    </div>
+    <div class="card">
+      <div class="stack tight">
+        <div class="field"><label for="s-login">Email or login</label>
+          <input id="s-login" placeholder="e.g. fatima or fatima@example.com" autocomplete="username"></div>
+        <div class="field"><label for="s-pass">Password</label>
+          <input id="s-pass" type="password" value="333" autocomplete="new-password"></div>
+        <p class="muted">Default password today is 333. Change it before real use.</p>
+      </div>
+      <button id="btn-setlogin">Save login</button>
+      <button id="btn-skiplogin" class="ghost small">Skip for now</button>
     </div>
   </section>
 

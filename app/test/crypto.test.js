@@ -1,7 +1,7 @@
 // Client crypto (web/crypto.js) run under Node's WebCrypto. Same code the browser runs.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64 } from '../web/crypto.js';
+import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64, wrapKey, unwrapKey } from '../web/crypto.js';
 
 describe('crypto.js', () => {
   test('makeKey gives a 256-bit AES-GCM key that exports to 32 raw bytes', async () => {
@@ -68,5 +68,24 @@ describe('crypto.js', () => {
   test('b64 helpers round-trip arbitrary bytes', () => {
     const bytes = Uint8Array.from({ length: 64 }, (_, i) => (i * 37) & 0xff);
     assert.deepEqual([...b64.to(b64.from(bytes))], [...bytes]);
+  });
+
+  test('wrapKey / unwrapKey: the password opens the family key, a wrong password does not', async () => {
+    const key = await makeKey();
+    const raw = await exportKeyRaw(key);
+    const w = await wrapKey(raw, '333');
+    assert.ok(w.wrap_salt && w.wrap_iv && w.wrapped_h);
+    assert.equal(Buffer.from(w.wrapped_h, 'base64').toString('base64').includes(raw), false);
+    assert.equal(await unwrapKey(w, '333'), raw);
+    assert.equal(await unwrapKey(w, '334'), null);
+    const again = await importKeyRaw(await unwrapKey(w, '333'));
+    assert.equal(await keyCheck(again), await keyCheck(key));
+  });
+
+  test('two wraps of the same key differ (fresh salt and IV)', async () => {
+    const raw = await exportKeyRaw(await makeKey());
+    const a = await wrapKey(raw, 'pw'), b = await wrapKey(raw, 'pw');
+    assert.notEqual(a.wrapped_h, b.wrapped_h);
+    assert.notEqual(a.wrap_salt, b.wrap_salt);
   });
 });

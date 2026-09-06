@@ -1,7 +1,7 @@
 // Amanah Care web app. Vanilla ES module. All plaintext stays in this browser.
 // The Home dashboard, the routine and the record are all computed here, on the
 // phone, from decrypted events. The server only ever sorts ciphertext.
-import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64 }
+import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64, wrapKey, unwrapKey }
   from './crypto.js';
 
 const API = (window.AMANAH_API || `http://${location.hostname}:4000`);
@@ -20,6 +20,7 @@ let routineDirty = false;
 let WEEK = [];                  // decrypted CareLogged rows, last 7 days
 let HANDOFFS = [];              // handoff read-model rows for the family
 let MEMBERS = [];               // {id, role}
+let PREFS = null;               // decrypted PreferenceSet
 
 const CATS = [
   ['meds',        ['meds given','meds skipped','meds refused']],
@@ -46,11 +47,15 @@ const cap = (s)=>{ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1);
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
 
-function save(){ localStorage.setItem('amanah', JSON.stringify(ME)); }
+// One browser tab is one phone: the session lives in sessionStorage, so three
+// tabs on the same origin can be three family members. Survives reload, not close.
+function save(){ sessionStorage.setItem('amanah', JSON.stringify(ME)); }
 async function loadSession(){
-  const raw = localStorage.getItem('amanah'); if(!raw) return false;
+  localStorage.removeItem('amanah');  // older builds kept it here; never share it across tabs
+  const raw = sessionStorage.getItem('amanah'); if(!raw) return false;
   ME = JSON.parse(raw); KEY = await importKeyRaw(ME.h); return true;
 }
+const isElder = ()=> ME?.role === 'elder';
 
 async function api(path, opts={}){
   const r = await fetch(API+path, { headers:{'content-type':'application/json'}, ...opts });
@@ -87,7 +92,7 @@ async function traceProjection(tr){
 }
 
 // ---- views ----
-function show(id){ ['landing','invite','app'].forEach(v=>$('#view-'+v).classList.toggle('hide', v!==id)); }
+function show(id){ ['landing','setlogin','invite','app'].forEach(v=>$('#view-'+v).classList.toggle('hide', v!==id)); }
 function tab(name){
   $$('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
   $$('.tabview').forEach(v=>v.classList.add('hide'));
@@ -119,7 +124,7 @@ async function createFamily(){
   await postEncEvent('MemberJoined', { name: myName }, { actor_id: member_id });
   await postEncEvent('FamilyCreated', { elder_name: elder }, { actor_id: member_id });
   save();
-  showInvite();
+  afterLogin = 'invite'; showSetLogin();
 }
 
 function inviteCode(){
@@ -164,7 +169,39 @@ async function joinFamily(){
   ME = { family_id: payload.f, member_id, role, h: payload.h, my_name: name };
   if(!pinned) await postEncEvent('MemberJoined', { name }, { actor_id: member_id });
   save();
-  enterApp();
+  afterLogin = 'app'; showSetLogin();
+}
+
+// ---- login: code once, then email/login + password ----
+let afterLogin = 'app';           // where to go once the login is saved or skipped
+function showSetLogin(){ $('#s-login').value = ME.login || ''; $('#s-pass').value = '333'; show('setlogin'); }
+function afterSetLogin(){ if(afterLogin==='invite') showInvite(); else enterApp(); }
+async function saveLogin(){
+  const login = $('#s-login').value.trim(); const password = $('#s-pass').value;
+  if(!login) return toast('Choose an email or a login');
+  if(!password) return toast('Choose a password');
+  const wrapped = await wrapKey(ME.h, password);          // H locked with the password, on this phone
+  const kc = await keyCheck(KEY);
+  try{
+    const r = await api('/auth/register', { method:'POST', body: JSON.stringify({
+      family_id: ME.family_id, member_id: ME.member_id, key_check: kc, login, password, ...wrapped }) });
+    ME.login = r.login; save();
+  }catch(e){ return toast(e.message.startsWith('409') ? 'That login is taken' : 'Could not save the login'); }
+  toast('Login saved'); afterSetLogin();
+}
+async function loginWithPassword(){
+  const login = $('#l-login').value.trim(); const password = $('#l-pass').value;
+  if(!login || !password) return toast('Login and password, please');
+  let r;
+  try{ r = await api('/auth/login', { method:'POST', body: JSON.stringify({ login, password }) }); }
+  catch{ return toast('Wrong login or password'); }
+  const h = await unwrapKey(r, password);                  // only the password opens the family key
+  if(!h) return toast('Could not unlock the family key');
+  KEY = await importKeyRaw(h);
+  ME = { family_id: r.family_id, member_id: r.member_id, role: r.role, h, my_name: '', login };
+  await loadNames();
+  ME.my_name = nameCache[ME.member_id] || login;
+  save(); enterApp();
 }
 
 // encrypt a payload then post with clear routing fields
@@ -187,8 +224,18 @@ function renderWhoAmI(){
   if(dot) dot.style.background = `hsl(${hsh % 360} 60% 45%)`;
   document.title = `${name} · Amanah Care`;
 }
+// The elder gets a different app: Today, My week, My preferences, Invite. Big type, read-only.
+const ELDER_TABS = { home:'Today', record:'My week', prefs:'My preferences', invite:'Invite' };
+function setTabsForRole(){
+  document.body.classList.toggle('elder', isElder());
+  $$('.tabs button').forEach(b=>{
+    const t=b.dataset.tab;
+    if(isElder()){ b.classList.toggle('hide', !(t in ELDER_TABS)); if(ELDER_TABS[t]) b.firstChild.nodeValue = ELDER_TABS[t]; }
+    else b.classList.remove('hide');
+  });
+}
 async function enterApp(){
-  show('app'); renderWhoAmI();
+  show('app'); renderWhoAmI(); setTabsForRole();
   buildChipsets(); buildRoutineForm();
   await loadMembers();
   await loadNames();
@@ -224,6 +271,7 @@ async function renderStrip(){
   if(!pref){ $('#strip').classList.add('hide'); return; }
   const p = await decryptJSON(KEY, pref.iv, pref.payload_cipher);
   if(!p){ $('#strip').classList.add('hide'); return; }
+  PREFS = p;
   $('#p-lang').value = p.lang||''; $('#p-diet').value = p.diet||'';
   $('#p-prayer').value = p.prayer||''; $('#p-modesty').value = p.modesty||'';
   const bits = [['Language',p.lang],['Diet',p.diet],['Prayer',p.prayer],['Modesty',p.modesty]]
@@ -339,6 +387,7 @@ function nextOf(cat, rows){
   return null;
 }
 function renderHome(){
+  if(isElder()) return renderElderHome();
   const today = todayItems();
   const rows = planRows();
   const done = rows.filter(r=>r.d).length;
@@ -421,6 +470,43 @@ function renderHome(){
     <div class="card"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekTotal} items · ${people} ${people===1?'person':'people'}</span></div>
       <div class="days">${weekHtml}</div></div>`;
   $$('[data-done]').forEach(b=>b.onclick=()=>{ b.disabled=true; logRoutineItem(b.dataset.done).catch(e=>{ toast(e.message); b.disabled=false; }); });
+}
+
+// ---- ELDER view: what Ammi needs to know, in large type, nothing to operate ----
+function renderElderHome(){
+  const today = todayItems();
+  const rows = planRows();
+  const nm = nowMin();
+  const open = HANDOFFS.filter(h=>h.status==='open').sort((a,b)=>new Date(b.opened_at)-new Date(a.opened_at));
+  const acked = HANDOFFS.filter(h=>h.status==='acknowledged').sort((a,b)=>new Date(b.acked_at)-new Date(a.acked_at))[0];
+  const last = today.at(-1);
+  let withNow = null;
+  if(acked && (!last || new Date(acked.acked_at) > new Date(last.occurred_at) || acked.to_id===last.actor_id)) withNow = nameOf(acked.to_id);
+  else if(last) withNow = nameOf(last.actor_id);
+  const coming = rows.filter(r=>!r.d && hm(r.it.time)>=nm-60).slice(0,4);
+  const done = rows.filter(r=>r.d);
+  const prayers = rows.filter(r=>r.it.category==='prayer');
+  const tr = nextOf('transport', rows), ap = nextOf('appointment', rows);
+  const family = MEMBERS.filter(m=>m.id!==ME.member_id).map(m=>nameOf(m.id));
+  const erow = (r)=>`<div class="erow ${r.d?'done':''}"><span class="etime">${esc(r.it.time)}</span><span class="elabel">${esc(cap(r.it.label))}</span><span class="ewho">${r.d?`${esc(nameOf(r.d.actor_id))} ✓`:esc(r.it.who?nameOf(r.it.who):'')}</span></div>`;
+  $('#home').innerHTML = `
+    <div class="ehero">
+      <div class="edate">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
+      <h1>Assalamu alaykum, ${esc(ME.my_name)}</h1>
+      <div class="ewith">${withNow?`<b>${esc(withNow)}</b> is looking after you today.`:'Your family is here for you today.'}${open.length?` <b>${esc(nameOf(open[0].to_id))}</b> is coming next.`:''}</div>
+    </div>
+    <div class="ecard"><h2>Coming up</h2>
+      ${coming.length ? coming.map(erow).join('') : '<p class="elabel" style="font-size:22px;margin:0">Nothing more today. Rest well.</p>'}</div>
+    ${prayers.length?`<div class="ecard"><h2>Your prayers today</h2><div class="eprayers">${prayers.map(r=>`<span class="eprayer ${r.d?'done':''}">${esc(r.it.label)}${r.d?' ✓':''}</span>`).join('')}</div></div>`:''}
+    <div class="ecard"><h2>Done today</h2><p class="ebig">${done.length}<span style="font-size:22px;color:var(--muted)"> of ${rows.length}</span></p>
+      <div>${done.map(erow).join('')}</div></div>
+    <div class="ecard"><h2>Next visit and pickup</h2>
+      <div class="erow"><span class="etime">${ap?esc(ap.when.split(' ')[0]):'—'}</span><span class="elabel">${ap?esc(cap(ap.label)):'No appointment planned'}</span><span class="ewho">${ap?esc(nameOf(ap.who)):''}</span></div>
+      <div class="erow"><span class="etime">${tr?esc(tr.when.split(' ')[0]):'—'}</span><span class="elabel">${tr?esc(cap(tr.label)):'No pickup planned'}</span><span class="ewho">${tr?esc(nameOf(tr.who)):''}</span></div></div>
+    <div class="ecard"><h2>What your family knows about you</h2>
+      ${PREFS ? `<div class="eprefs">${[['Language',PREFS.lang],['Food',PREFS.diet],['Prayer',PREFS.prayer],['Personal care',PREFS.modesty]].filter(([,v])=>v).map(([k,v])=>`<div><span>${k}</span><br>${esc(v)}</div>`).join('')}</div><p class="muted" style="font-size:15px">Shown to whoever looks after you, on every handoff.</p>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
+    <div class="ecard"><h2>Who can read your record</h2><p style="font-size:21px;margin:0">${family.length?esc(family.join(', ')):'Only you'}</p>
+      <p class="muted" style="font-size:15px">They hold your family key. Nobody else can read it, not even the people who run this app.</p></div>`;
 }
 
 // ---- chips / logging ----
@@ -725,6 +811,10 @@ async function renderFlow(){
 $('#btn-create').onclick = ()=>createFamily().catch(e=>toast(e.message));
 $('#btn-join').onclick   = ()=>joinFamily().catch(e=>toast(e.message));
 $('#btn-enter').onclick  = ()=>enterApp();
+$('#btn-login').onclick  = ()=>loginWithPassword().catch(e=>toast(e.message));
+$('#l-pass').onkeydown   = (e)=>{ if(e.key==='Enter') loginWithPassword().catch(e=>toast(e.message)); };
+$('#btn-setlogin').onclick = ()=>saveLogin().catch(e=>toast(e.message));
+$('#btn-skiplogin').onclick = afterSetLogin;
 $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
 $('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };
 $('#btn-log').onclick    = ()=>logItem().catch(e=>toast(e.message));

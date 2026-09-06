@@ -46,3 +46,27 @@ export async function decryptJSON(key, ivB64, cipherB64) {
     return JSON.parse(dec.decode(pt));
   } catch { return null; } // wrong key or tampered -> null, caller shows a lock
 }
+
+// Password-locked copy of H, so a member can log in on a new phone without the
+// QR. PBKDF2-SHA256 (310k rounds) makes the wrapping key; AES-GCM seals raw H.
+// The server stores salt, iv and the sealed bytes. Only the password opens it.
+const PBKDF2_ITERATIONS = 310000;
+async function passwordKey(password, salt) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+export async function wrapKey(rawHb64, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const k = await passwordKey(password, salt);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, b64.to(rawHb64));
+  return { wrap_salt: b64.from(salt), wrap_iv: b64.from(iv), wrapped_h: b64.from(ct) };
+}
+export async function unwrapKey({ wrap_salt, wrap_iv, wrapped_h }, password) {
+  try {
+    const k = await passwordKey(password, b64.to(wrap_salt));
+    const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64.to(wrap_iv) }, k, b64.to(wrapped_h));
+    return b64.from(raw);
+  } catch { return null; } // wrong password
+}

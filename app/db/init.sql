@@ -61,3 +61,21 @@ SELECT family_id,
 FROM events
 WHERE actor_id IS NOT NULL
 GROUP BY family_id, actor_id, date_trunc('day', occurred_at)::date;
+
+-- Login after the first join. The invite code (QR) proves you hold H once; then
+-- you log in with an email or a chosen login + password. wrapped_h is H encrypted
+-- on the phone with a key derived from the password (PBKDF2, AES-GCM). The server
+-- stores the wrapped copy and a scrypt hash of the password. It can verify the
+-- password; it cannot open the wrap. Default demo password is 333 (SR-11 stub).
+CREATE TABLE IF NOT EXISTS logins (
+  login          TEXT PRIMARY KEY,               -- lowercased email or chosen login
+  member_id      TEXT NOT NULL UNIQUE REFERENCES members(id),
+  family_id      TEXT NOT NULL REFERENCES families(id),
+  pw_salt        TEXT NOT NULL,
+  pw_hash        TEXT NOT NULL,                  -- scrypt(password, pw_salt), hex
+  wrap_salt      TEXT NOT NULL,                  -- PBKDF2 salt, base64
+  wrap_iv        TEXT NOT NULL,                  -- AES-GCM IV, base64
+  wrapped_h      TEXT NOT NULL,                  -- H under the password key, base64
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_login_at  TIMESTAMPTZ
+);

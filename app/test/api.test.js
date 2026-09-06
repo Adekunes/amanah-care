@@ -4,7 +4,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startApp, uuid, makeStream } from './helpers.mjs';
 import { createApp } from '../api/app.js';
-import { makeKey, keyCheck, encryptJSON, decryptJSON } from '../web/crypto.js';
+import { makeKey, keyCheck, exportKeyRaw, importKeyRaw, encryptJSON, decryptJSON, wrapKey, unwrapKey } from '../web/crypto.js';
 
 describe('api', () => {
   let t;
@@ -212,6 +212,55 @@ describe('api', () => {
       const rows = await (await t.get(`/families/${f.fid}/members`)).json();
       assert.equal(rows.length, 2);
       for (const r of rows) assert.deepEqual(Object.keys(r).sort(), ['id', 'joined_at', 'role']);
+    });
+  });
+
+  describe('login: code once, then login + password', () => {
+    async function reg(f, member, login, password = '333') {
+      const w = await wrapKey(await exportKeyRaw(f.key), password);
+      return t.post('/auth/register', { family_id: f.fid, member_id: member, key_check: f.kc, login, password, ...w });
+    }
+    test('register: 400 missing fields, 400 bad login, 403 wrong key, 403 non-member', async () => {
+      const f = await family();
+      assert.equal((await t.post('/auth/register', { login: 'x' })).status, 400);
+      const w = await wrapKey(await exportKeyRaw(f.key), '333');
+      assert.equal((await t.post('/auth/register', { family_id: f.fid, member_id: f.sis, key_check: f.kc, login: 'a b', password: '333', ...w })).status, 400);
+      assert.equal((await t.post('/auth/register', { family_id: f.fid, member_id: f.sis, key_check: 'nope', login: 'sister', password: '333', ...w })).status, 403);
+      assert.equal((await t.post('/auth/register', { family_id: f.fid, member_id: uuid(), key_check: f.kc, login: 'ghost', password: '333', ...w })).status, 403);
+    });
+    test('register 201, duplicate login by another member 409, re-register by the same member replaces', async () => {
+      const f = await family();
+      const login = 'fatima-' + f.fid;
+      assert.equal((await reg(f, f.sis, login)).status, 201);
+      assert.equal((await reg(f, f.elder, login)).status, 409);
+      assert.equal((await reg(f, f.sis, login, 'newpw')).status, 201);
+      assert.equal((await t.post('/auth/login', { login, password: '333' })).status, 401);
+      assert.equal((await t.post('/auth/login', { login, password: 'newpw' })).status, 200);
+    });
+    test('login: 400 missing, 401 unknown login, 401 wrong password', async () => {
+      assert.equal((await t.post('/auth/login', { login: 'x' })).status, 400);
+      assert.equal((await t.post('/auth/login', { login: 'nobody-' + uuid(), password: '333' })).status, 401);
+      const f = await family();
+      await reg(f, f.sis, 'sis-' + f.fid);
+      assert.equal((await t.post('/auth/login', { login: 'sis-' + f.fid, password: '334' })).status, 401);
+    });
+    test('login is case-insensitive, returns wrapped material the password unlocks, never the password or H', async () => {
+      const f = await family();
+      const email = 'Fatima.' + f.fid + '@Example.com';
+      assert.equal((await reg(f, f.sis, email)).status, 201);
+      const r = await t.post('/auth/login', { login: email.toLowerCase(), password: '333' });
+      assert.equal(r.status, 200);
+      const body = await r.json();
+      assert.deepEqual(Object.keys(body).sort(), ['family_id', 'key_version', 'member_id', 'role', 'wrap_iv', 'wrap_salt', 'wrapped_h']);
+      assert.equal(body.member_id, f.sis);
+      assert.equal(body.role, 'family');
+      const raw = await unwrapKey(body, '333');
+      assert.equal(await keyCheck(await importKeyRaw(raw)), f.kc);
+      assert.equal(await unwrapKey(body, 'wrong'), null);
+      const rows = (await t.db.query('SELECT * FROM logins WHERE member_id=$1', [f.sis])).rows;
+      assert.equal(rows.length, 1);
+      assert.equal(JSON.stringify(rows).includes(await exportKeyRaw(f.key)), false);
+      assert.equal(JSON.stringify(rows).includes('333'), false);
     });
   });
 
