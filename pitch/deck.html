@@ -172,7 +172,7 @@
       <h3>Watch for</h3>
       <ul>
         <li>Nothing typed except one line.</li>
-        <li>Three real sessions, one real backend, seconds apart.</li>
+        <li>Three real sessions, one real backend, updating live without a refresh.</li>
         <li>Readable on the phones, unreadable on the server.</li>
       </ul>
     </div>
@@ -189,7 +189,7 @@
     <div class="hop sealed"><div class="n">3</div><b>Redis Streams</b><span>Append-only event log. Replayable.</span><span class="tag seal">sealed</span></div>
     <div class="hop sealed"><div class="n">4</div><b>Projector + notifier</b><span>Two consumer groups: read models, alerts.</span><span class="tag seal">sealed</span></div>
     <div class="hop sealed"><div class="n">5</div><b>Postgres</b><span>7 tables + 1 view. Metadata and ciphertext only.</span><span class="tag seal">sealed</span></div>
-    <div class="hop"><div class="n">6</div><b>Family phones</b><span>Decrypt, compute the dashboard locally.</span><span class="tag read">readable</span></div>
+    <div class="hop"><div class="n">6</div><b>Family phones</b><span>Live stream per family; decrypt and compute the dashboard locally.</span><span class="tag read">readable</span></div>
   </div>
   <div class="cols3" style="margin-top:4px">
     <div class="card"><h3>Every action is an event</h3><p>Dashboard, routine, record, alerts were added without touching the write path. They are projections over one log.</p></div>
@@ -211,7 +211,7 @@
       <li><b>Grounded in the data.</b> Categories match what caregivers report doing.</li></ul></div>
     <div class="card"><h3>Honest scope</h3>
       <p><span class="tag read">real</span> create, join, login, log, routine, handoff, alerts, dashboard, record, elder view, encryption, tests</p>
-      <p><span class="tag seal">simplified</span> polling not push · demo default password 333 · one stream for all families · support workers share the family key</p>
+      <p><span class="tag seal">simplified</span> live updates over server-sent events, no mobile push yet · demo default password 333 · one stream for all families · support workers share the family key</p>
       <p><span class="tag warn">not built</span> elder consent filter (needs a scoped key) · key rotation · reminders · Urdu and Arabic · native apps · AI (edge only, roadmap)</p></div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>7</span></div>
@@ -243,9 +243,9 @@
   <div class="qa">
     <div><b>Delivery format?</b><span>Web app, phone first, any browser. Two windows on stage stand in for two phones. Native mobile is roadmap.</span></div>
     <div><b>Technologies?</b><span>Node/Express API, Redis Streams event log, Postgres read models, vanilla JS + WebCrypto AES-GCM, nginx, Docker Compose. Node's built-in test runner. Vendored QR library. No frameworks, no CDNs, so the demo needs no internet.</span></div>
-    <div><b>Behind the scenes?</b><span>Phone encrypts → POST /events → membership check → XADD to the stream → projector consumer group → Postgres events + handoffs + workload view; a second consumer group, the notifier, writes alerts per subscriber → phones poll and decrypt. The dashboard is computed on the phone.</span></div>
+    <div><b>Behind the scenes?</b><span>Phone encrypts → POST /events → membership check → XADD to the stream → projector consumer group → Postgres events + handoffs + workload view, then an announcement on a Redis channel that the API relays to every open tab as a server-sent event; a second consumer group, the notifier, writes alerts per subscriber → phones poll and decrypt. The dashboard is computed on the phone.</span></div>
     <div><b>Built from scratch here?</b><span>Spec, requirements and two audit rounds were planned ahead. All code was written during the hackathon window. QR generation is a vendored library.</span></div>
-    <div><b>Tradeoffs?</b><span>Polling over push, a demo default password over real credential policy, one stream over per-family streams, consent filter deferred. Each one on the honesty slide with the reason.</span></div>
+    <div><b>Tradeoffs?</b><span>Server-sent events over mobile push, a demo default password over real credential policy, one stream over per-family streams, consent filter deferred. Each one on the honesty slide with the reason.</span></div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>A1</span></div>
 </section>
@@ -265,7 +265,7 @@
 <section class="slide">
   <div class="eyebrow">Appendix · Demo, functionality, business</div>
   <div class="qa">
-    <div><b>Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Login is real, with a demo default password. Notifications are polling. The consent filter is not built. Nothing on stage is faked.</span></div>
+    <div><b>Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Login is real, with a demo default password. Updates are live over server-sent events, with polling as the safety net. The consent filter is not built. Nothing on stage is faked.</span></div>
     <div><b>Most important feature?</b><span>The handoff, composed from the record: what happened from the log, what is next from the routine, the elder's preferences on top.</span></div>
     <div><b>Hardest part?</b><span>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from client-side decryption.</span></div>
     <div><b>Business model?</b><span>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</span></div>

@@ -9,6 +9,7 @@ import express from 'express';
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mountSubscriptions, ensureDefaults } from './routes/subscriptions.js';
 import { mountNotifications } from './routes/notifications.js';
+import { LocalBus } from './bus.js';
 
 const uuid = () => (globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + Math.random().toString(16).slice(2));
 
@@ -28,7 +29,7 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
 const normLogin = (l) => String(l || '').trim().toLowerCase();
 const hashPw = (pw, salt) => scryptSync(String(pw), salt, 32).toString('hex');
 
-export function createApp({ db, redis, stream = 'events' }) {
+export function createApp({ db, redis, stream = 'events', bus = new LocalBus() }) {
   const app = express();
   app.use(express.json({ limit: '256kb' }));
   app.use((req, res, next) => {
@@ -221,6 +222,20 @@ export function createApp({ db, redis, stream = 'events' }) {
          FROM events ORDER BY occurred_at DESC LIMIT 50`);
     res.json(r.rows);
   }));
+
+  // Live updates (FR-05 upgrade): one server-sent-events stream per family.
+  // The projector announces an event after its read models are written; the
+  // phone refetches what it shows. Metadata only, never a payload.
+  app.get('/families/:id/live', async (req, res) => {
+    res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform',
+              'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
+    res.flushHeaders();
+    res.write('event: hello\ndata: {}\n\n');
+    const send = (msg) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(msg)}\n\n`); };
+    const off = await bus.subscribe(req.params.id, send);
+    const beat = setInterval(() => { if (!res.writableEnded) res.write(': ping\n\n'); }, 15000);
+    req.on('close', async () => { clearInterval(beat); await off(); });
+  });
 
   // Alerts: subscriptions + notifications live in their own route modules.
   mountSubscriptions(app, { db, wrap, isMember });

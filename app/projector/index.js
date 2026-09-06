@@ -22,6 +22,9 @@ try {
   console.log('[projector] group exists');
 }
 
+// Announces each applied event on family:<id> for the API's live streams.
+const bus = { publish: (family, msg) => redis.publish(`family:${family}`, JSON.stringify(msg)) };
+
 console.log('[projector] consuming...');
 for (;;) {
   let resp;
@@ -33,7 +36,7 @@ for (;;) {
   for (const stream of resp) {
     for (const msg of stream.messages) {
       try {
-        await applyEvent(db, msg.id, msg.message);
+        await applyEvent(db, msg.id, msg.message, bus);
         await redis.xAck(STREAM, GROUP, msg.id);
       } catch (e) {
         console.error('[projector] apply failed, will retry', msg.id, e.message);

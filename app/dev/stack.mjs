@@ -12,6 +12,8 @@ import { createApp } from '../api/app.js';
 import { applyEvent } from '../projector/apply.js';
 import { notify } from '../notifier/apply.js';
 import { makeDb } from '../test/helpers.mjs';
+import { LocalBus } from '../api/bus.js';
+import { announcement } from '../projector/apply.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.join(here, '..', 'web');
@@ -19,10 +21,11 @@ const API_PORT = +(process.env.PORT || 4000);
 const WEB_PORT = +(process.env.WEB_PORT || 8080);
 
 const db = makeDb();
+const bus = new LocalBus();
 let n = 0;
 // Fake stream: every XADD is projected on the spot, so reads are immediate.
-const redis = { async xAdd(_stream, _id, fields) { const id = `${Date.now()}-${n++}`; await applyEvent(db, id, fields); await notify(db, id, fields); return id; } };
-createApp({ db, redis }).listen(API_PORT, () => console.log(`[stack] api http://localhost:${API_PORT} (in-memory postgres, inline projector)`));
+const redis = { async xAdd(_stream, _id, fields) { const id = `${Date.now()}-${n++}`; await applyEvent(db, id, fields); await notify(db, id, fields); await bus.publish(fields.family_id, announcement(fields)); return id; } };
+createApp({ db, redis, bus }).listen(API_PORT, () => console.log(`[stack] api http://localhost:${API_PORT} (in-memory postgres, inline projector)`));
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml' };
 http.createServer((req, res) => {

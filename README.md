@@ -14,7 +14,7 @@ The family enters the elder's routine once (meds, meals, prayers, walks, pickups
 - Web: one responsive page, WebCrypto AES-GCM in the browser. No build step.
 - Docker Compose: the whole stack in one command.
 
-Cut-core scope. Notifications are by polling, not push. Consent filter, elder today view, and key rotation are on the roadmap, see `spec/REQUIREMENTS.md`.
+Cut-core scope. Every open tab gets live updates over server-sent events (a Redis channel the projector announces on), with a 4-second poll as the safety net; no mobile push yet. Consent filter, elder today view, and key rotation are on the roadmap, see `spec/REQUIREMENTS.md`.
 
 ## Run it
 

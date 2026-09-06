@@ -2,6 +2,7 @@
 import { createClient } from 'redis';
 import pg from 'pg';
 import { createApp } from './app.js';
+import { RedisBus } from './redisbus.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -10,5 +11,5 @@ const redis = createClient({ url: process.env.REDIS_URL });
 redis.on('error', (e) => console.error('[api] redis', e.message));
 await redis.connect();
 
-const app = createApp({ db, redis });
+const app = createApp({ db, redis, bus: new RedisBus(redis) });
 app.listen(PORT, () => console.log(`[api] listening on ${PORT}`));

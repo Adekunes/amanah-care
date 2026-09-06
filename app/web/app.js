@@ -60,6 +60,7 @@ const isElder = ()=> ME?.role === 'elder';
 
 // Wipe every trace of this session from this tab and drop back to the landing card.
 function logout(){
+  stopLive();
   clearInterval(pollTimer); pollTimer = null;
   sessionStorage.removeItem('amanah');
   KEY = null; ME = null;
@@ -270,6 +271,7 @@ async function enterApp(){
   await loadWeek();
   tab('home');
   startPolling();
+  startLive();
   await runHooks(enterHooks);
 }
 
@@ -713,6 +715,42 @@ async function renderSent(flash){
   box.innerHTML=groups.join('');
 }
 
+// ---- live updates: one server-sent-events stream per family ----
+// The projector announces an event once its read models are written; every
+// open tab refetches what it is showing. The 4 s poll below stays as the net.
+let live = null, liveTimer = null, liveQueue = [];
+const liveHooks = [];
+const VERB = { HandoffOpened:'sent a handoff', HandoffAcknowledged:'accepted a handoff', PreferenceSet:'updated the preferences',
+               RoutineSet:'changed the routine', MemberJoined:'joined', CareLogged:'logged' };
+function startLive(){
+  stopLive();
+  if(!('EventSource' in window) || !ME) return;
+  live = new EventSource(`${API}/families/${ME.family_id}/live`);
+  live.onmessage = (m)=>{ let ev; try{ ev = JSON.parse(m.data); }catch{ return; } if(!ev?.type) return;
+    liveQueue.push(ev); clearTimeout(liveTimer); liveTimer = setTimeout(()=>flushLive().catch(()=>{}), 150); };
+  live.onerror = ()=>{};   // EventSource reconnects by itself; polling covers the gap
+}
+function stopLive(){ if(live){ live.close(); live=null; } clearTimeout(liveTimer); liveQueue=[]; }
+async function flushLive(){
+  const evs = liveQueue.splice(0);
+  const others = evs.filter(e=>e.actor_id && e.actor_id!==ME?.member_id);
+  if(others.length){ const e = others.at(-1);
+    const what = e.type==='CareLogged' ? `logged ${e.category||'care'}` : (VERB[e.type]||e.type);
+    toast(`${nameOf(e.actor_id)} ${what}${others.length>1?` · +${others.length-1} more`:''}`); }
+  await refreshAll();
+  setTimeout(()=>refreshAll().catch(()=>{}), 900);   // rows written by a second consumer (alerts) land a beat later
+}
+async function refreshAll(){
+  if(!ME) return;
+  const vis = (id)=>!$(id).classList.contains('hide');
+  if(vis('#tab-home')) await refreshHome(true);
+  if(vis('#tab-log')) await renderCareToday();
+  if(vis('#tab-record')) await renderRecord();
+  if(vis('#tab-handoff')) await renderSent(false);
+  await refreshInbox();                       // inbox, badge, and the poll hooks (alerts)
+  for(const fn of liveHooks){ try{ await fn(); }catch{} }
+}
+
 // ---- inbox / poll (FR-05) ----
 let pollTimer=null;
 function startPolling(){ if(pollTimer) clearInterval(pollTimer);
@@ -846,6 +884,7 @@ window.amanah = {
   onEnter(fn){ enterHooks.push(fn); },
   onPoll(fn){ pollHooks.push(fn); },
   onTab(name, fn){ (tabHooks[name]=tabHooks[name]||[]).push(fn); },
+  onLive(fn){ liveHooks.push(fn); },
 };
 async function runHooks(list){ for(const fn of list){ try{ await fn(); }catch(e){ console.warn('[hook]', e.message); } } }
 

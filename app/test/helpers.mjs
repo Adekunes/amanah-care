@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { newDb, DataType } from 'pg-mem';
 import { createApp } from '../api/app.js';
 import { applyEvent } from '../projector/apply.js';
+import { LocalBus } from '../api/bus.js';
 import { notify } from '../notifier/apply.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -38,9 +39,9 @@ export function makeStream() {
 }
 
 // Drain the fake stream through the real projector, then the real notifier, into the db.
-export async function project(db, redis) {
+export async function project(db, redis, bus = null) {
   for (const e of redis.entries.splice(0)) {
-    await applyEvent(db, e.id, e.message);
+    await applyEvent(db, e.id, e.message, bus);
     await notify(db, e.id, e.message);
   }
 }
@@ -48,13 +49,14 @@ export async function project(db, redis) {
 export async function startApp(over = {}) {
   const db = over.db || makeDb();
   const redis = over.redis || makeStream();
-  const app = createApp({ db, redis });
+  const bus = over.bus || new LocalBus();
+  const app = createApp({ db, redis, bus });
   const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (p, body) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const get = (p) => fetch(base + p);
-  const close = () => new Promise((r) => server.close(r));
-  return { db, redis, base, post, get, close, project: () => project(db, redis) };
+  const close = () => new Promise((r) => { server.closeAllConnections?.(); server.close(r); });
+  return { db, redis, bus, base, post, get, close, project: () => project(db, redis, bus) };
 }
 
 export const uuid = () => globalThis.crypto.randomUUID();
