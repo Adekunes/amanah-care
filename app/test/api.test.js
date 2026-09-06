@@ -252,6 +252,30 @@ describe('api', () => {
     });
   });
 
+  describe('CareBlocked: a card moved to Blocked', () => {
+    test('202 for a member, 403 for a stranger, listed by /care with its type, reason never in clear on the server', async () => {
+      const f = await family();
+      const c = await enc(f.key, { text: 'Meals not done: refused', reason: 'refused', routine_id: 'meals' });
+      assert.equal((await t.post('/events', { family_id: f.fid, type: 'CareBlocked', actor_id: uuid(), category: 'meal', ...c })).status, 403);
+      const { id } = await (await t.post('/events', { family_id: f.fid, type: 'CareBlocked', actor_id: f.sis, category: 'meal', ...c })).json();
+      await t.project();
+      const rows = await (await t.get(`/families/${f.fid}/care`)).json();
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].type, 'CareBlocked');
+      assert.equal(rows[0].retracted, false);
+      for (const d of [await (await t.get('/debug/events')).text(), JSON.stringify(rows), JSON.stringify((await t.db.query('SELECT * FROM events')).rows)]) assert.equal(d.includes('refused'), false);
+      assert.deepEqual(await decryptJSON(f.key, rows[0].iv, rows[0].payload_cipher), { text: 'Meals not done: refused', reason: 'refused', routine_id: 'meals' });
+      // blocked never counts as care; retracting it (back to To do) costs nothing either
+      await t.post('/events', { family_id: f.fid, type: 'CareRetracted', actor_id: f.sis, handoff_id: id });
+      await t.post('/events', { family_id: f.fid, type: 'CareLogged', actor_id: f.sis, category: 'meds', ...(await enc(f.key, { text: 'Medication', routine_id: 'meds' })) });
+      await t.project();
+      const after = await (await t.get(`/families/${f.fid}/care`)).json();
+      assert.equal(after.find((r) => r.id === id).retracted, true);
+      const wl = await (await t.get(`/families/${f.fid}/workload`)).json();
+      assert.equal(wl.find((r) => r.member_id === f.sis).care_count, 1);
+    });
+  });
+
   describe('login: code once, then login + password', () => {
     async function reg(f, member, login, password = '333') {
       const w = await wrapKey(await exportKeyRaw(f.key), password);

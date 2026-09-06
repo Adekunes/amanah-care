@@ -21,7 +21,7 @@ export const ELDER_ONLY = new Set(['ConsentChanged']);
 export const LISTABLE = new Set([
   'FamilyCreated', 'MemberJoined', 'PreferenceSet', 'RoutineSet',
   'CareLogged', 'HandoffOpened', 'HandoffAcknowledged', 'ConsentChanged',
-  'EmergencyRaised', 'PatternAcknowledged', 'CareRetracted',
+  'EmergencyRaised', 'PatternAcknowledged', 'CareRetracted', 'CareBlocked',
 ]);
 
 // Express 4 does not catch rejected promises. Every async route goes through this.
@@ -173,18 +173,20 @@ export function createApp({ db, redis, stream = 'events', bus = new LocalBus() }
     res.json(await latestOfType(req.params.id, 'RoutineSet'));
   }));
 
-  // Care items since a given time (client decrypts). LEFT JOINed with any
-  // CareRetracted event for the same row: CareRetracted carries no payload
-  // and reuses the `handoff_id` routing column (no schema change) to hold
-  // the id of the CareLogged event it undoes, so a member can retract a
-  // mistaken log without deleting the original event (event sourcing).
+  // Care items since a given time (client decrypts): CareLogged (a card moved
+  // to Done) and CareBlocked (a card moved to Blocked, reason encrypted), each
+  // row carrying its `type`. LEFT JOINed with any CareRetracted event for the
+  // same row: CareRetracted carries no payload and reuses the `handoff_id`
+  // routing column (no schema change) to hold the id of the CareLogged or
+  // CareBlocked event it undoes (a card moved back to To do), so a member can
+  // retract a mistaken move without deleting the original event (event sourcing).
   // The join is against a GROUP BY handoff_id subquery, not EXISTS/DISTINCT
   // ON, so a second retraction of the same id cannot duplicate the row and
   // pg-mem (used by the tests) runs it unchanged.
   app.get('/families/:id/care', wrap(async (req, res) => {
     const since = req.query.since || '1970-01-01';
     const r = await db.query(
-      `SELECT c.id, c.actor_id, c.category, c.iv, c.payload_cipher, c.key_version, c.occurred_at,
+      `SELECT c.id, c.type, c.actor_id, c.category, c.iv, c.payload_cipher, c.key_version, c.occurred_at,
               (ret.handoff_id IS NOT NULL) AS retracted, ret.actor_id AS retracted_by
          FROM events c
          LEFT JOIN (
@@ -192,7 +194,7 @@ export function createApp({ db, redis, stream = 'events', bus = new LocalBus() }
              FROM events WHERE family_id=$1 AND type='CareRetracted'
              GROUP BY handoff_id
          ) ret ON ret.handoff_id = c.id
-        WHERE c.family_id=$1 AND c.type='CareLogged' AND c.occurred_at >= $2
+        WHERE c.family_id=$1 AND c.type IN ('CareLogged','CareBlocked') AND c.occurred_at >= $2
         ORDER BY c.occurred_at ASC`, [req.params.id, since]);
     res.json(r.rows);
   }));

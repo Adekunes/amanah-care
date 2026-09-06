@@ -34,5 +34,8 @@ http.createServer((req, res) => {
   const file = path.normalize(path.join(WEB, p));
   if (!file.startsWith(WEB) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
+  // On a non-default api port, tell the page where the api is (a second stack next to the Docker one).
+  if (p === '/index.html' && API_PORT !== 4000)
+    return res.end(fs.readFileSync(file, 'utf8').replace('<script src="vendor/qrcode.js">', `<script>window.AMANAH_API='http://'+location.hostname+':${API_PORT}'</script>\n<script src="vendor/qrcode.js">`));
   fs.createReadStream(file).pipe(res);
 }).listen(WEB_PORT, () => console.log(`[stack] web http://localhost:${WEB_PORT}`));

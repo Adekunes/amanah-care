@@ -15,8 +15,8 @@
 "One in four American Muslims already care for an older adult, twice the general public. One in four caregivers say they cannot coordinate. Half of dementia caregivers report burden. What changes with a record: a missed dose is seen the same day, the load becomes visible before someone burns out, and the ER gets fourteen days on one page. And it is not only the surveys: on AgingCare, AlzConnected, the Alzheimer's Society forum and Mumsnet, 35 pages we verified this morning describe the same three things: one person carrying the load, doses nobody confirms, group chats that bury the truth. We will measure adherence, time to accept a handoff, and the share carried by the busiest person, in a five-family pilot starting Monday."
 
 **2:00 · Box 5 · The demo.** (slide 5, then the app, two full minutes)
-1. Sister A, Home: Ammi's day, 10 of 13 done, who has her, next pickup, the recommendations.
-2. Log: pick two, log, undo one. It stays, struck through.
+1. Sister A, Home: the board. Five cards, three columns. Two done, three to do, who has her. Drag Meals to Done. Press Blocked on Walk, "agitated". Undo one. It stays in the record, struck through.
+2. Patterns: refused twice, agitated evenings, no walk in 48 hours, Sister A carries 80%. Counts, not conclusions.
 3. Hand off to Fatima. Already written. Send.
 4. Fatima's phone: alert, card with preferences on top. Accept.
 5. Ammi's screen: "Fatima is looking after you today." I need help. Red on every phone. Hospital sheet.

@@ -22,6 +22,9 @@ describe('notifier/match', () => {
     test('CareLogged/meds -> care.meds, care.*', () => {
       assert.deepEqual(kindsFor({ type: 'CareLogged', category: 'meds' }), ['care.meds', 'care.*']);
     });
+    test('CareBlocked/meal -> care.meal, care.* (a card moved to Blocked alerts like one moved to Done)', () => {
+      assert.deepEqual(kindsFor({ type: 'CareBlocked', category: 'meal' }), ['care.meal', 'care.*']);
+    });
     test('CareLogged/transport -> care.transport, care.*', () => {
       assert.deepEqual(kindsFor({ type: 'CareLogged', category: 'transport' }), ['care.transport', 'care.*']);
     });

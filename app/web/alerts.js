@@ -25,7 +25,8 @@ function verbFor(row, p){
   switch(row.type){
     case 'HandoffOpened': return 'handed off to you';
     case 'HandoffAcknowledged': return 'accepted your handoff';
-    case 'CareLogged': return 'logged ' + (p?.text || row.category || 'care');
+    case 'CareLogged': return 'did ' + (p?.text || row.category || 'care');
+    case 'CareBlocked': return p?.text ? `marked ${p.text}` : `blocked ${row.category || 'a card'}`;
     case 'PreferenceSet': return 'updated the preferences';
     case 'RoutineSet': return 'changed the routine';
     case 'MemberJoined': return 'joined';

@@ -16,7 +16,7 @@
       <div class="auth-word">Amanah Care</div>
       <p class="auth-tag">The care record only your family can read.</p>
       <ul class="auth-points">
-        <li>Plan the day, log what happened, hand off without a group chat.</li>
+        <li>Five cards a day. Drag each one to Done, or say why not.</li>
         <li>One tap makes the hospital sheet the ER needs.</li>
         <li>Only the family holds the key. The server sees scrambled text.</li>
       </ul>
@@ -135,7 +135,7 @@
     </div>
     <nav class="tabs">
       <button data-tab="home" class="on">Home</button>
-      <button data-tab="log">Log</button>
+      <button data-tab="patterns">Patterns</button>
       <button data-tab="handoff">Hand off</button>
       <button data-tab="inbox">Inbox<span id="inbox-badge" class="badge hide">0</span></button>
       <button data-tab="alerts">Alerts<span id="alerts-badge" class="badge hide">0</span></button>
@@ -153,9 +153,13 @@
     <div id="sv-banner" class="sv-banner hide"><b>This is what the server, and we who run it, can see.</b> Who, what kind, when. Every word is sealed with the family key that never left the phones.</div>
     <div id="strip" class="strip hide"></div>
 
-    <!-- HOME: the dashboard, computed on this phone from decrypted events -->
+    <!-- HOME: the board, computed on this phone from decrypted events -->
     <div id="tab-home" class="tabview">
       <div id="home"><p class="muted">Loading…</p></div>
+    </div>
+
+    <!-- PATTERNS: recommendations, counts, your part, the week, who carried it -->
+    <div id="tab-patterns" class="tabview hide">
       <div id="home-side">
         <div id="recs" class="hide"></div>
         <div id="home-mid"></div>
@@ -169,7 +173,7 @@
       </div>
     </div>
 
-    <!-- LOG -->
+    <!-- LOG (no longer in the tab row: the board on Home replaced it; kept for the record view code) -->
     <div id="tab-log" class="tabview hide">
       <div class="card">
         <div class="group">
@@ -252,7 +256,7 @@
     <div id="tab-routine" class="tabview hide">
       <div class="card">
         <div class="card-head"><h2 id="routine-title">Routine</h2><span class="pill hide" id="routine-dirty">unsaved</span></div>
-        <p class="muted">Meds, meals, prayers, walks, pickups, appointments. The plan every day is measured against. Stored encrypted like everything else.</p>
+        <p class="muted">The cards on the board, one per line: what, by when, who. Five is the whole idea; rename or retime them here. Stored encrypted like everything else.</p>
         <div id="routine-list"><p class="muted">No routine yet.</p></div>
         <button id="btn-r-save">Save routine</button>
       </div>
@@ -391,6 +395,15 @@
     </div>
     <div id="sheet" class="sheet"></div>
   </section>
+
+  <div id="blocksheet" class="sendfx hide">
+    <div class="sendfx-inner blocksheet">
+      <div class="sendfx-title" id="bs-title">Why not?</div>
+      <div class="chips" id="bs-reasons"></div>
+      <input id="bs-other" class="hide" placeholder="a few words" maxlength="80">
+      <div class="bs-actions"><button id="bs-cancel" class="ghost" type="button">Cancel</button><button id="bs-ok" type="button">Mark blocked</button></div>
+    </div>
+  </div>
 
   <div id="sendfx" class="sendfx hide">
     <div class="sendfx-inner">

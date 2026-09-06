@@ -24,11 +24,12 @@ CREATE TABLE IF NOT EXISTS events (
   family_id     TEXT NOT NULL,
   type          TEXT NOT NULL,
   actor_id      TEXT,
-  category      TEXT,                   -- clear routing field for CareLogged
+  category      TEXT,                   -- clear routing field for CareLogged / CareBlocked
   from_id       TEXT,
   to_id         TEXT,
   handoff_id    TEXT,                   -- also reused by CareRetracted: holds the id of
-                                         -- the CareLogged event it undoes, not a handoff
+                                         -- the CareLogged or CareBlocked event it undoes
+                                         -- (a card moved back to To do), not a handoff
                                          -- (no schema change; see api/app.js GET .../care)
   occurred_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   key_version   INT NOT NULL DEFAULT 1,
@@ -57,16 +58,20 @@ CREATE INDEX IF NOT EXISTS handoffs_to_idx ON handoffs(family_id, to_id, status)
 -- care_count nets CareLogged minus CareRetracted per family/actor/day, so a
 -- member who undoes their own mistaken log is not credited for it (CareRetracted
 -- is an undo event, not a deletion; see api/app.js GET .../care for the read side).
+-- Only a retraction of a CareLogged subtracts: undoing a CareBlocked (a card
+-- moved back from Blocked to To do) never earned a credit, so it costs none.
+-- The self join finds the event a CareRetracted points at (handoff_id).
 CREATE OR REPLACE VIEW workload_view AS
-SELECT family_id,
-       actor_id AS member_id,
-       date_trunc('day', occurred_at)::date AS day,
-       count(CASE WHEN type = 'CareLogged' THEN 1 END)
-         - count(CASE WHEN type = 'CareRetracted' THEN 1 END)   AS care_count,
-       count(CASE WHEN type = 'HandoffAcknowledged' THEN 1 END) AS handoff_count
-FROM events
-WHERE actor_id IS NOT NULL
-GROUP BY family_id, actor_id, date_trunc('day', occurred_at)::date;
+SELECT e.family_id,
+       e.actor_id AS member_id,
+       date_trunc('day', e.occurred_at)::date AS day,
+       count(CASE WHEN e.type = 'CareLogged' THEN 1 END)
+         - count(CASE WHEN e.type = 'CareRetracted' AND t.type = 'CareLogged' THEN 1 END) AS care_count,
+       count(CASE WHEN e.type = 'HandoffAcknowledged' THEN 1 END) AS handoff_count
+FROM events e
+LEFT JOIN events t ON e.type = 'CareRetracted' AND t.id = e.handoff_id
+WHERE e.actor_id IS NOT NULL
+GROUP BY e.family_id, e.actor_id, date_trunc('day', e.occurred_at)::date;
 
 -- Login after the first join. The invite code (QR) proves you hold H once; then
 -- you log in with an email or a chosen login + password. wrapped_h is H encrypted

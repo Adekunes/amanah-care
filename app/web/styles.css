@@ -459,12 +459,17 @@ body.elder .ecard .muted{font-size:calc(var(--fs-2) * var(--elder-scale))}
   #view-app > .tabs button:hover{background:#fff}
   #view-app > .tabs button.on{background:var(--brand-ink);color:#fff;border-color:var(--brand-ink)}
   #view-app > :not(.tabs):not(#famhead):not(#whoami){grid-column:2;min-width:0}
-  /* two independent columns: left = hero, tiles, plan; right = recommendations, patterns, your part, week, workload */
-  #tab-home{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:var(--sp-5);align-items:start}
-  #home{grid-column:1;display:flex;flex-direction:column;gap:var(--sp-5)}
-  #home-side{grid-column:2;display:flex;flex-direction:column;gap:var(--sp-5)}
+  /* Home is the board, full width. Patterns: recommendations left, counts right. */
+  #tab-home{display:flex;flex-direction:column;gap:var(--sp-5)}
+  #home{display:flex;flex-direction:column;gap:var(--sp-5)}
+  #home-side{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:var(--sp-5);align-items:start}
+  #home-side #recs{grid-column:1;grid-row:1 / span 3}
+  #home-side #recs.hide{display:none}
   #home-mid{display:contents}
+  #home-side > .h-week-card{grid-column:2}
   body.elder #tab-home{display:flex;flex-direction:column}
+  .hero.compact .hero-row{flex-direction:row;align-items:flex-end;justify-content:space-between}
+
   #tab-log > .card:first-child,
   #tab-handoff > .card:first-child,
   #tab-routine > .card:last-child,
@@ -531,3 +536,58 @@ body.support .famhead .fam-sub::after{content:" · support worker"}
   .auth-card{padding:28px 28px 30px;border-radius:24px}
   .auth-pane h2{font-size:24px}
 }
+
+/* ---- the board: five cards, three columns ---- */
+.hero.compact{gap:10px;padding:16px}
+.hero-row{display:flex;flex-direction:column;gap:10px}
+.hero-row .hero-actions{margin:0}
+.hero-row .hero-actions button{width:auto;padding:0 14px}
+.board{display:grid;grid-template-columns:1fr;gap:var(--sp-3)}
+.col{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2);
+  border-top:4px solid var(--line-2);transition:background .15s,border-color .15s;min-height:120px}
+.col.todo{border-top-color:var(--line-2)} .col.done{border-top-color:var(--brand)} .col.blocked{border-top-color:var(--warn)}
+.col.over{background:var(--brand-soft);outline:2px dashed var(--brand);outline-offset:-4px}
+.col.blocked.over{background:var(--warn-soft);outline-color:var(--warn)}
+.col header{display:flex;justify-content:space-between;align-items:center;padding:0 2px 4px}
+.col header h2{font-size:var(--fs-1);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:800}
+.col .count{font-size:var(--fs-1);font-weight:800;min-width:22px;height:22px;display:inline-grid;place-items:center;border-radius:999px;background:var(--bg);color:var(--ink-2)}
+.col.done .count{background:var(--brand-soft);color:var(--brand-ink)} .col.blocked .count{background:var(--warn-soft);color:var(--warn)}
+.col .cards{display:flex;flex-direction:column;gap:var(--sp-2);flex:1}
+.col .empty{margin:0;padding:14px 8px;font-size:var(--fs-2);color:var(--muted);text-align:center;border:1.5px dashed var(--line);border-radius:var(--r-sm);line-height:1.4}
+.kcard{background:var(--bg);border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;display:flex;flex-direction:column;gap:6px;
+  cursor:grab;user-select:none;transition:transform .12s,box-shadow .12s,border-color .12s}
+.kcard:active{cursor:grabbing}
+.kcard:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.kcard.dragging{opacity:.45;transform:scale(.98)}
+.kcard.done{background:#fff;border-color:var(--brand-tint)}
+.kcard.blocked{background:#fff;border-color:#f0c7ad}
+.kcard.landed{animation:land .35s ease}
+@keyframes land{0%{transform:translateY(-6px);opacity:.5}100%{transform:none;opacity:1}}
+.k-top{display:flex;align-items:center;gap:8px;min-width:0}
+.k-top b{font-size:var(--fs-3);letter-spacing:-.01em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-icon{font-size:18px;line-height:1;flex:0 0 auto}   /* emoji glyph size */
+.k-time{font-size:var(--fs-1);font-weight:700;color:var(--muted);flex:0 0 auto}
+.kcard.done .k-top b{color:var(--brand-ink)}
+.kcard.done .k-time{color:var(--brand)}
+.kcard.blocked .k-top b{color:#8f3616}
+.k-meta{font-size:var(--fs-1);color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
+.kcard.done .k-meta{color:var(--brand)} .kcard.blocked .k-meta{color:var(--warn);font-weight:600}
+.k-acts{display:flex;gap:6px}
+.k-acts button{width:auto;min-height:34px;padding:0 12px;font-size:var(--fs-1);border-radius:999px;flex:1}
+.k-acts button.ghost{flex:0 0 auto}
+.kcard.done .k-acts button,.kcard.blocked .k-acts button{flex:0 0 auto;margin-left:auto}
+body.support .kcard.done{border-color:#9dbdf0}
+.board-foot{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);align-items:center;padding:0 4px;font-size:var(--fs-2);color:var(--muted)}
+.board-foot b{color:var(--ink)}
+.board-foot a{margin-left:auto;color:var(--brand);font-weight:700;text-decoration:none;white-space:nowrap}
+.item.blocked .pill{background:var(--warn-soft);color:var(--warn)}
+.erow.blocked .etime{color:var(--warn)} .erow.blocked .ewho{color:var(--warn);font-weight:700}
+.erow.todo .etime{color:var(--ink-2)}
+
+/* why not: the small sheet behind a Blocked move */
+.blocksheet{display:flex;flex-direction:column;gap:12px}
+.blocksheet .chips .chip{text-transform:capitalize}
+.bs-actions{display:flex;gap:8px}
+.bs-actions button{flex:1}
+/* three columns side by side from a small tablet up; phones stack them (all three stay visible) */
+@media (min-width:600px){ .board{grid-template-columns:repeat(3,minmax(0,1fr))} .board .col{min-height:280px} .hero.compact .hero-row{flex-direction:row;align-items:flex-end;justify-content:space-between} }

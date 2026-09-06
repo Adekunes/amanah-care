@@ -3,6 +3,7 @@
 // phone, from decrypted events. The server only ever sorts ciphertext.
 import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON as decryptReal, b64, wrapKey, unwrapKey }
   from './crypto.js';
+import { COLUMNS, DEFAULT_CARDS, BLOCK_REASONS, boardFor, counts, iconFor, blockedText } from './board.js';
 
 // Server view: one tap shows this screen the way the server sees it. Nothing is
 // decrypted, names become ids, text becomes the stored ciphertext. Same data.
@@ -144,7 +145,7 @@ function tab(name){
   $$('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
   $$('.tabview').forEach(v=>v.classList.add('hide'));
   $('#tab-'+name).classList.remove('hide');
-  if(name==='home') refreshHome(true);
+  if(name==='home' || name==='patterns') refreshHome(true);
   if(name==='log') renderCareToday();
   if(name==='handoff') buildHandoff();
   if(name==='inbox') refreshInbox();
@@ -172,6 +173,7 @@ async function createFamily(){
   // record my name + elder name as encrypted events
   await postEncEvent('MemberJoined', { name: myName }, { actor_id: member_id });
   await postEncEvent('FamilyCreated', { elder_name: elder, family_name: familyName }, { actor_id: member_id });
+  await postEncEvent('RoutineSet', { items: DEFAULT_CARDS.map(({ icon, ...it }) => it) }, { actor_id: member_id });
   save();
   afterLogin = 'invite'; showSetLogin();
 }
@@ -385,7 +387,8 @@ async function careSince(since, all=false){
   const out=[];
   for(const r of rows){ if(r.retracted && !all) continue;
     const p = await decryptJSON(KEY, r.iv, r.payload_cipher);
-    out.push({ ...r, text: p?.text ?? (SERVER_VIEW ? sealed(r.payload_cipher) : '🔒 locked'), routine_id: p?.routine_id || null }); }
+    out.push({ ...r, blocked: r.type === 'CareBlocked', reason: p?.reason || null,
+      text: p?.text ?? (SERVER_VIEW ? sealed(r.payload_cipher) : '🔒 locked'), routine_id: p?.routine_id || null }); }
   return out;
 }
 async function loadWeek(){
@@ -408,8 +411,8 @@ function planFor(d=new Date()){ return ROUTINE.filter(i=>isOnDay(i,d)).sort((a,b
 // A routine item is done today if something was logged against it (routine_id),
 // or a same-category log starts with its label (logged from the Log tab).
 function doneFor(item, items){
-  return items.find(c => c.routine_id===item.id ||
-    (c.category===item.category && item.label && String(c.text).toLowerCase().startsWith(item.label.toLowerCase())));
+  return items.find(c => !c.blocked && (c.routine_id===item.id ||
+    (c.category===item.category && item.label && String(c.text).toLowerCase().startsWith(item.label.toLowerCase()))));
 }
 function planRows(){
   const today = todayItems(); const nm = nowMin();
@@ -464,8 +467,9 @@ async function logRoutineItem(id){
 // ---- HOME dashboard ----
 let homeSig = null;
 async function refreshHome(force){
-  if(!force && $('#tab-home').classList.contains('hide')) return;
+  if(!force && $('#tab-home').classList.contains('hide') && $('#tab-patterns').classList.contains('hide')) return;
   await loadWeek();
+  await loadLog();                                   // patterns count over the record, not just the week
   HANDOFFS = await api(`/families/${ME.family_id}/handoffs`).catch(()=>HANDOFFS);
   await loadRoutine();
   const sig = [WEEK.length, WEEK.at(-1)?.id, HANDOFFS.map(h=>h.id+h.status).join(','), JSON.stringify(ROUTINE), Math.floor(nowMin()/5)].join('|');
@@ -490,7 +494,8 @@ function renderHome(){
   if(isElder()) return renderElderHome();
   const today = todayItems();
   const rows = planRows();
-  const done = rows.filter(r=>r.d).length;
+  const board = boardFor(planFor(), WEEK);
+  const c = counts(board);
   const open = HANDOFFS.filter(h=>h.status==='open').sort((a,b)=>new Date(b.opened_at)-new Date(a.opened_at));
   const acked = HANDOFFS.filter(h=>h.status==='acknowledged').sort((a,b)=>new Date(b.acked_at)-new Date(a.acked_at))[0];
   const last = today.at(-1);
@@ -499,103 +504,171 @@ function renderHome(){
   let duty, wait=false;
   if(acked && (!last || new Date(acked.acked_at) > new Date(last.occurred_at) || acked.to_id===last.actor_id))
     duty = `<b>${esc(nameOf(acked.to_id))}</b> has ${esc(ELDER)} since ${fmtWhen(acked.acked_at)}`;
-  else if(last) duty = `<b>${esc(nameOf(last.actor_id))}</b> logged last, ${fmtWhen(last.occurred_at)}`;
-  else duty = `No one has logged for ${esc(ELDER)} yet today`;
+  else if(last) duty = `<b>${esc(nameOf(last.actor_id))}</b> moved a card last, ${fmtWhen(last.occurred_at)}`;
+  else duty = `No card moved for ${esc(ELDER)} yet today`;
   if(open.length){ wait=true; duty += ` · handoff ${esc(nameOf(open[0].from_id))} → <b>${esc(nameOf(open[0].to_id))}</b> waiting`; }
 
-  const cnt = (cat)=>today.filter(c=>c.category===cat).length;
-  const planned = (cat)=>rows.filter(r=>r.it.category===cat).length;
-  const lastOf = (cat)=>today.filter(c=>c.category===cat).at(-1);
-  const tile = (cls, big, lab, sub)=>`<div class="tile ${cls}"><div class="big">${big}</div><div class="tlab">${lab}</div><div class="tsub">${sub}</div></div>`;
-  const ratio = (cat, lab)=>{ const n=cnt(cat), p=planned(cat); const nx=nextOf(cat,rows);
-    return tile(p&&n>=p?'ok':'', `${n}${p?`<span class="of">/${p}</span>`:''}`, lab,
-      nx ? `next: ${esc(nx.label)} ${esc(nx.when)}` : (p?'all done for today':'not in the routine')); };
-  const mood = lastOf('mood');
-  const mob = lastOf('mobility');
-  const tr = nextOf('transport', rows), ap = nextOf('appointment', rows);
-  const tiles = [
-    ratio('meds','Meds today'),
-    ratio('meal','Meals today'),
-    ratio('prayer','Prayers today'),
-    tile('', mob?`<span class="big word">${esc(cap(mob.text.split(' (')[0]))}</span>`:'—', 'Mobility', mob?`${esc(nameOf(mob.actor_id))} · ${fmtTime(mob.occurred_at)}`:'nothing logged today'),
-    tile('', mood?`<span class="big word">${esc(cap(mood.text.split(' (')[0]))}</span>`:'—', 'Mood, last logged', mood?`${esc(nameOf(mood.actor_id))} · ${fmtTime(mood.occurred_at)}`:'nothing logged today'),
-    tile(open.length?'warn':'', String(open.length), 'Handoffs waiting', open.length?`${esc(nameOf(open[0].from_id))} → ${esc(nameOf(open[0].to_id))}`:'everyone is caught up'),
-    tile('', tr?`<span class="big word">${esc(tr.when)}</span>`:'—', 'Next pickup / drop-off', tr?`${esc(tr.label)} · ${esc(nameOf(tr.who))}`:'nothing planned'),
-    tile('', ap?`<span class="big word">${esc(ap.when)}</span>`:'—', 'Next appointment', ap?`${esc(ap.label)} · ${esc(nameOf(ap.who))}`:'nothing planned'),
-  ].join('');
+  const myWaiting = open.filter(h=>h.to_id===ME.member_id).length;
+  const badge=$('#inbox-badge'); badge.textContent=myWaiting; badge.classList.toggle('hide', !myWaiting);
 
-  const plan = rows.length ? rows.map(({it,d,st})=>`<div class="plan-row ${st}">
-      <div class="ptime">${esc(it.time)}</div>
-      <div class="pbody"><b>${esc(it.label)}</b><span>${esc(it.category)}${it.who?` · ${esc(nameOf(it.who))}`:''}</span></div>
-      <div class="pstate">${d ? `<span class="done-by">✓ ${esc(nameOf(d.actor_id))} ${fmtTime(d.occurred_at)}</span>`
-        : (st==='overdue' ? `<span class="pill overdue">not yet</span>` : '') + `<button data-done="${esc(it.id)}">Done</button>`}</div>
-    </div>`).join('')
-    : `<p class="muted">No routine yet. Set it up in the Routine tab and this becomes ${esc(ELDER)}'s daily checklist.</p>`;
+  // the week in one line: items done, who carried it
+  const weekDone = WEEK.filter(x=>!x.blocked);
+  const byActor = {}; for(const x of weekDone) byActor[x.actor_id]=(byActor[x.actor_id]||0)+1;
+  const top = Object.entries(byActor).sort((a,b)=>b[1]-a[1])[0];
+  const share = top && weekDone.length ? Math.round(top[1]/weekDone.length*100) : 0;
 
-  // last 7 days, items per day
+  const EMPTY = { todo: c.done+c.blocked===board.length && board.length ? 'Everything decided for today.' : 'Nothing left here.',
+                  done: 'Nothing done yet. Move a card here when it is.', blocked: 'Nothing blocked today.' };
+  const cols = COLUMNS.map(([key,lab])=>`<section class="col ${key}" data-col="${key}">
+      <header><h2>${lab}</h2><span class="count tnum">${c[key]}</span></header>
+      <div class="cards">${board.filter(b=>b.state===key).map(cardHtml).join('') || `<p class="empty">${EMPTY[key]}</p>`}</div>
+    </section>`).join('');
+
+  $('#home').innerHTML = `
+    <div class="hero compact">
+      <div class="hero-row">
+        <div>
+          <div class="date">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
+          <h1>${ME.role==='support' ? `Your shift with ${esc(ELDER)}` : `${esc(ELDER)}'s day`}</h1>
+        </div>
+        <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
+      </div>
+      <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
+      <div class="progress"><div class="top"><span>Today</span><b class="tnum">${c.done} of ${board.length} done${c.blocked?` · ${c.blocked} blocked`:''}</b></div>
+        <div class="bar"><span style="width:${board.length?Math.round(c.done/board.length*100):0}%"></span></div></div>
+    </div>
+    ${board.length ? `<div class="board">${cols}</div>` : `<div class="card"><p class="muted">${SERVER_VIEW ? 'The cards are inside the encrypted routine. The server cannot show them.' : `No cards yet. Set ${esc(ELDER)}'s five cards in the Routine tab.`}</p></div>`}
+    <div class="board-foot">
+      <span><b class="tnum">${c.done}/${board.length}</b> done today</span>
+      <span><b class="tnum">${c.blocked}</b> blocked</span>
+      <span><b class="tnum">${weekDone.length}</b> done in 7 days</span>
+      <span>${top ? `<b>${esc(nameOf(top[0]))}</b> carried ${share}%` : 'nobody carried the week yet'}</span>
+      <a href="#" data-gopatterns>Patterns and recommendations →</a>
+    </div>`;
+  wireBoard();
+  wireEmergencyButtons();
+  $('#home').querySelector('[data-gopatterns]').onclick = (e)=>{ e.preventDefault(); tab('patterns'); };
+  renderPatternsTab(rows, today, weekDone);
+}
+
+// One card on the board. Meta line: who and when (Done), the reason (Blocked), the target time (To do).
+function cardHtml({card, state, ev}){
+  const meta = state==='done' ? `✓ ${esc(nameOf(ev.actor_id))} · ${fmtTime(ev.occurred_at)}`
+    : state==='blocked' ? `${esc(cap(ev.reason || ev.text))} · ${esc(nameOf(ev.actor_id))} ${fmtTime(ev.occurred_at)}`
+    : `${card.who ? `${esc(nameOf(card.who))} · ` : ''}by ${esc(card.time)}`;
+  const acts = state==='todo'
+    ? `<button data-move="done" data-card="${esc(card.id)}" type="button">Done</button><button class="ghost" data-move="blocked" data-card="${esc(card.id)}" type="button">Blocked</button>`
+    : `<button class="ghost" data-move="todo" data-card="${esc(card.id)}" type="button" title="Back to To do">↩ To do</button>`;
+  return `<article class="kcard ${state}" draggable="true" data-card="${esc(card.id)}">
+      <div class="k-top"><span class="k-icon">${iconFor(card)}</span><b>${esc(card.label)}</b><span class="k-time tnum">${esc(card.time)}</span></div>
+      <div class="k-meta">${meta}</div>
+      <div class="k-acts">${acts}</div>
+    </article>`;
+}
+
+// Drag on desktop, buttons everywhere. The card jumps first, the events follow.
+function wireBoard(){
+  const home = $('#home');
+  home.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>moveCard(b.dataset.card, b.dataset.move).catch(e=>{ toast(e.message); refreshHome(true); }));
+  home.querySelectorAll('.kcard').forEach(k=>{
+    k.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', k.dataset.card); e.dataTransfer.effectAllowed='move'; k.classList.add('dragging'); });
+    k.addEventListener('dragend', ()=>k.classList.remove('dragging'));
+  });
+  home.querySelectorAll('.col').forEach(col=>{
+    col.addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; col.classList.add('over'); });
+    col.addEventListener('dragleave', ()=>col.classList.remove('over'));
+    col.addEventListener('drop', (e)=>{ e.preventDefault(); col.classList.remove('over');
+      const id = e.dataTransfer.getData('text/plain'); if(id) moveCard(id, col.dataset.col).catch(err=>{ toast(err.message); refreshHome(true); }); });
+  });
+}
+function jumpCard(id, to){
+  const k = $('#home').querySelector(`.kcard[data-card="${CSS.escape(id)}"]`); const col = $('#home').querySelector(`.col[data-col="${to}"] .cards`);
+  if(!k || !col) return; col.querySelector('.empty')?.remove(); k.className = `kcard ${to} landed`; col.prepend(k);
+}
+// Move one card. Leaving Done or Blocked retracts the deciding event (the record keeps it,
+// struck through); landing on Done is a CareLogged, on Blocked a CareBlocked with the reason.
+let moving = false;
+async function moveCard(id, to){
+  if(moving) return; 
+  const card = ROUTINE.find(i=>i.id===id); if(!card) return;
+  const cur = boardFor([card], WEEK)[0];
+  if(cur.state===to) return;
+  let reason = null;
+  if(to==='blocked'){ reason = await askReason(card); if(!reason) return; }
+  moving = true;
+  try{
+    jumpCard(id, to);
+    if(cur.ev) await postEvent({ family_id: ME.family_id, type:'CareRetracted', actor_id: ME.member_id, handoff_id: cur.ev.id, occurred_at: now(), id: uuid() });
+    let r = null;
+    if(to==='done') r = await postEncEvent('CareLogged', { text: card.label, routine_id: card.id }, { actor_id: ME.member_id, category: card.category });
+    if(to==='blocked') r = await postEncEvent('CareBlocked', { text: blockedText(card, reason), reason, routine_id: card.id }, { actor_id: ME.member_id, category: card.category });
+    if(navigator.vibrate) navigator.vibrate(30);
+    if(r?.id) toastAction(`${card.label}: ${to==='done'?'done':`blocked, ${reason}`}`, 'Undo', async ()=>{ await retractCare(r.id, false); toast('Back to To do'); await refreshAll(); });
+    else toast(`${card.label} back to To do`);
+  } finally { moving = false; }
+  await refreshHome(true);
+}
+// Why is it blocked? Four quick reasons or a few words. Resolves null when cancelled.
+function askReason(card){
+  return new Promise(res=>{
+    const box=$('#blocksheet'); $('#bs-title').textContent = `${card.label}: why not?`;
+    const chips=$('#bs-reasons'); chips.innerHTML='';
+    const other=$('#bs-other'); other.value=''; other.classList.add('hide');
+    let picked=null;
+    for(const r of BLOCK_REASONS){ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=r;
+      b.onclick=()=>{ picked=r; chips.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on', x===b));
+        other.classList.toggle('hide', r!=='other'); if(r==='other') other.focus(); };
+      chips.appendChild(b); }
+    const done=(v)=>{ box.classList.add('hide'); $('#bs-ok').onclick=null; $('#bs-cancel').onclick=null; res(v); };
+    $('#bs-ok').onclick=()=>{ if(!picked) return toast('Pick a reason'); const v = picked==='other' ? (other.value.trim() || 'other') : picked; done(v); };
+    $('#bs-cancel').onclick=()=>done(null);
+    box.classList.remove('hide');
+  });
+}
+
+// ---- PATTERNS tab: counts over the week, your part, the last 7 days, who carried it ----
+function renderPatternsTab(rows, today, weekDone){
   const days=[]; for(let k=6;k>=0;k--){ const d=midnight(); d.setDate(d.getDate()-k); const e=new Date(d); e.setDate(e.getDate()+1);
-    days.push({ d, n: WEEK.filter(c=>{ const t=new Date(c.occurred_at); return t>=d && t<e; }).length }); }
+    days.push({ d, n: weekDone.filter(c=>{ const t=new Date(c.occurred_at); return t>=d && t<e; }).length }); }
   const max = Math.max(...days.map(x=>x.n), 1);
   const weekHtml = days.map((x,i)=>`<div class="day ${i===6?'today':''}">
       <span class="dn">${x.n}</span>
       <div class="col" style="height:${Math.max(4, Math.round(x.n/max*44))}px"><i style="height:100%"></i></div>
       <span class="dl">${x.d.toLocaleDateString([], {weekday:'narrow'})}</span>
     </div>`).join('');
-  const weekTotal = WEEK.length;
-  const people = new Set(WEEK.map(c=>c.actor_id)).size;
-
-  // your part
+  const people = new Set(weekDone.map(c=>c.actor_id)).size;
   const mine = today.filter(c=>c.actor_id===ME.member_id).length;
   const myNext = rows.find(r=>!r.d && r.it.who===ME.member_id && hm(r.it.time)>=nowMin()-60);
-  const myWaiting = open.filter(h=>h.to_id===ME.member_id).length;
-  const badge=$('#inbox-badge'); badge.textContent=myWaiting; badge.classList.toggle('hide', !myWaiting);
-
-  $('#home').innerHTML = `
-    <div class="hero">
-      <div class="date">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
-      <h1>${ME.role==='support' ? `Your shift with ${esc(ELDER)}` : `${esc(ELDER)}'s day`}</h1>
-      <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
-      <div class="progress"><div class="top"><span>Today's plan</span><b class="tnum">${done} of ${rows.length} done</b></div>
-        <div class="bar"><span style="width:${rows.length?Math.round(done/rows.length*100):0}%"></span></div></div>
-      <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
-    </div>
-    <div class="tiles h-tiles">${tiles}</div>
-    <div class="card h-plan"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
-      <div class="plan">${plan}</div></div>`;
-
+  const myWaiting = HANDOFFS.filter(h=>h.status==='open' && h.to_id===ME.member_id).length;
   $('#home-mid').innerHTML = `
     <div class="card h-patterns"><div class="card-head"><h2>Patterns, not predictions</h2><span class="muted">last 7 days</span></div>
       ${patternsHtml(7)}
       <p class="muted" style="font-size:var(--fs-1)">Counted from the record. The family and the doctor decide what it means.</p></div>
     <div class="card h-mine"><div class="card-head"><h2>${ME.role==='support' ? 'Your visit today' : 'Your part today'}</h2><span class="muted">${esc(ME.my_name)}</span></div>
       <div class="mine">
-        <div><b>${mine}</b><span>items you logged</span></div>
+        <div><b>${mine}</b><span>cards you moved</span></div>
         <div><b>${myNext?esc(myNext.it.time):'—'}</b><span>${myNext?esc(myNext.it.label):'nothing assigned to you next'}</span></div>
         <div><b>${myWaiting}</b><span>handoff${myWaiting===1?'':'s'} waiting for you</span></div>
       </div></div>
-    <div class="card h-week"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekTotal} items · ${people} ${people===1?'person':'people'}</span></div>
+    <div class="card h-week"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekDone.length} done · ${people} ${people===1?'person':'people'}</span></div>
       <div class="days">${weekHtml}</div></div>`;
-  $$('[data-done]').forEach(b=>b.onclick=()=>{ b.disabled=true; logRoutineItem(b.dataset.done).catch(e=>{ toast(e.message); b.disabled=false; }); });
-  wireEmergencyButtons();
 }
 
 // ---- ELDER view: what Ammi needs to know, in large type, nothing to operate ----
 function renderElderHome(){
   const today = todayItems();
   const rows = planRows();
-  const nm = nowMin();
   const open = HANDOFFS.filter(h=>h.status==='open').sort((a,b)=>new Date(b.opened_at)-new Date(a.opened_at));
   const acked = HANDOFFS.filter(h=>h.status==='acknowledged').sort((a,b)=>new Date(b.acked_at)-new Date(a.acked_at))[0];
   const last = today.at(-1);
   let withNow = null;
   if(acked && (!last || new Date(acked.acked_at) > new Date(last.occurred_at) || acked.to_id===last.actor_id)) withNow = nameOf(acked.to_id);
   else if(last) withNow = nameOf(last.actor_id);
-  const coming = rows.filter(r=>!r.d && hm(r.it.time)>=nm-60).slice(0,4);
-  const done = rows.filter(r=>r.d);
-  const prayers = rows.filter(r=>r.it.category==='prayer');
+  const board = boardFor(planFor(), WEEK);
+  const done = board.filter(b=>b.state==='done');
   const tr = nextOf('transport', rows), ap = nextOf('appointment', rows);
   const family = MEMBERS.filter(m=>m.id!==ME.member_id).map(m=>nameOf(m.id));
-  const erow = (r)=>`<div class="erow ${r.d?'done':''}"><span class="etime">${esc(r.it.time)}</span><span class="elabel">${esc(cap(r.it.label))}</span><span class="ewho">${r.d?`${esc(nameOf(r.d.actor_id))} ✓`:esc(r.it.who?nameOf(r.it.who):'')}</span></div>`;
+  const erow = (b)=>`<div class="erow ${b.state}"><span class="etime">${b.state==='done'?'✓':(b.state==='blocked'?'✕':esc(b.card.time))}</span><span class="elabel">${iconFor(b.card)} ${esc(cap(b.card.label))}</span><span class="ewho">${b.state==='done'?`${esc(nameOf(b.ev.actor_id))} ✓`:(b.state==='blocked'?'not today':esc(b.card.who?nameOf(b.card.who):''))}</span></div>`;
   $('#home').innerHTML = `
     <div class="ehero">
       <div class="edate">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
@@ -603,11 +676,8 @@ function renderElderHome(){
       <div class="ewith">${withNow?`<b>${esc(withNow)}</b> is looking after you today.`:'Your family is here for you today.'}${open.length?` <b>${esc(nameOf(open[0].to_id))}</b> is coming next.`:''}</div>
       <div class="hero-actions" style="flex-direction:column"><button class="emg-btn big" data-emg type="button">I need help</button><button class="ghost" data-sheet type="button">Hospital sheet, for the ambulance</button></div>
     </div>
-    <div class="ecard"><h2>Coming up</h2>
-      ${coming.length ? coming.map(erow).join('') : '<p class="elabel" style="margin:0">Nothing more today. Rest well.</p>'}</div>
-    ${prayers.length?`<div class="ecard"><h2>Your prayers today</h2><div class="eprayers">${prayers.map(r=>`<span class="eprayer ${r.d?'done':''}">${esc(r.it.label)}${r.d?' ✓':''}</span>`).join('')}</div></div>`:''}
-    <div class="ecard"><h2>Done today</h2><p class="ebig">${done.length}<span class="of"> of ${rows.length}</span></p>
-      <div>${done.map(erow).join('')}</div></div>
+    <div class="ecard"><h2>Your day</h2><p class="ebig">${done.length}<span class="of"> of ${board.length} done</span></p>
+      <div>${board.length ? board.map(erow).join('') : '<p class="elabel" style="margin:0">Nothing planned. Rest well.</p>'}</div></div>
     <div class="ecard"><h2>Next visit and pickup</h2>
       <div class="erow"><span class="etime">${ap?esc(ap.when.split(' ')[0]):'—'}</span><span class="elabel">${ap?esc(cap(ap.label)):'No appointment planned'}</span><span class="ewho">${ap?esc(nameOf(ap.who)):''}</span></div>
       <div class="erow"><span class="etime">${tr?esc(tr.when.split(' ')[0]):'—'}</span><span class="elabel">${tr?esc(cap(tr.label)):'No pickup planned'}</span><span class="ewho">${tr?esc(nameOf(tr.who)):''}</span></div></div>
@@ -626,14 +696,14 @@ function computePatterns(days = 7){
   const items = LOG_ITEMS.filter(c => !c.retracted && new Date(c.occurred_at) >= since);
   const lines = [];
   for(const w of ['agitated', 'confused', 'tired', 'cheerful', 'calm']){
-    const m = items.filter(c => c.category === 'mood' && has(c, w)); const d = daysOf(m);
+    const m = items.filter(c => (c.category === 'mood' || c.blocked) && has(c, w)); const d = daysOf(m);
     if(d >= 2){
       const evening = m.every(c => new Date(c.occurred_at).getHours() >= 18);
       const morning = m.every(c => new Date(c.occurred_at).getHours() < 12);
       lines.push(`${cap(w)} on ${d} of the last ${days} days${evening ? ', every time after 18:00' : (morning ? ', every time before noon' : '')}.`);
     }
   }
-  const refused = items.filter(c => c.category === 'meal' && has(c, 'refused'));
+  const refused = items.filter(c => c.category === 'meal' && has(c, 'refus'));
   if(refused.length) lines.push(`Refused food on ${daysOf(refused)} of the last ${days} days (${refused.length} meal${refused.length > 1 ? 's' : ''}).`);
   const half = items.filter(c => c.category === 'meal' && has(c, 'half'));
   if(daysOf(half) >= 2) lines.push(`Ate half on ${daysOf(half)} of the last ${days} days.`);
@@ -807,8 +877,8 @@ function renderGrouped(box, items, flashFirst){
   box.innerHTML = groups.map(({k,list})=>{ const closed=logView.collapsed.has(k);
     const rows=list.map(i=>{ const cls=(first&&flashFirst?' flash':'')+(i.retracted?' retracted':''); first=false;
       const mine = i.actor_id===ME.member_id && !i.retracted && Date.now()-new Date(i.occurred_at) < 24*3600e3;
-      return `<div class="item${cls}">
-        <div class="top"><b>${esc(i.text)}</b><span class="pill">${i.retracted?'retracted':esc(i.category)}</span></div>
+      return `<div class="item${cls}${i.blocked?' blocked':''}">
+        <div class="top"><b>${esc(i.text)}</b><span class="pill">${i.retracted?'retracted':(i.blocked?'blocked':esc(i.category))}</span></div>
         <div class="muted">${esc(nameOf(i.actor_id))} · ${when(i)}${i.retracted?` · undone by ${esc(nameOf(i.retracted_by))}`:''}${mine?` · <a href="#" data-undo="${esc(i.id)}">undo</a>`:''}</div></div>`; }).join('');
     return `<div class="grp${closed?' closed':''}"><div class="rec-day grp-head" data-toggle="${esc(k)}"><b><i class="chev">${closed?'▸':'▾'}</i>${esc(groupLabel(k))}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div><div class="grp-body${closed?' hide':''}">${rows}</div></div>`; }).join('');
   box.querySelectorAll('[data-undo]').forEach(a=>a.onclick=(e)=>{ e.preventDefault(); if(confirm('Undo this entry? It stays in the record, marked as undone.')) retractCare(a.dataset.undo).catch(err=>toast(err.message)); });
@@ -963,7 +1033,7 @@ async function renderSent(flash){
 let live = null, liveTimer = null, liveQueue = [];
 const liveHooks = [];
 const VERB = { EmergencyRaised:'raised an EMERGENCY', HandoffOpened:'sent a handoff', HandoffAcknowledged:'accepted a handoff', PreferenceSet:'updated the preferences',
-               RoutineSet:'changed the routine', MemberJoined:'joined', CareLogged:'logged' };
+               RoutineSet:'changed the routine', MemberJoined:'joined', CareLogged:'moved a card to Done', CareBlocked:'moved a card to Blocked', CareRetracted:'moved a card back' };
 function startLive(){
   stopLive();
   if(!('EventSource' in window) || !ME) return;
@@ -978,7 +1048,7 @@ async function flushLive(){
   const others = evs.filter(e=>e.actor_id && e.actor_id!==ME?.member_id);
   const emg = others.find(e=>e.type==='EmergencyRaised'); if(emg) showEmergencyBanner(emg);
   if(others.length){ const e = others.at(-1);
-    const what = e.type==='CareLogged' ? `logged ${e.category||'care'}` : (VERB[e.type]||e.type);
+    const what = e.type==='CareLogged' ? `did ${e.category||'care'}` : (e.type==='CareBlocked' ? `blocked ${e.category||'care'}` : (VERB[e.type]||e.type));
     toast(`${nameOf(e.actor_id)} ${what}${others.length>1?` · +${others.length-1} more`:''}`); }
   await refreshAll();
   setTimeout(()=>refreshAll().catch(()=>{}), 900);   // rows written by a second consumer (alerts) land a beat later
