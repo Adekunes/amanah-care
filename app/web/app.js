@@ -1,8 +1,14 @@
 // Amanah Care web app. Vanilla ES module. All plaintext stays in this browser.
 // The Home dashboard, the routine and the record are all computed here, on the
 // phone, from decrypted events. The server only ever sorts ciphertext.
-import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64, wrapKey, unwrapKey }
+import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON as decryptReal, b64, wrapKey, unwrapKey }
   from './crypto.js';
+
+// Server view: one tap shows this screen the way the server sees it. Nothing is
+// decrypted, names become ids, text becomes the stored ciphertext. Same data.
+let SERVER_VIEW = false;
+const decryptJSON = (k, iv, c) => SERVER_VIEW ? Promise.resolve(null) : decryptReal(k, iv, c);
+const sealed = (cipher) => cipher ? `🔒 ${String(cipher).slice(0, 22)}…` : '🔒 (no payload)';
 
 const API = (window.AMANAH_API || `http://${location.hostname}:4000`);
 const $ = (s) => document.querySelector(s);
@@ -60,6 +66,7 @@ const isElder = ()=> ME?.role === 'elder';
 
 // Wipe every trace of this session from this tab and drop back to the landing card.
 function logout(){
+  if(SERVER_VIEW){ SERVER_VIEW=false; document.body.classList.remove('serverview'); $('#sv-banner').classList.add('hide'); $('#btn-serverview').textContent='Server view'; }
   stopLive();
   clearInterval(pollTimer); pollTimer = null;
   sessionStorage.removeItem('amanah');
@@ -241,7 +248,7 @@ async function postEncEvent(type, payloadObj, clear={}){
 // Show who is signed in on THIS window (tabs otherwise look identical).
 function renderWhoAmI(){
   if(!ME) return;
-  const name = ME.my_name || 'Me';
+  const name = SERVER_VIEW ? 'member ' + ME.member_id.slice(0,6) : (ME.my_name || 'Me');
   const role = ME.role || '';
   const el = document.getElementById('who-name'); if(el) el.textContent = name;
   const rl = document.getElementById('who-role'); if(rl) rl.textContent = role;
@@ -289,13 +296,14 @@ async function loadElder(){
   const evs = await fetchEventsByType('FamilyCreated');
   for(const e of evs){ const p = await decryptJSON(KEY, e.iv, e.payload_cipher);
     if(p?.elder_name) ELDER=p.elder_name; if(p?.family_name) FAMILY=p.family_name; }
-  if(!FAMILY) FAMILY = `${ELDER}'s family`;
+  if(!FAMILY) FAMILY = SERVER_VIEW ? `family ${ME.family_id}` : `${ELDER}'s family`;
+  if(SERVER_VIEW) ELDER = `elder of ${ME.family_id}`;
   $('#fam-name').textContent = FAMILY;
-  document.title = `${ME.my_name || 'Me'} · ${FAMILY}`;
+  document.title = `${SERVER_VIEW ? 'server view' : (ME.my_name || 'Me')} · ${FAMILY}`;
   $('#routine-title').textContent = `${ELDER}'s routine`;
   $('#record-title').textContent = `${ELDER}'s record`;
 }
-function nameOf(id){ if(!id) return 'anyone'; return nameCache[id] || (id===ME.member_id ? ME.my_name : id.slice(0,6)); }
+function nameOf(id){ if(!id) return 'anyone'; if(SERVER_VIEW) return 'member ' + id.slice(0,6); return nameCache[id] || (id===ME.member_id ? ME.my_name : id.slice(0,6)); }
 
 // ---- preference strip ----
 async function renderStrip(){
@@ -318,7 +326,7 @@ async function careSince(since){
   const rows = await api(`/families/${ME.family_id}/care?since=${encodeURIComponent(since||'1970-01-01')}`);
   const out=[];
   for(const r of rows){ const p = await decryptJSON(KEY, r.iv, r.payload_cipher);
-    out.push({ ...r, text: p?.text ?? '🔒 locked', routine_id: p?.routine_id || null }); }
+    out.push({ ...r, text: p?.text ?? (SERVER_VIEW ? sealed(r.payload_cipher) : '🔒 locked'), routine_id: p?.routine_id || null }); }
   return out;
 }
 async function loadWeek(){
@@ -747,8 +755,8 @@ async function renderSent(flash){
       rowsHtml.push(`<div class="sent-row ${flash&&h===list[0]?'flash':''}">
         <div class="sent-top"><span class="pill ${h.status}">${h.status==='acknowledged'?'accepted':'delivered'}</span>
           <span class="muted">${when}</span></div>
-        <div class="sent-what"><b>Sent:</b> ${esc(p.summary||'—')}</div>
-        <div class="sent-what"><b>Next:</b> ${esc(p.next||'—')}</div>
+        <div class="sent-what"><b>Sent:</b> ${esc(p.summary||(SERVER_VIEW?sealed(h.summary_cipher):'—'))}</div>
+        <div class="sent-what"><b>Next:</b> ${esc(p.next||(SERVER_VIEW?'sealed in the same payload':'—'))}</div>
       </div>`);
     }
     groups.push(`<div class="sent-group">
@@ -824,9 +832,9 @@ async function renderInbox(rows){
         <span class="pill ${h.status}">${h.status}</span></div>
       ${strip?`<div class="strip">${strip}</div>`:''}
       <div class="group"><span class="eyebrow">What happened</span>
-        <div>${esc(p.summary||'—')}</div></div>
+        <div>${esc(p.summary||(SERVER_VIEW?sealed(h.summary_cipher):'—'))}</div></div>
       <div class="group"><span class="eyebrow">What is next</span>
-        <div>${esc(p.next||'—')}</div></div>
+        <div>${esc(p.next||(SERVER_VIEW?'sealed in the same payload':'—'))}</div></div>
       ${h.status==='open'
         ? `<button data-ack="${h.id}">Accept handoff</button>`
         : `<p class="muted">Accepted ${fmtTime(h.acked_at)}</p>`}
@@ -920,6 +928,20 @@ async function renderFlow(){
   animateHops();
 }
 
+// ---- server view toggle ----
+async function toggleServerView(){
+  SERVER_VIEW = !SERVER_VIEW;
+  document.body.classList.toggle('serverview', SERVER_VIEW);
+  $('#sv-banner').classList.toggle('hide', !SERVER_VIEW);
+  $('#btn-serverview').textContent = SERVER_VIEW ? 'Family view' : 'Server view';
+  for(const k of Object.keys(nameCache)) delete nameCache[k];
+  ELDER='Elder'; FAMILY=''; PREFS=null; if(!routineDirty) ROUTINE=[]; lastLogCount=-1; homeSig=null; inboxSig=null;
+  renderWhoAmI();
+  await loadNames(); await loadElder(); await renderStrip(); await loadRoutine();
+  await refreshAll();
+  toast(SERVER_VIEW ? 'What the server sees' : 'Back to your family view');
+}
+
 // ---- hooks for sibling modules (alerts.js). Kept tiny on purpose. ----
 const enterHooks=[], pollHooks=[], tabHooks={};
 window.amanah = {
@@ -939,6 +961,7 @@ $('#btn-enter').onclick  = ()=>enterApp();
 $('#btn-login').onclick  = ()=>loginWithPassword().catch(e=>toast(e.message));
 $('#l-pass').onkeydown   = (e)=>{ if(e.key==='Enter') loginWithPassword().catch(e=>toast(e.message)); };
 $('#btn-setlogin').onclick = ()=>saveLogin().catch(e=>toast(e.message));
+$('#btn-serverview').onclick = ()=>toggleServerView().catch(e=>toast(e.message));
 $('#btn-skiplogin').onclick = afterSetLogin;
 $('#btn-copy').onclick   = ()=>{ navigator.clipboard?.writeText($('#invite-code').value); toast('Copied'); };
 $('#btn-copy-app').onclick = ()=>{ navigator.clipboard?.writeText($('#invite-code-app').value); toast('Copied'); };

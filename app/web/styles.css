@@ -307,6 +307,15 @@ body.elder .famhead #fam-name{font-size:22px}
 .alert-row .who{font-weight:700}
 .alert-row .what{font-size:14px;color:var(--ink-2)}
 
+/* ---- server view: the same screen, as the server sees it ---- */
+.sv-btn{width:auto;min-height:32px;padding:0 10px;font-size:12px;margin-left:auto}
+.whoami #btn-logout{margin-left:6px}
+body.serverview{--bg:#f7f1e6;--card:#fffaf2;--brand-soft:#f3e7d3;--line:#e9dcc6}
+body.serverview .sv-btn{background:var(--seal);color:#fff;border-color:var(--seal)}
+.sv-banner{background:var(--seal-soft);border:1.5px solid #e8d3b3;color:var(--seal);border-radius:var(--r);padding:12px 14px;font-size:13.5px;line-height:1.45}
+.sv-banner b{color:#6b4210}
+body.serverview .item .top b,body.serverview .sent-what,body.serverview .pbody b,body.serverview .erow .elabel,body.serverview .rec-row .rx,body.serverview .alert-row .what{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--seal);word-break:break-all}
+
 /* ---- elder view: big type, calm, nothing to operate ---- */
 body.elder{font-size:20px}
 body.elder .wrap{max-width:560px}
