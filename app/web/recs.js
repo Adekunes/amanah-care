@@ -57,7 +57,7 @@ async function render(){
         <ul>${acts.map((a) => `<li>${A.esc(a)}</li>`).join('')}</ul>
         ${note}
         <div class="esc">${A.esc(row.escalation_path)}${contact}</div>
-        <div class="rec-foot"><span class="prov">${A.esc(row.provenance)}</span><button class="ghost small" data-ack="${A.esc(row.pattern_id)}" type="button">Acknowledge for 24 h</button></div>
+        <div class="rec-foot"><span class="prov">${A.esc(row.provenance)}</span><button class="ghost small" data-ack="${A.esc(row.pattern_id)}" type="button">Acknowledge (24h)</button></div>
       </div>`; }).join('')}</div>`;
     box.classList.remove('hide');
     box.querySelectorAll('[data-ack]').forEach((b) => b.onclick = () => ack(b.dataset.ack, b).catch((e) => A.toast(e.message)));

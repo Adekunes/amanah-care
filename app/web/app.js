@@ -556,22 +556,24 @@ function renderHome(){
       <h1>${ME.role==='support' ? `Your shift with ${esc(ELDER)}` : `${esc(ELDER)}'s day`}</h1>
       <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
       <div class="progress"><div class="top"><span>Today's plan</span><b class="tnum">${done} of ${rows.length} done</b></div>
-        <div class="bar"><span style="width:${rows.length?Math.round(done/rows.length*100):0}%;background:#7fe3cd"></span></div></div>
+        <div class="bar"><span style="width:${rows.length?Math.round(done/rows.length*100):0}%"></span></div></div>
       <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
     </div>
     <div class="tiles h-tiles">${tiles}</div>
+    <div class="card h-plan"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
+      <div class="plan">${plan}</div></div>`;
+
+  $('#home-mid').innerHTML = `
     <div class="card h-patterns"><div class="card-head"><h2>Patterns, not predictions</h2><span class="muted">last 7 days</span></div>
       ${patternsHtml(7)}
-      <p class="muted" style="font-size:12.5px">Counted from the record. The family and the doctor decide what it means.</p></div>
-    <div class="card h-plan"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
-      <div class="plan">${plan}</div></div>
-    <div class="card"><div class="card-head"><h2>${ME.role==='support' ? 'Your visit today' : 'Your part today'}</h2><span class="muted">${esc(ME.my_name)}</span></div>
+      <p class="muted" style="font-size:var(--fs-1)">Counted from the record. The family and the doctor decide what it means.</p></div>
+    <div class="card h-mine"><div class="card-head"><h2>${ME.role==='support' ? 'Your visit today' : 'Your part today'}</h2><span class="muted">${esc(ME.my_name)}</span></div>
       <div class="mine">
         <div><b>${mine}</b><span>items you logged</span></div>
         <div><b>${myNext?esc(myNext.it.time):'—'}</b><span>${myNext?esc(myNext.it.label):'nothing assigned to you next'}</span></div>
         <div><b>${myWaiting}</b><span>handoff${myWaiting===1?'':'s'} waiting for you</span></div>
       </div></div>
-    <div class="card"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekTotal} items · ${people} ${people===1?'person':'people'}</span></div>
+    <div class="card h-week"><div class="card-head"><h2>Last 7 days</h2><span class="muted">${weekTotal} items · ${people} ${people===1?'person':'people'}</span></div>
       <div class="days">${weekHtml}</div></div>`;
   $$('[data-done]').forEach(b=>b.onclick=()=>{ b.disabled=true; logRoutineItem(b.dataset.done).catch(e=>{ toast(e.message); b.disabled=false; }); });
   wireEmergencyButtons();
@@ -602,17 +604,17 @@ function renderElderHome(){
       <div class="hero-actions" style="flex-direction:column"><button class="emg-btn big" data-emg type="button">I need help</button><button class="ghost" data-sheet type="button">Hospital sheet, for the ambulance</button></div>
     </div>
     <div class="ecard"><h2>Coming up</h2>
-      ${coming.length ? coming.map(erow).join('') : '<p class="elabel" style="font-size:22px;margin:0">Nothing more today. Rest well.</p>'}</div>
+      ${coming.length ? coming.map(erow).join('') : '<p class="elabel" style="margin:0">Nothing more today. Rest well.</p>'}</div>
     ${prayers.length?`<div class="ecard"><h2>Your prayers today</h2><div class="eprayers">${prayers.map(r=>`<span class="eprayer ${r.d?'done':''}">${esc(r.it.label)}${r.d?' ✓':''}</span>`).join('')}</div></div>`:''}
-    <div class="ecard"><h2>Done today</h2><p class="ebig">${done.length}<span style="font-size:22px;color:var(--muted)"> of ${rows.length}</span></p>
+    <div class="ecard"><h2>Done today</h2><p class="ebig">${done.length}<span class="of"> of ${rows.length}</span></p>
       <div>${done.map(erow).join('')}</div></div>
     <div class="ecard"><h2>Next visit and pickup</h2>
       <div class="erow"><span class="etime">${ap?esc(ap.when.split(' ')[0]):'—'}</span><span class="elabel">${ap?esc(cap(ap.label)):'No appointment planned'}</span><span class="ewho">${ap?esc(nameOf(ap.who)):''}</span></div>
       <div class="erow"><span class="etime">${tr?esc(tr.when.split(' ')[0]):'—'}</span><span class="elabel">${tr?esc(cap(tr.label)):'No pickup planned'}</span><span class="ewho">${tr?esc(nameOf(tr.who)):''}</span></div></div>
     <div class="ecard"><h2>What your family knows about you</h2>
-      ${PREFS ? `<div class="eprefs">${[['Language',PREFS.lang],['Food',PREFS.diet],['Prayer',PREFS.prayer],['Personal care',PREFS.modesty],['Fasting',PREFS.fasting]].filter(([,v])=>v).map(([k,v])=>`<div><span>${k}</span><br>${esc(v)}</div>`).join('')}</div><p class="muted" style="font-size:15px">Shown to whoever looks after you, on every handoff.</p>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
-    <div class="ecard"><h2>Who can read your record</h2><p style="font-size:21px;margin:0">${family.length?esc(family.join(', ')):'Only you'}</p>
-      <p class="muted" style="font-size:15px">They hold your family key. Nobody else can read it, not even the people who run this app.</p></div>`;
+      ${PREFS ? `<div class="eprefs">${[['Language',PREFS.lang],['Food',PREFS.diet],['Prayer',PREFS.prayer],['Personal care',PREFS.modesty],['Fasting',PREFS.fasting]].filter(([,v])=>v).map(([k,v])=>`<div><span>${k}</span><br>${esc(v)}</div>`).join('')}</div><p class="muted">Shown to whoever looks after you, on every handoff.</p>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
+    <div class="ecard"><h2>Who can read your record</h2><p class="efam">${family.length?esc(family.join(', ')):'Only you'}</p>
+      <p class="muted">They hold your family key. Nobody else can read it, not even the people who run this app.</p></div>`;
   wireEmergencyButtons();
 }
 
@@ -1176,6 +1178,14 @@ $('#btn-r-add').onclick  = addRoutineItem;
 $('#btn-r-save').onclick = ()=>saveRoutine().catch(e=>toast(e.message));
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 { const b=$('#btn-logout'); if(b) b.onclick=logout; }
+
+// ---- auth page: one card, three modes ----
+function authMode(mode){
+  $$('#view-landing [data-pane]').forEach(p=>p.classList.toggle('hide', p.dataset.pane!==mode));
+  $$('#view-landing .auth-tabs button').forEach(b=>b.classList.toggle('on', b.dataset.auth===mode));
+  const first = $(`#view-landing [data-pane="${mode}"] input, #view-landing [data-pane="${mode}"] textarea`); if(first && window.innerWidth>=960) first.focus();
+}
+$$('#view-landing [data-auth]').forEach(el=>el.addEventListener('click', (e)=>{ e.preventDefault(); authMode(el.dataset.auth); }));
 
 // resume session if present
 loadSession().then(ok=>{ if(ok) enterApp(); else show('landing'); });
