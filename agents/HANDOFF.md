@@ -90,16 +90,29 @@ Elder consent filter + audience filtering (needs a scoped support key); RTL Urdu
 
 ## 6. Repo state (IMPORTANT)
 
-```
-6034913 docs(pitch): slide deck, simple-English explainer, judge Q&A, sources   <- local only
-b7ec6b2 feat(web): Home dashboard, elder routine, record tab, one-process dev stack <- local only
-538d8d2 test: in-process suite with coverage for api, projector and client crypto  <- local only
-48f7ee0 UX pass on the handoff app + full agent handoff                             <- on GitHub main
-fa042c6 Merge branch 'add-members-from-the-page'                                    <- safio's merge
-```
-Working tree clean. Commits are authored as the owner with the Fable co-author line. **Push only when the owner says so**; from this Mac that needs either `gh auth login` as Adekunes or Rselectronic added as a collaborator (`gh api -X PUT repos/Adekunes/amanah-care/collaborators/Rselectronic` from the other Mac, then accept the invite). Coordinate with safio so nobody clobbers `main`; safio's last work is already in `fa042c6`.
+GitHub `main` is still at `48f7ee0`. Local `main` is **15 commits ahead**, all authored as the owner with the Fable co-author line, working tree clean:
 
----
+```
+8e683db feat(web): family name wiring in app.js and seed (follow-up)
+6e375de feat(web): family name on top of every screen
+9e518a8 fix(api): allow PUT and DELETE in CORS so the browser can save subscriptions
+0cb8429 feat: alerts with per-member event subscriptions, notifier service, logout
+e327fc2 chore: contract for alerts + logout (schema, route mounts, web hooks, spec)
+deb8627 docs: Docker stack verified on the demo Mac
+46e9165 docs(pitch): wording, add the real-product question to the appendix
+af4b2aa docs(pitch): login and elder view on the slides and in the explainer
+78d409d docs(pitch): login and elder view on the deck and explainer, PDFs regenerated
+a4b97b2 docs: login and elder view in deck, explainer, README and handoff
+19403e3 feat: login after the first code join, elder view, one session per tab
+d8e7ac4 docs: refresh agent handoff, owner notes and README for the current state
+6034913 docs(pitch): slide deck, simple-English explainer, judge Q&A, sources
+b7ec6b2 feat(web): Home dashboard, elder routine, record tab, one-process dev stack
+538d8d2 test: in-process suite with coverage for api, projector and client crypto
+```
+
+Push status: the owner approved the push (2026-09-05 ~22:15) but this Mac's `gh` is `Rselectronic`, which cannot see the private repo. A `gh auth login -h github.com -p https -w` device flow was started for the Adekunes account; the owner had not entered the code by 22:50. The remote is now `https://github.com/Adekunes/amanah-care.git`. A watcher script (`push-when-ready.sh` in the session scratchpad) pushes automatically once `gh auth status` shows Adekunes and the remote has not moved; if the remote moved, it stops and lists the new commits (rebase or merge by hand, coordinate with safio). If you restart the flow: `gh auth login -h github.com -p https -w`, then `gh auth switch -u Adekunes && gh auth setup-git && git push origin main`.
+
+Late additions this session (after the ten-agent build): CORS now allows PUT and DELETE (the browser's subscription save was blocked by the preflight); family name field at creation, stored encrypted in `FamilyCreated.family_name`, shown in `#fam-name` above the identity bar and in the tab title, default "<Elder>'s family". Known quirk: the notifier matches an event against the subscriptions that exist when it processes the event, so a seed that sets subscriptions right after posting history gets alerts for some history items too (11 rows on the demo seed). Harmless for the demo, worth a note if asked.
 
 ## 7. Architecture + deviations (unchanged in substance)
 
