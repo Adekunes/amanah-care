@@ -4,7 +4,7 @@ A private care-handoff log for families caring for an elderly parent. Built for 
 
 ## What it does
 
-Sister A logs care items, hands off to Brother B, B is notified, opens the card, reads what happened and what is next, and accepts. A workload bar counts who did what. The elder's preferences ride on top of every card. Open the raw database and you see only scrambled text.
+The family enters the elder's routine once (meds, meals, prayers, walks, pickups, appointments, who does what). Every day becomes a checklist. Caregivers log what was done in two taps, hand off to the next person with a card composed from the record (what happened from the log, what is next from the routine), and the recipient accepts. Home is a dashboard computed on the phone: who has the elder right now, done versus planned, mood and mobility last logged, next pickup and appointment, handoffs waiting, your own part, the last seven days and who carried the week. Record shows everything, day by day. The elder's preferences ride on top of every card. Open the raw database and you see only scrambled text.
 
 ## Stack
 
@@ -23,13 +23,32 @@ cd app
 docker compose up --build
 ```
 
-Then, with the stack up, seed a populated family:
+No Docker? The same api and projector run in one process on an in-memory Postgres:
+
+```bash
+cd app && npm install && node dev/stack.mjs
+```
+
+Then, with either stack up, seed a populated family:
 
 ```bash
 cd app/seed && npm install && API=http://localhost:4000 node seed.js
 ```
 
-Open the web app at http://localhost:8080 in two browser windows. Paste the printed Sister A code into one Join box and the Brother B code into the other. The elder code opens the today view.
+Open http://localhost:8080 in one window and http://127.0.0.1:8080 in another (two origins, two sessions). Paste the Sister A code into one Join box and the Fatima code into the other.
+
+## Tests
+
+```bash
+cd app && npm install && npm test          # 40 tests, in-process, no Docker
+npm run coverage                            # api/app.js, projector/apply.js, web/crypto.js
+```
+
+The suite loads the real `db/init.sql` into an in-memory Postgres, runs the real Express routes, records every stream append and pushes it through the real projector before checking the read models. One test asserts that a logged note never appears in any server-side row.
+
+## Pitch
+
+`pitch/deck.html` (arrow keys), `pitch/Amanah-Care-pitch-deck.pdf`, and `pitch/Amanah-Care-explained.pdf` (the whole project in simple English, with the judge Q&A).
 
 ## Privacy model in one paragraph
 

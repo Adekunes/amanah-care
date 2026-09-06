@@ -1,288 +1,196 @@
 # Amanah Care — full handoff for the next AI agent
 
-Read this top to bottom before touching anything. It is the current, complete state as of 2026-09-05, and it supersedes the older `agents/README.md` where they disagree. `agents/OWNER-NOTES.md` still holds the owner's verbatim directives and preferences; read that too.
+Read this top to bottom before touching anything. Current as of **2026-09-05, 19:20 EDT** (hackathon day 1 evening). It supersedes `agents/README.md` where they disagree. `agents/OWNER-NOTES.md` holds the owner's verbatim directives; read it too.
 
 ---
 
 ## 0. Take over in 60 seconds
 
-- Project: **Amanah Care**, a private care-handoff web app for families caring for an elderly Muslim parent. Built for **MuslimHacks 2026, Elderly Care track**, Concordia University, Montreal, 5–6 Sep 2026.
-- Owner: **Abdul Quayum Adekunle**. Partner/collaborator: **safio** (GitHub), write access on the repo.
-- Repo: `~/Developer/muslimhacks-2026-elderly-care/`, GitHub `git@github.com:Adekunes/amanah-care.git` (private).
-- The app is built and **runs on Docker**. Everything since the partner merge is **local and uncommitted**. **Do not push without the owner saying so.**
-- Stack the owner mandated: **Redis Streams** (event log), **Postgres** (read models), **Docker Compose**, a **web page with WebCrypto** client-side AES-GCM encryption. Web first, native mobile later.
+- Project: **Amanah Care**, a private care record for families caring for an elderly Muslim parent. **MuslimHacks 2026, Elderly Care track**, Concordia University, Montreal, 5–6 Sep 2026. Demo/judging is day 2 (Sun 6 Sep).
+- Owner: **Abdul Quayum Adekunle** (GitHub `Adekunes`). Partner: **safio** (GitHub), write access on the repo.
+- GitHub: `git@github.com:Adekunes/amanah-care.git` (private). GitHub `main` is at `48f7ee0`. **Four local commits since are NOT pushed** (see §6). Do not push without the owner saying so.
+- Two machines:
+  - **This one (RS work Mac, user `abdulrsmac`)**: repo at `~/code/amanah-care/`. `gh` is authed as `Rselectronic` (no access to the repo). No Docker yet (see §3). Owner chose this Mac for the live demo.
+  - **Owner's other Mac**: repo at `~/Developer/muslimhacks-2026-elderly-care/`, Docker Desktop installed, `gh` authed as Adekunes. It has commit `48f7ee0`; it does NOT have the four new commits.
+- Stack: **Redis Streams** (event log), **Postgres** (read models), **Node** api + projector, **vanilla JS + WebCrypto** web app, **Docker Compose**. Plus a **one-process dev stack** with no Docker.
 
-To run it right now:
+Run it right now on this Mac (no Docker needed):
 ```bash
-cd ~/Developer/muslimhacks-2026-elderly-care/app
-export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"   # if `docker` not on PATH
-docker compose up -d --build
-cd seed && npm install && API=http://localhost:4000 node seed.js      # prints join codes
-# open http://localhost:8080 in two browser windows, paste a code into each Join box
+cd ~/code/amanah-care/app
+npm install                                   # pg-mem for the in-memory Postgres
+node dev/stack.mjs                            # api :4000 + web :8080, in memory
+cd seed && API=http://localhost:4000 node seed.js   # prints SISTER_A / ABDULLAH / FATIMA / AMMI codes
+# open http://localhost:8080 and http://127.0.0.1:8080, paste a different code in each Join box
 ```
+Tests: `cd ~/code/amanah-care/app && npm test` (40 tests, ~2.5 s) and `npm run coverage`.
 
 ---
 
-## 1. What the product is
+## 1. What the product is (pinned this session)
 
-Care for an elder is shared across relatives. Today it lives in WhatsApp, memory, and separate calendars, and nothing keeps the next caregiver informed or gives the elder control. Amanah Care is a **structured handoff log** where:
-
-- Every action is an **event** (event sourcing, the owner is a solutions architect and required this).
-- Every payload is **encrypted in the browser** with a family key `H`. The server, and whoever operates it, stores **ciphertext only**.
-- The core loop: a caregiver **logs care**, **hands off** to another member, that member is **notified** (polling), **opens the card**, reads what happened and what is next, and **accepts**. A **workload bar** counts who did what. The elder's **preferences** ride on top of every card.
-
-One-line pitch: a private, event-sourced care-handoff log where only the family can read the data.
+- **The elder is not the app user.** Owner: elders are not tech savvy; care happens on WhatsApp and is not trackable. The **family caregivers are the users**; the elder is the subject and owns the preferences. Do not rework the app around "elder as sender".
+- The app is **the track of everything about the elder** that WhatsApp loses: the routine (meds, meals, prayers, walks, pickups/drop-offs, appointments), what was actually done and by whom, the handoff, the load per person, and the elder's preferences. All encrypted with the family key H; server stores ciphertext only.
+- Owner's words: it should be **"a dashboard that makes sense, has metrics that need tracking, and feels personal to all."** Metrics are counts and last values against the family's own plan. Never judgments, never diagnosis/triage (challenge constraint).
+- Pitch framing (owner): **simple**, and pitched as **"we solved a problem"**, with the **diagnosis first** and **proper evidence**, and it must **answer all the judge questions** from the rubric.
 
 ---
 
-## 2. Challenge + judging context (from the two PDFs in ~/Downloads)
+## 2. Challenge + judging context
 
-`MuslimHacks-2026-Challenges.pdf` (track 01 Elderly Care) and `MuslimHacks Judging Rubric.pdf`.
+`~/Downloads/MuslimHacks-2026-Challenges.pdf` (8 pages; page 3 = Elderly Care) and `~/Downloads/MuslimHacks Judging Rubric.pdf` (3 pages). Extracted text lives in the session scratchpad only; the facts you need:
 
-**Hard constraints (must not break):**
-- Health info needs consent + privacy protection. (Met: family-held key, ciphertext-only server.)
-- No diagnosis, no dosage advice, no medical triage. (Met: events record human actions, no advice paths.)
-- "Muslim-friendly" is not one setting; preferences are individual. (Met: per-elder encrypted prefs.)
-
-**Format rules:** deliver a working MVP of ONE core workflow in 24h; do not try to solve the whole problem; reserve 1–2h for the pitch.
-
-**Judging weights (each line 1–5):** Business 40% (solves problem, easy to use, sustainable cost, research), Delivery 30% (live demo works, clear presentation, convincing pitch, follow-up answers), Technical 30% (architecture discernible + appropriate, code quality, performance, **tested with coverage metrics**, explain the process).
-
-**Biggest rubric gap:** no automated tests / coverage numbers. Everything else is strong. Prepare to either add a test suite or answer honestly and pivot to the demo.
-
-**Follow-up questions** judges draw from live are grouped as Technical, Impact & Users, Demo & Functionality, Business & Scalability, Team & Process, Data & Privacy, Future, Closing. The full list is in the rubric PDF. Two we answer very well: Data & Privacy ("key made in browser, never sent, server sees ciphertext, no LLM in core") and Tradeoffs ("cut consent filter, live push, key rotation to ship the handoff loop at quality; all on the honesty slide").
+- Focus areas: caregiver handoffs, workload visibility, personal preferences, elder participation (visibility + control over what is shared).
+- Constraints: health info needs consent + privacy; no diagnosis/dosage/triage; "Muslim-friendly" is not one setting.
+- Before-you-build questions: primary user? why better than the family WhatsApp group? who can access the data and who controls it?
+- Format: one core workflow working end to end in 24 h; keep 1–2 h for the pitch.
+- Rubric: Business 40% (solves problem, easy to use, sustainable cost, research), Delivery 30% (live demo works, clearly presented, convincing, follow-up answers), Technical 30% (architecture, code quality, performance, **tested with coverage metrics**, process).
+- Verified stats (guide p.3, ISPU): 1 in 4 American Muslims care for an older adult vs 16% general public; 52% of Muslims 30–49 care for an elder (21% of 18–29, 31% of 50+); 18% vs 7% struggle to find culturally appropriate caregivers. Plus (web-verified this session) Statistics Canada CSS 2022: 42% of Canadians 15+ gave unpaid care, 13.4 M, 1.8 M sandwiched; Collins & Kishita 2020 meta-analysis: ~31% depression, ~49% burden among dementia family caregivers. Sources with URLs are on the deck's last slide.
 
 ---
 
-## 3. Current running state
+## 3. Docker on this Mac (open blocker for the compose demo)
 
-- Docker Desktop 4.89 is installed (via `brew install --cask docker`). `docker` CLI is at `/Applications/Docker.app/Contents/Resources/bin/docker`; add it to PATH if needed.
-- Six containers via `app/docker-compose.yml`: `web` (8080), `api` (4000), `projector`, `redis`, `postgres`. In cut-core there is no separate notifier container (polling instead).
-- The DB currently holds test residue (e.g. a handoff to Ammi with next="s3rd" and an accumulated summary) from manual testing. Reset for a clean demo (see §9).
-
----
-
-## 4. What is BUILT (cut-core scope + UX additions)
-
-Base workflow (mine + partner safio's, merged):
-- Family create from scratch; member join by **QR or invite code**.
-- **Log care**: two-step chips (category → preset) + optional note. 8 categories: meds, meal, prayer, mobility, mood, appointment, transport, note.
-- **Preference strip** on top of every card (language, diet, prayer, modesty), encrypted.
-- **Hand off**: recipient picker, summary **auto-composed** from logged items, you type only "what is next".
-- **Notify by polling** every 4s (FR-05). No SSE/push in cut core.
-- **Accept** flips status open → acknowledged.
-- **Workload bar** per member from event metadata (no decryption).
-- **Flow tab**: traces a real write through 6 hops (browser → wire → api → redis → projector → family phones), tags each hop readable vs sealed, shows real timings, hops light up in sequence.
-- **Proof/kill-switch**: live Postgres rows showing ciphertext only.
-- **In-app Invite tab** (partner) to add members from inside the app.
-
-UX added this session (all local, uncommitted):
-- **Identity bar** at the top of the app: colored dot + name + role (e.g. "Ammi · ELDER"), and the **browser tab title** is set to the person's name, so multiple test windows are distinguishable. Function `renderWhoAmI()` in `app/web/app.js`.
-- **Handoff preview** before sending: shows To / What happened / What is next (`#ho-preview`, `updateHandoffPreview()`).
-- **Send animation** overlay: You (plaintext + H) → 🔒 → Server (ciphertext only) → 🔒 → Recipient (decrypts with H), a lock packet travels each segment (`sendAnimation()`, `#sendfx`).
-- **Sender record** ("Your handoffs") under the Hand off tab, **grouped by recipient**, showing what you sent each person and status delivered/accepted (`renderSent()`). This answers the owner's ask: "what did I send Fatima, what did I send Abdullah."
-- Clearer empty-summary wording ("Nothing new since your last handoff").
-- **nginx no-store headers** so rebuilds are never served stale.
+`brew install --cask docker-desktop` was started by the agent and **rolled back**: the cask runs `sudo mkdir -p /usr/local/bin` and there is no TTY for the password. The 580 MB dmg is cached in `~/Library/Caches/Homebrew/downloads/`. **The owner must run this in his own Terminal:**
+```bash
+brew install --cask docker-desktop
+```
+then open Docker from Applications, accept the service agreement, wait for "Engine running". Then:
+```bash
+cd ~/code/amanah-care/app && docker compose up -d --build
+cd seed && npm install && API=http://localhost:4000 node seed.js
+```
+Note `docker compose` will build with the NEW Dockerfiles (`api` copies `app.js`, `projector` copies `apply.js`, `web` copies the new html/js/css). Until Docker exists, demo and develop on `node dev/stack.mjs` (same api/projector code, in-memory Postgres via pg-mem, inline projector, no-store static server). Redis and Postgres are replaced in that mode; say so if asked.
 
 ---
 
-## 5. What is DEFERRED (roadmap, on the honesty slide, NOT built)
+## 4. What is BUILT (all local, committed, not pushed)
 
-- Elder consent filter + audience filtering (cosmetic under same-H; needs a scoped support key).
-- Elder read-only "today view" with RTL Urdu/Arabic.
-- SSE / web push (replaced by polling).
-- 30-minute reminder on open handoffs.
-- Key rotation (lost-key → new H).
-- Real member authentication (currently a trusted client-declared member_id stub).
+Base (from `48f7ee0`, owner + safio): family create, join by QR/code, Log (category → preset chips), preference strip, hand off with auto summary, inbox polling every 4 s, accept, workload bar, Flow tab (6 hops with timings), proof/kill-switch view, in-app Invite tab, identity bar, handoff preview, send animation, sender record, nginx no-store.
+
+Added this session:
+- **Tests + coverage** (`538d8d2`): `app/api/app.js` exports `createApp({db, redis})`; `app/api/server.js` is the wiring. `app/projector/apply.js` exports `applyEvent(db, streamId, fields)`; `index.js` is the loop. `app/test/` runs the real routes in-process on the real `db/init.sql` loaded into pg-mem, with a fake stream whose entries are pushed through the real projector. 40 tests: guards, stream fields, read models, handoff lifecycle, workload from metadata, AES-GCM round trip, tamper rejection, and a **privacy test** asserting a logged note is absent from every server-side row, stream entry and API response. Coverage on api/app.js, projector/apply.js, web/crypto.js: **100% lines, 90% branches, 100% functions**. Async route errors answer 500 JSON. The workload view uses `count(CASE ...)` (same result as `FILTER`, runs in pg-mem).
+- **New read endpoints**: `GET /families/:id/routine` (latest RoutineSet), `GET /families/:id/events?type=X` (one type, ciphertext rows, replaces the 50-row `/debug/events` for names), `GET /families/:id/workload?since=YYYY-MM-DD`.
+- **Home dashboard** (`b7ec6b2`, `app/web/app.js` `renderHome()`): hero with who has the elder now (from the handoff chain, day-aware time), today's plan progress; tiles: meds/meals/prayers done vs planned, mobility and mood last logged, handoffs waiting, next pickup/drop-off, next appointment; today's plan checklist (tap Done logs a `CareLogged` with `routine_id`); "your part today"; last 7 days strip; who carried the week (workload, this week only, zero rows hidden). Inbox tab badge shows open handoffs for you.
+- **Routine tab**: items `{id, category, label, time 'HH:MM', days: 'daily'|'weekdays'|'mon'..'sun', who: memberId|''}` saved as ONE encrypted `RoutineSet` event (whole list each save, like PreferenceSet). Dirty flag until saved.
+- **Record tab**: 30 days of `CareLogged`, grouped by day, category filter chips.
+- **Hand off**: "what is next" pre-filled from routine items still open today (editable).
+- **Seed** (`app/seed/seed.js`): Ammi's 15-item routine, six days of history with rotating caregivers, four accepted past handoffs, today's items before now−90 min already logged by Sister A, mood at 10:00. Prints `SISTER_A_CODE`, `ABDULLAH_CODE`, `FATIMA_CODE`, `AMMI_CODE`. Each run makes a NEW family; old codes die with the old family (and the in-memory stack forgets everything on restart).
+- **Dev stack** (`app/dev/stack.mjs`), **`app/package.json`** with `test` and `coverage` scripts, devDependency `pg-mem`.
+- **Pitch** (`6034913`, `pitch/`): `deck.html` (21 slides, arrow keys, click, `#n`), `Amanah-Care-pitch-deck.pdf`, `explainer.html` + `Amanah-Care-explained.pdf` (simple English, demo commands, all judge Q&A, sources). Regenerate PDFs with headless Chrome:
+  `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/Amanah-Care-pitch-deck.pdf" "file://$PWD/deck.html"` (the CVDisplayLink errors it prints are harmless).
+
+---
+
+## 5. DEFERRED (on the honesty slide, not built)
+
+Elder consent filter + audience filtering (needs a scoped support key); elder read-only large-print today view with RTL Urdu/Arabic; SSE/web push (polling instead); 30-minute reminders; key rotation; real member authentication (trusted client-declared member_id); native mobile; any AI. **AI decision (owner asked, agent advised, owner accepted): AI only at the edge, on the phone, opt-in per family; never on the server; nothing built tonight because a cloud model call would contradict the privacy claim on stage.** Candidate edge features: free text/voice → structured log items; plain-sentence or Urdu/Arabic summaries; "patterns, not predictions" counts. On-device route: Chrome built-in AI (Prompt/Summarizer/Translator on Gemini Nano, stable on desktop) or Apple on-device models.
 
 ---
 
 ## 6. Repo state (IMPORTANT)
 
-- GitHub `main` = partner safio's merge `fa042c6` ("Merge branch add-members-from-the-page"), which built on my earlier commit `d0baa41`. safio added the in-app Invite tab, an interface cleanup, and their own Flow view.
-- Local `main` was fast-forwarded to `fa042c6`, then I made **uncommitted working-tree changes** to `app/web/app.js`, `app/web/index.html`, `app/web/styles.css`, `app/web/nginx.conf`, `app/seed/seed.js` (the UX work in §4).
-- My earlier uncommitted flow-tab attempt is in `git stash` ("my-local-flow-and-nginx"); it is superseded by safio's flow view — you can drop it.
-- **Nothing since the merge is committed or pushed.** When the owner approves, commit the working tree and push. Commit attribution line for this project:
-  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
-
----
-
-## 7. Architecture + deviations
-
-- **Redis Streams** event store. **Deviation from the spec (AR-02):** the MVP uses ONE global stream `events` with `family_id` as a field, not one stream per family. Reason: a projector consuming dynamically-created per-family streams is a time sink. One consumer group. Documented in `app/db/init.sql`. Post-hackathon change.
-- **api** (Node/Express, `app/api/server.js`): POST /events validates membership then `XADD`, returns 202. Read endpoints for members, preferences, care, handoffs, workload, and `/debug/events` (kill-switch). Guards: rejects non-members; rejects ConsentChanged from non-elder. **Auth is stubbed** (caller declares `actor_id`, trusted).
-- **projector** (`app/projector/index.js`): one consumer group, idempotent upsert by event id, builds the `handoffs` read model; workload is a SQL view.
-- **web** (`app/web/`, served by nginx): vanilla ES module + WebCrypto. One-column, phone-first.
-- Write path: browser encrypts → api → XADD → projector → Postgres. Read path: browser fetches read model → decrypts with H.
-
----
-
-## 8. Privacy model (the family key H)
-
-- Browser makes a random 256-bit AES-GCM key `H` with WebCrypto. **Never sent to the server.**
-- Server stores only `key_check` = SHA-256 hex of raw H (proves possession, reveals nothing).
-- Every ciphertext carries a fresh random 96-bit IV. No nonce reuse.
-- Members join in person by scanning a **QR** carrying H (base64url of `{f, h}`), or pasting the invite code. The `#`-fragment link is a labelled fallback. The UI never offers "share to WhatsApp".
-- **Seed/demo codes also pin a member** (`{f, h, m, r, n}`) so a seeded handoff reaches the intended window.
-- **Known limits (say on the honesty slide):** support workers hold the same H so the consent filter is UI-only; auth is stubbed; notifications are polling not push.
-
-Data model: 4 tables (`families`, `members`, `events`, `handoffs`) + 1 view (`workload_view`). Names/notes/summaries/preferences live only inside encrypted event payloads. Schema in `app/db/init.sql`.
-
----
-
-## 9. How to run, reset, seed
-
-```bash
-export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
-cd ~/Developer/muslimhacks-2026-elderly-care/app
-
-docker compose up -d --build          # start everything
-docker compose ps                     # check health
-
-# clean reset (drops DB, re-inits schema; no named volume so `down` wipes data)
-docker compose down && docker compose up -d
-
-# seed a populated family (Ammi elder, Sister A, Abdullah, Fatima; prefs; no pre-logged care)
-cd seed && API=http://localhost:4000 node seed.js
-# prints SISTER_A_CODE / ABDULLAH_CODE / FATIMA_CODE. The elder (Ammi) code is not
-# printed by seed; build it by decoding any code for {f,h}, querying
-# /families/<f>/members for the role=elder id, then base64url({f,h,m:elderId,r:'elder',n:'Ammi'}).
 ```
-
-Open http://localhost:8080 in two windows. To keep separate browser storage per window on one machine, use **two origins**: `localhost:8080` for one member and `127.0.0.1:8080` for another (they hit the same backend; api CORS is `*`). Paste a different code into each Join box.
-
----
-
-## 10. How to test with the browser harness (and the traps I hit)
-
-The owner wants testing via **browser-harness** (`browser-harness <<'PY' ... PY`, drives his agent Chrome via CDP). It works, but:
-
-- **Multi-tab switching is flaky.** `list_tabs()` returns `null` ids; keep the id returned by `new_tab(url)`. After `switch_tab(id)`, VERIFY with `js("location.href")` before acting (I use a `use(tid, expect)` guard that retries). Close leftover tabs first via `cdp("Target.getTargets")` + `cdp("Target.closeTarget", targetId=...)`.
-- **Cache bit me hard.** Chrome served a stale pre-build `index.html`/`app.js`. Fixed by nginx `no-store` headers (already in `app/web/nginx.conf`) plus loading with a `?v=<timestamp>` query.
-- **Heredoc quoting:** use a quoted `<<'PY'` and pass values via `os.environ`; unquoted heredocs mangle regex/backslashes. Avoid nested quotes in `js()` — use unquoted CSS attribute selectors like `[data-tab=flow]`, or Python `%r` injection.
-- **Screenshot helper is `capture_screenshot(path)`**, not `screenshot`.
-- For quick, reliable checks (console errors, single-tab flows) the **in-app Claude Browser** (`mcp__Claude_Browser__*`) is more reliable than browser-harness and gives console access. Use it to debug, use browser-harness for the owner-facing demo.
-- The app.js is an **ES module**, so its top-level functions are NOT on `window`; `typeof renderSent` from the page console is `undefined` even when it works. Check DOM/behavior, not globals.
+6034913 docs(pitch): slide deck, simple-English explainer, judge Q&A, sources   <- local only
+b7ec6b2 feat(web): Home dashboard, elder routine, record tab, one-process dev stack <- local only
+538d8d2 test: in-process suite with coverage for api, projector and client crypto  <- local only
+48f7ee0 UX pass on the handoff app + full agent handoff                             <- on GitHub main
+fa042c6 Merge branch 'add-members-from-the-page'                                    <- safio's merge
+```
+Working tree clean. Commits are authored as the owner with the Fable co-author line. **Push only when the owner says so**; from this Mac that needs either `gh auth login` as Adekunes or Rselectronic added as a collaborator (`gh api -X PUT repos/Adekunes/amanah-care/collaborators/Rselectronic` from the other Mac, then accept the invite). Coordinate with safio so nobody clobbers `main`; safio's last work is already in `fa042c6`.
 
 ---
 
-## 11. Bugs I found and fixed this session (so you don't re-chase them)
+## 7. Architecture + deviations (unchanged in substance)
 
-- **Duplicate `esc` declaration** (partner had `const esc`, I added `function esc`) → SyntaxError broke the ENTIRE app. Fixed. If the whole app goes blank, check the console for a top-level SyntaxError first.
-- **Empty handoff summary race:** opening the handoff before the auto-compose finished sent a blank summary. `openHandoff()` now recomputes if empty.
-- **Stale name cache:** a recipient showed as an id, not their name, when they joined after the sender loaded. Fixed by refreshing `loadNames()` at the start of `renderSent()` and `buildHandoff()`.
-- **Postgres `LC_ALL`:** running a local (non-Docker) Postgres fails with "postmaster became multithreaded during startup" unless `LC_ALL` is a valid locale (e.g. en_US.UTF-8). Only relevant if you run PG outside Docker.
+- One global Redis stream `events` with `family_id` as a field (deviation from AR-02), one consumer group. Post-hackathon: per-family streams.
+- api: POST /events validates membership then XADD, 202. Guards: non-members rejected; `ConsentChanged` elder-only. Auth stubbed.
+- projector: idempotent upsert by event id; builds `handoffs`; workload is a SQL view over metadata.
+- web: ES module + WebCrypto; dashboard/routine/record computed client-side after decryption.
+- Data model: `families`, `members`, `events`, `handoffs` + `workload_view`. Names/notes/summaries/preferences/routine live only inside encrypted payloads. Payload shapes: `CareLogged {text, routine_id?}`, `HandoffOpened {summary, next}`, `PreferenceSet {lang, diet, prayer, modesty}`, `RoutineSet {items:[...]}`, `MemberJoined {name}`, `FamilyCreated {elder_name}`.
 
----
+## 8. Privacy model (unchanged)
 
-## 12. Environment + hazards
-
-- brew `postgresql@16` and `redis` were installed earlier only to verify before Docker existed. They are not running. The owner may remove them: `brew uninstall postgresql@16 redis`. Use Docker for everything now.
-- `gh` CLI is authed as GitHub user **Adekunes**.
-- **HAZARD (owner's global rule):** never create a git repo in the home directory. Repos live in `~/Developer/<project>/`. A hazard-guard hook blocks the home-dir case and also pattern-matches that phrase inside shell commands, so **write docs with the Write tool, not a `cat` heredoc**.
-- The owner deleted 25 videos from `~/Downloads` this session (moved to Trash, recoverable). Unrelated to this project.
+Browser-made 256-bit AES-GCM key H, never sent; server stores `key_check` = SHA-256 hex of raw H; fresh 96-bit IV per ciphertext; join by QR in person (`{f,h}` base64url), seed codes also pin a member `{f,h,m,r,n}`; `#`-fragment link is a labelled fallback. Known limits on the honesty slide: same H for support workers, stubbed auth, polling.
 
 ---
 
-## 13. Session conventions (keep these)
+## 9. Demo script (day 2)
 
-- **Caveman mode** is active in the owner's environment: terse replies, drop articles/filler. Code, commits, and security text stay normal.
-- **writing-lint**: the owner has a global writing harness. Any prose deliverable for him (posts, emails, scripts) must pass it. Technical docs like this are fine. Avoid em-dashes, "shift", "here's the thing", anaphora, staccato triples, rhetorical questions.
-- **Ask big questions via the question tool**, batched, before large work.
+1. Reset + seed (Docker: `docker compose down && docker compose up -d --build`, then seed. Dev stack: restart `node dev/stack.mjs`, then seed).
+2. Window A `localhost:8080` = Sister A code. Window B `127.0.0.1:8080` = Fatima code (separate storage per origin).
+3. A: Home. Say what the tiles mean. Tap Done on the next open item. Watch tiles move.
+4. A: Hand off → Fatima. Show "what happened" and "what is next" already written. Send (animation).
+5. B: Inbox badge → open card with preference strip → Accept.
+6. A: Home shows "Fatima has Ammi since …". Workload bar moves.
+7. Flow tab: last write hop by hop with ms. "What the database stores": scrambled rows.
+8. Tests: `npm run coverage` on the terminal for the coverage table.
+Fallback if Docker misbehaves on stage: `node dev/stack.mjs` (identical UI and API).
+
+---
+
+## 10. Browser harness notes for this Mac
+
+- The in-app **Claude Browser** (`mcp__Claude_Browser__*`) works at `localhost:8080`. When the pane is hidden, `computer` actions (scroll/screenshot) time out; use `javascript_tool` / `get_page_text` / `read_page` instead. `localStorage.clear()` + reload to switch member.
+- `app.js` is an ES module: its functions are not on `window`. Check the DOM, not globals.
+- Reseeding creates a new family; a browser still holding the old session shows a blank app. Clear storage and rejoin.
+- The owner's other machine used `browser-harness` (CDP). Its traps are in `agents/README.md` history: null `list_tabs()` ids, cache (fixed by no-store), heredoc quoting.
+
+---
+
+## 11. Bugs fixed / traps this session
+
+- pg-mem lacks `date_trunc` (registered in `test/helpers.mjs`) and silently ignores `count(*) FILTER` (view rewritten to `count(CASE …)`).
+- Names came from `/debug/events` (50 rows); with seeded history they would drop off. Now `/families/:id/events?type=MemberJoined`.
+- "has Ammi since 12:04 PM" from yesterday looked fresh: `fmtWhen()` adds the weekday when not today.
+- Elder appeared in the workload with zeros (MemberJoined/PreferenceSet events have actor_id): filtered client-side, and workload now `?since=` this week.
+- zsh: `echo ===X` triggers `=command` expansion; quote it.
+- brew cask `docker-desktop` needs sudo → cannot be installed from the agent shell.
+
+---
+
+## 12. Session conventions (keep)
+
+- **Caveman mode** in the owner's environment: terse replies. Code, commits, security text normal.
+- **No em-dashes** in prose deliverables; short sentences; no "shift", "here's the thing", anaphora, staccato triples, rhetorical questions (owner's writing-lint).
+- **Ask big questions via the question tool, batched, before large work.** Owner answers fast and sends mid-turn messages; fold them in.
 - **Comparisons as markdown tables**, short cells.
-- **Do not push to GitHub** until the owner explicitly approves.
+- **Never push without approval. Never hard-delete. Never create a git repo in the home directory** (repos under `~/code/` here, `~/Developer/` on the other Mac).
+- Commit as the owner (`Abdul Quayum Adekunle <a.quayum@rspcbassembly.com>` on this Mac) with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
 
 ---
 
-## 14. Recommended next tasks (in priority order)
+## 13. Recommended next tasks (priority order)
 
-1. **Decide the elder's role in the pitch story.** Owner leans "elder is the sender/owner of handoffs" ("what did I send Fatima/Abdullah"), but the app currently models caregivers as senders and the elder as subject/recipient. Pin this; it changes the demo narrative and maybe the seed.
-2. **Reset to clean seed data** before any demo (current DB has "s3rd" residue).
-3. **Add a minimal automated test suite + coverage number** — the one clear rubric gap (Technical: "tested with coverage metrics"). Even a handful of api/projector/crypto tests with a printed coverage % helps.
-4. **Optional: build the elder today view** (large text, RTL Urdu/Arabic, read-only) — highest pitch value of the deferred items, low risk.
-5. **Pitch deck**: open with the guide's stats (1 in 4 Muslims care for an elder vs 16% general; 52% of Muslims 30–49; 18% vs 7% struggle to find culturally fitting caregivers); close with the real/mocked/not-built honesty slide.
-6. When approved, **commit the working tree and push**; coordinate with safio to avoid clobbering their main.
+1. **Owner installs Docker** (§3), then `docker compose up -d --build`, seed, run the demo script end to end in two windows on Docker. Confirm the `web` image picked up the new files (`curl -s localhost:8080/ | grep -c 'data-tab="home"'` should be 1).
+2. **Rehearse the pitch** from `pitch/deck.html` with the demo script (§9). Time it: 5–7 min talk + demo, keep the appendix for Q&A.
+3. **Push when approved**; coordinate with safio; then share `pitch/*.pdf`.
+4. Optional, if time: deterministic **Quick log** (free text → category/preset, on-device, no LLM) as the seam for edge AI; a **patterns card** ("refused lunch 3 of last 5 days", counts only); elder large-print today view; README screenshots.
+5. Update `spec/REQUIREMENTS.md`/`TASKS.md` status columns to reflect what shipped (not done this session).
 
----
-
-## 15. File map
+## 14. File map
 
 ```
 app/
-  docker-compose.yml        six services, one command
-  db/init.sql               4 tables + 1 view (+ the single-stream deviation note)
-  api/server.js             command handler + read models + /debug kill-switch
-  projector/index.js        Redis Streams consumer group -> Postgres
-  web/
-    index.html              all views + tabs (Log, Hand off, Inbox, Prefs, Invite, Flow) + whoami bar + sendfx overlay
-    app.js                  ES module: crypto wiring, flows, renderSent, sendAnimation, renderWhoAmI, flow
-    crypto.js               WebCrypto: makeKey, export/import, keyCheck, encryptJSON/decryptJSON
-    styles.css              one-column phone-first theme + animations
-    nginx.conf              no-store headers
-    vendor/qrcode.js        vendored QR lib (qrcode-generator 1.4.4), no CDN
-  seed/seed.js              populated demo family + printed join codes
-spec/                       SPEC, REQUIREMENTS, TASKS, AUDIT, diagrams (the planning + two audit rounds)
-agents/
-  HANDOFF.md                this file (current master)
-  README.md                 earlier handoff (pre app-build), still useful for the plan history
-  OWNER-NOTES.md            owner's verbatim directives + standing preferences
+  package.json              test + coverage scripts, devDependency pg-mem
+  docker-compose.yml        web :8080, api :4000, projector, redis, postgres
+  db/init.sql               4 tables + 1 view (count(CASE) form)
+  api/app.js                createApp(): routes, guards, read models, 500 handler
+  api/server.js             wiring: pg pool + redis client, listen
+  projector/apply.js        applyEvent(): idempotent upsert + handoffs read model
+  projector/index.js        consumer group loop
+  web/index.html            tabs: Home, Log, Hand off, Inbox, Routine, Record, Prefs, Invite, Flow
+  web/app.js                dashboard, routine, record, handoff, inbox, flow, crypto wiring
+  web/crypto.js             WebCrypto AES-GCM helpers (tested in Node)
+  web/styles.css            phone-first theme + dashboard/routine/record styles
+  web/nginx.conf            no-store
+  seed/seed.js              populated family: routine, 6-day history, handoffs, today
+  dev/stack.mjs             api + inline projector on pg-mem + static web, one process
+  test/helpers.mjs          pg-mem schema loader, fake stream, project(), startApp()
+  test/api.test.js          routes + privacy test
+  test/projector.test.js    applyEvent + workload view
+  test/crypto.test.js       AES-GCM, IV, tamper, key check
+pitch/
+  deck.html, Amanah-Care-pitch-deck.pdf, explainer.html, Amanah-Care-explained.pdf
+spec/                       SPEC, REQUIREMENTS (46 IDs), TASKS, AUDIT, diagrams
+agents/                     HANDOFF.md (this), README.md (older), OWNER-NOTES.md
 ```
-
----
-
-## 16. All the no's — rejected paths, dead ends, and deferrals (read before restarting)
-
-If you restart, do not re-litigate these. Each was decided with a reason.
-
-**Scope no's**
-- NO to the full requirement register in 24h. Two audits showed ~34 person-hours of must-haves vs ~22 planned. Chose "cut core": the handoff loop, built well, rest labelled roadmap.
-- NO to the elder consent filter for the MVP. Under the same-H model it is cosmetic (support holds the same key, so hiding categories is UI-only, not cryptographic). Deferred; needs a scoped support key (1–2 days).
-- NO to key rotation in the MVP. Edge case that touches every crypto path. Deferred.
-- NO to a 30-minute reminder for the MVP. Non-core. Deferred.
-- NO to real member authentication in the MVP. Proper identity proof is 1–2 days. Stubbed (trusted client-declared member_id), labelled on the honesty slide. The privacy story does not depend on it.
-
-**Delivery/transport no's**
-- NO to SSE / web push for notifications. SSE only reaches an already-open tab and is fragile on stage; web push needs a service worker + VAPID, a time sink. Chose polling every 4s (honest, robust). Push is post-hackathon.
-
-**Key-sharing no's**
-- NO to the invite-link-with-H-in-`#` as the PRIMARY path. It leaks H if pasted into a chat app (the exact third party families avoid). Kept only as a labelled fallback. Chose QR in person.
-- NO to passphrase-derived H (Argon2) despite better recovery UX. It weakens `key_check` to offline brute force unless Argon2 cost is high + an HMAC verifier, and it touches every crypto path (+2–3h). Better as a real-product change, worse hackathon choice.
-
-**Architecture no's**
-- NO to one Redis stream per family for the MVP. A projector consuming dynamically-created per-family streams is a time sink. Chose a single global `events` stream with `family_id` as a field, one consumer group. Per-family isolation is post-hackathon.
-
-**Unresolved (decide on restart)**
-- The elder's role: SENDER (owner leans this: "what did I send Fatima/Abdullah") vs RECIPIENT/subject (current app models caregivers as senders, elder as subject). Not yet pinned. This shapes the whole narrative and the seed. Decide first if you restart.
-
-**Testing no**
-- NO automated tests exist yet. Only manual end-to-end verification. This is the single clear rubric gap (Technical: "tested with coverage metrics"). Add a small suite if you can.
-
-**Process no's (owner's standing rules)**
-- Do NOT push to GitHub without explicit approval.
-- Do NOT hard-delete files; use Trash and confirm the target first.
-- Do NOT create a git repo in the home directory.
-- Do NOT write prose deliverables that fail `writing-lint` (no em-dashes, no "shift", no "here's the thing", no anaphora/staccato/rhetorical-question patterns).
-- Caveman replies (terse); code/commits/security stay normal.
-
-**Harness no's (what wasted time)**
-- Do NOT trust `list_tabs()` ids (they are null); keep `new_tab` return ids and verify the focused tab with `location.href`.
-- Do NOT assume rebuilt web assets reach the browser; the HTTP cache served stale files until no-store headers + `?v=` cache-busting.
-- Do NOT use unquoted heredocs or nested quotes in `js()`; they mangle regex/quotes.
-
----
-
-## 17. If you restart from scratch — what to reuse vs rebuild
-
-**Reuse as-is (these are good and paid for):**
-- The whole `spec/` folder: SPEC, REQUIREMENTS (46 IDs), TASKS, AUDIT, diagrams. Two audit rounds already done.
-- The privacy model and `crypto.js` (WebCrypto AES-GCM, per-message IV, key_check). Verified.
-- The event catalogue and 4-table + 1-view data model (`app/db/init.sql`).
-- The cut-core scope decision and the deferred list.
-- This handoff and OWNER-NOTES.
-
-**Rebuild only if you change direction:**
-- If the elder becomes the primary sender, rework the handoff UI and seed around that.
-- If you want real privacy for support workers, design scoped keys (not same-H).
-- If you want reliable notifications, add push properly (out of a 24h budget).
-
-Starting point either way: `docker compose up --build`, then iterate on `app/web/` (no build step, just rebuild the `web` container or bind-mount for live edits).

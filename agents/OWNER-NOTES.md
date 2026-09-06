@@ -36,3 +36,15 @@ MuslimHacks 2026, Elderly Care track. His team was on Elderly Care. Full name fo
 - Comparisons as markdown tables, short cells.
 - He rejects the safe/minimal option by default and likes ambitious full-scope builds, but for THIS hackathon he explicitly chose the disciplined cut-core scope. Honor the explicit choice.
 - Never create a git repo in the home directory. Repos go in `~/Developer/<project>/`.
+
+## Session 2026-09-05 evening (RS work Mac, hackathon day 1) — directives close to his words
+
+- "CUZZY WE NEED TO COOK" with HANDOFF.md, the challenge guide and the rubric attached. Green light: "GO COOK CUZZY but be smart and build a pitch deck that makes sense."
+- Code access: "Push from other Mac, then I clone here" was chosen, then he copied the folder to ~/Downloads instead (with .git). Moved to ~/code/amanah-care.
+- Demo machine: "HERE WILL BE BETTER" (this Mac). Docker Desktop install needs his password; he has not run it yet.
+- Priority: "Tests+coverage, then deck, then today view."
+- Product intent: "elders are not too tech savvy ... looking after them is done on WhatsApp ... so it's not trackable. What if we would have a track of everything of the elder in terms of health tools and all of that, in routines, in picking up and drop off and stuff like that." Then: "it should be a dashboard that makes sense and has metrics that need tracking and should feel personal to all." Chosen scope: Routine + Today's plan + Record + auto "what is next" (+ dashboard).
+- Pitch: "it has to answer all the questions of the judge." "remember simple but you have to pitch it as we have solved a problem." "and to do that we need to diagnose the problem." "proper evidence."
+- Asked "is there a way that AI can help here or no?" and later "where would AI fit in this project and what could we do". Agent's position (accepted so far): no LLM in the core loop by design; AI only at the edge on the phone, opt-in; nothing built tonight. Owner has not yet chosen whether to build the deterministic Quick log / patterns card tonight.
+- Also asked for "a pdf explaining everything in simple english" (delivered: pitch/Amanah-Care-explained.pdf).
+- Standing: no push without his word; commits authored as him with the Fable co-author line.
