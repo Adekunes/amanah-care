@@ -33,6 +33,7 @@ describe('api', () => {
     assert.equal(r.status, 204);
     assert.equal(r.headers.get('access-control-allow-origin'), '*');
     assert.match(r.headers.get('access-control-allow-methods'), /POST/);
+    assert.match(r.headers.get('access-control-allow-methods'), /PUT/);   // subscriptions are saved with PUT from the browser
   });
 
   describe('POST /families', () => {
