@@ -408,3 +408,46 @@ body.elder input{font-size:19px}
 .pill.notice{background:var(--line);color:var(--ink-2)}
 .pill.attention{background:var(--seal-soft);color:var(--seal)}
 .pill.contact{background:var(--warn-soft);color:var(--warn)}
+
+/* ---- undo: toast with an action, retracted rows ---- */
+.toast.action{display:flex;align-items:center;gap:14px;padding:9px 10px 9px 20px}
+.toast.action button{width:auto;min-height:32px;padding:0 14px;font-size:13px;background:#fff;color:var(--brand-ink);border-radius:999px}
+.item.retracted .top b{text-decoration:line-through;color:var(--muted)}
+.item.retracted .pill{background:var(--warn-soft);color:var(--warn)}
+.item a[data-undo]{color:var(--brand);font-weight:700;text-decoration:none}
+
+/* ---- desktop: same DOM, a real screen ---- */
+@media (min-width:960px){
+  body{font-size:16px}
+  .wrap{max-width:1200px;padding:24px 32px 64px}
+  h1{font-size:30px} h2{font-size:17px}
+  #view-landing{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start}
+  #view-landing > .group{grid-column:1 / -1}
+  #view-invite,#view-setlogin{max-width:560px;margin:0 auto}
+  #view-app{display:grid;grid-template-columns:200px 1fr;column-gap:28px;row-gap:16px;align-items:start}
+  #view-app > #famhead,#view-app > #whoami{grid-column:1 / -1}
+  #view-app > .tabs{grid-column:1;grid-row:3 / span 40;flex-direction:column;position:sticky;top:16px;margin:0;padding:0;border:0;background:transparent;overflow:visible;gap:4px;align-self:start}
+  #view-app > .tabs button{width:100%;text-align:left;border-radius:10px;min-height:42px;font-size:14.5px;padding:0 14px;scroll-snap-align:none;display:flex;align-items:center;justify-content:space-between}
+  #view-app > .tabs button.on{background:var(--brand-ink);color:#fff;border-color:var(--brand-ink)}
+  #view-app > :not(.tabs):not(#famhead):not(#whoami){grid-column:2;min-width:0}
+  #tab-home{display:block;columns:2;column-gap:20px}
+  #home{display:contents}
+  #tab-home > *,#home > *{break-inside:avoid;margin-bottom:18px}
+  #home > .hero{column-span:all}
+  #tab-log,#tab-handoff,#tab-routine,#tab-alerts,#tab-flow{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  #tab-inbox,#tab-record,#tab-prefs,#tab-invite{max-width:780px}
+  #tab-prefs .stack.tight{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #tab-prefs .field:has(textarea){grid-column:1 / -1}
+  .chips .chip{min-height:38px}
+  .sheet{max-width:920px;margin:0 auto}
+  .sheet-bar{max-width:920px;margin:0 auto 12px}
+  body.elder #view-app{display:flex;flex-direction:column;max-width:680px;margin:0 auto}
+  body.elder .tabs{position:static;flex-direction:row;background:var(--bg);padding:14px 0;border-bottom:1px solid var(--line)}
+  body.elder .tabs button{width:auto;min-height:44px}
+  body.elder #tab-home{columns:1}
+}
+
+/* ---- roles look different on stage: family is green, a support worker is blue ---- */
+body.support{--brand:#1f5fb8;--brand-ink:#12386f;--brand-soft:#e4edfa;--line:#d9e3f0;--line-2:#c3d2e6;--bg:#f2f5fa}
+body.support .who-role{background:#e4edfa;color:#12386f}
+body.support .famhead .fam-sub::after{content:" · support worker"}

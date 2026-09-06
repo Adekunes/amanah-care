@@ -31,8 +31,8 @@ async function put(path, body){
 }
 
 const FAM = uuid().slice(0,8);
-const elder = uuid(), sisA = uuid(), abd = uuid(), fat = uuid();
-const NAMES = { [elder]:'Ammi', [sisA]:'Sister A', [abd]:'Abdullah', [fat]:'Fatima' };
+const elder = uuid(), sisA = uuid(), abd = uuid(), fat = uuid(), layla = uuid();   // layla: support worker from the agency
+const NAMES = { [elder]:'Ammi', [sisA]:'Sister A', [abd]:'Abdullah', [fat]:'Fatima', [layla]:'Nurse Layla' };
 
 // k days ago at local HH:MM
 function at(k, hhmm){ const [h,m]=hhmm.split(':').map(Number); const d=new Date(); d.setDate(d.getDate()-k); d.setHours(h,m,0,0); return d; }
@@ -44,6 +44,7 @@ async function ev(type, payload, clear, when){ const c = payload?await encJSON(p
 
 await post('/families',{ family_id:FAM, key_check:keyCheck, key_version:1, member:{id:elder, role:'elder'} });
 for (const m of [sisA, abd, fat]) await post(`/families/${FAM}/join`,{ key_check:keyCheck, member:{id:m, role:'family'} });
+await post(`/families/${FAM}/join`,{ key_check:keyCheck, member:{id:layla, role:'support'} });
 
 const week = at(7,'09:00');
 for (const [id,name] of Object.entries(NAMES)) await ev('MemberJoined',{name},{actor_id:id}, week);
@@ -98,6 +99,11 @@ for (let k=6; k>=1; k--) {
 await care(4,'10:40','appointment','Dr. Rahman follow-up (BP checked, next visit in a month)','doc', fat);
 await care(6,'11:10','transport','pharmacy pickup done','pharm', abd);
 await care(3,'15:10','mobility','physio at home (20 min, went well)','physio', abd);
+// the agency's support worker: two visits this week, personal care
+await care(5,'10:30','personal care','bath done', null, layla);
+await care(5,'10:50','personal care','hair and nails', null, layla);
+await care(2,'10:30','personal care','bath done', null, layla);
+await care(2,'10:45','readings','blood pressure (128/82)', null, layla);
 
 // Past handoffs, all accepted. Summary and next are encrypted.
 async function handoff(k, hhmm, from, to, summary, next, ackMin=4){
@@ -142,9 +148,35 @@ async function wrapH(password){
   const ct=await subtle.encrypt({name:'AES-GCM', iv}, k, await subtle.exportKey('raw', key));
   return { wrap_salt:b64(salt), wrap_iv:b64(iv), wrapped_h:b64(ct) };
 }
-const LOGINS = { [sisA]:'sistera', [abd]:'abdullah', [fat]:'fatima', [elder]:'ammi' };
+const LOGINS = { [sisA]:'sistera', [abd]:'abdullah', [fat]:'fatima', [elder]:'ammi', [layla]:'layla' };
 for (const [m,l] of Object.entries(LOGINS))
   await post('/auth/register',{ family_id:FAM, member_id:m, key_check:keyCheck, login:l, password:'333', ...(await wrapH('333')) });
+
+// ---- a second family the same support worker serves: same login, same password ----
+const key2 = await subtle.generateKey({name:'AES-GCM',length:256}, true, ['encrypt','decrypt']);
+const kc2Buf = await subtle.digest('SHA-256', await subtle.exportKey('raw', key2));
+const keyCheck2 = [...new Uint8Array(kc2Buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+const FAM2 = uuid().slice(0,8), nana = uuid(), yusuf = uuid(), layla2 = uuid();
+async function enc2(o){ const iv=wc.getRandomValues(new Uint8Array(12)); const ct=await subtle.encrypt({name:'AES-GCM',iv}, key2, enc(o)); return { iv:b64(iv), payload_cipher:b64(ct) }; }
+async function ev2(type, payload, clear, when){ const c = payload?await enc2(payload):{iv:'',payload_cipher:''}; count++;
+  return post('/events',{ id:uuid(), family_id:FAM2, type, occurred_at: when?iso(when):new Date().toISOString(), key_version:1, ...c, ...clear }); }
+await post('/families',{ family_id:FAM2, key_check:keyCheck2, key_version:1, member:{id:nana, role:'elder'} });
+await post(`/families/${FAM2}/join`,{ key_check:keyCheck2, member:{id:yusuf, role:'family'} });
+await post(`/families/${FAM2}/join`,{ key_check:keyCheck2, member:{id:layla2, role:'support'} });
+for (const [id,name] of [[nana,'Nana'],[yusuf,'Yusuf'],[layla2,'Nurse Layla']]) await ev2('MemberJoined',{name},{actor_id:id}, week);
+await ev2('FamilyCreated',{elder_name:'Nana', family_name:'the Khan family'},{actor_id:yusuf}, week);
+await ev2('PreferenceSet',{lang:'Arabic',diet:'halal, low salt',prayer:'prayer times matter',modesty:'female caregiver for personal care',fasting:'none',care_contact:'CLSC nurse, 514 555 0199'},{actor_id:nana}, week);
+await ev2('RoutineSet',{items:[R('m1','meds','morning meds','08:00','daily'),R('w1','mobility','short walk','16:00','daily'),R('bath','personal care','bath','10:00','tue')]},{actor_id:yusuf}, week);
+for (const k of [2,1]) { await ev2('CareLogged',{text:'morning meds',routine_id:'m1'},{actor_id:yusuf, category:'meds'}, at(k,'08:10'));
+  await ev2('CareLogged',{text:'short walk',routine_id:'w1'},{actor_id:layla2, category:'mobility'}, at(k,'16:05'));
+  await ev2('CareLogged',{text:'calm'},{actor_id:layla2, category:'mood'}, at(k,'16:20')); }
+async function wrapH2(password){ const salt=wc.getRandomValues(new Uint8Array(16)), iv=wc.getRandomValues(new Uint8Array(12));
+  const base=await subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const k=await subtle.deriveKey({name:'PBKDF2', salt, iterations:310000, hash:'SHA-256'}, base, {name:'AES-GCM',length:256}, false, ['encrypt']);
+  const ct=await subtle.encrypt({name:'AES-GCM', iv}, k, await subtle.exportKey('raw', key2));
+  return { wrap_salt:b64(salt), wrap_iv:b64(iv), wrapped_h:b64(ct) }; }
+await post('/auth/register',{ family_id:FAM2, member_id:yusuf, key_check:keyCheck2, login:'yusuf', password:'333', ...(await wrapH2('333')) });
+await post('/auth/register',{ family_id:FAM2, member_id:layla2, key_check:keyCheck2, login:'layla', password:'333', ...(await wrapH2('333')) });
 
 function code(m,r,n){ return Buffer.from(JSON.stringify({f:FAM,h:rawH,m,r,n})).toString('base64').replace(/\+/g,'-').replace(/\//g,'_'); }
 console.log('\n=== Amanah Care seeded ===');
@@ -153,5 +185,6 @@ console.log('\nSISTER_A_CODE='+code(sisA,'family','Sister A'));
 console.log('ABDULLAH_CODE='+code(abd,'family','Abdullah'));
 console.log('FATIMA_CODE='+code(fat,'family','Fatima'));
 console.log('AMMI_CODE='+code(elder,'elder','Ammi'));
-console.log('\nLOGINS (password 333): sistera, abdullah, fatima, ammi');
+console.log('\nLOGINS (password 333): sistera, abdullah, fatima, ammi, layla (support worker, two families), yusuf (the Khan family)');
+console.log('second family:', FAM2, '(the Khan family, elder Nana)');
 console.log('SUBSCRIPTIONS:', Object.entries(SUBSCRIPTIONS).map(([m, kinds]) => `${NAMES[m]}=[${kinds.join(', ')}]`).join(' | '));

@@ -178,38 +178,102 @@
 </section>
 
 <!-- 8 -->
-<section class="slide dark" style="gap:26px;justify-content:center">
-  <h1>Her health is not a product.</h1>
-  <div class="lines" style="font-size:25px;color:#e3eeea">
-    <span>The key is made on the phone. It never leaves.</span>
-    <span>The server keeps scrambled text. Not even we can read it.</span>
-    <span>Tap <b>Server view</b> on any screen and see what we see: who, what kind, when. Not one word.</span>
-  </div>
-  <p class="mut" style="font-size:17px;margin-top:16px">A test proves it: a note written in the app appears in no database row, no stream entry, no response. 96 tests, 99.8% line coverage. Redis Streams, Postgres, Docker. No framework. No cloud AI.</p>
+<section class="slide" style="gap:16px;padding-top:56px">
+  <div class="eyebrow">How it works</div>
+  <h1 style="font-size:44px">One stream, one database, and a key that never leaves the phone.</h1>
+  <svg viewBox="0 0 1090 330" width="1090" height="330" style="margin-top:4px" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5f7d76"/></marker></defs>
+    <!-- phones -->
+    <rect x="0" y="40" width="200" height="200" rx="18" fill="#0b3f37"/>
+    <text x="100" y="72" text-anchor="middle" fill="#fff" font-size="17" font-weight="700">Family phones</text>
+    <text x="100" y="100" text-anchor="middle" fill="#cfe9e2" font-size="13">key H made here, never sent</text>
+    <text x="100" y="121" text-anchor="middle" fill="#cfe9e2" font-size="13">encrypt before, decrypt after</text>
+    <text x="100" y="142" text-anchor="middle" fill="#cfe9e2" font-size="13">dashboard, patterns and</text>
+    <text x="100" y="160" text-anchor="middle" fill="#cfe9e2" font-size="13">recommendations built here</text>
+    <rect x="58" y="192" width="84" height="24" rx="12" fill="#8fe0cc"/><text x="100" y="209" text-anchor="middle" fill="#0b3f37" font-size="11" font-weight="800" letter-spacing="1">READABLE</text>
+    <!-- api -->
+    <rect x="262" y="40" width="190" height="200" rx="18" fill="#fff" stroke="#d9c39a" stroke-width="2"/>
+    <text x="357" y="72" text-anchor="middle" fill="#111c19" font-size="17" font-weight="700">API · Node</text>
+    <text x="357" y="100" text-anchor="middle" fill="#465853" font-size="13">membership check</text>
+    <text x="357" y="121" text-anchor="middle" fill="#465853" font-size="13">append to the stream</text>
+    <text x="357" y="142" text-anchor="middle" fill="#465853" font-size="13">serve read models</text>
+    <text x="357" y="163" text-anchor="middle" fill="#465853" font-size="13">live stream to phones</text>
+    <rect x="322" y="192" width="70" height="24" rx="12" fill="#f7ecd9"/><text x="357" y="209" text-anchor="middle" fill="#8a5713" font-size="11" font-weight="800" letter-spacing="1">SEALED</text>
+    <!-- redis -->
+    <rect x="514" y="14" width="250" height="118" rx="18" fill="#f7ecd9" stroke="#e8d3b3" stroke-width="2"/>
+    <text x="639" y="42" text-anchor="middle" fill="#111c19" font-size="17" font-weight="700">Redis Streams</text>
+    <text x="639" y="66" text-anchor="middle" fill="#5a4a2f" font-size="13">events: append-only, replayable</text>
+    <text x="639" y="86" text-anchor="middle" fill="#5a4a2f" font-size="13">consumer groups: projector, notifier</text>
+    <text x="639" y="106" text-anchor="middle" fill="#5a4a2f" font-size="13">pub/sub channel per family: live</text>
+    <!-- postgres -->
+    <rect x="514" y="150" width="250" height="172" rx="18" fill="#f7ecd9" stroke="#e8d3b3" stroke-width="2"/>
+    <text x="639" y="178" text-anchor="middle" fill="#111c19" font-size="17" font-weight="700">Postgres</text>
+    <text x="639" y="202" text-anchor="middle" fill="#5a4a2f" font-size="13">families · members · events</text>
+    <text x="639" y="222" text-anchor="middle" fill="#5a4a2f" font-size="13">handoffs · subscriptions · notifications</text>
+    <text x="639" y="242" text-anchor="middle" fill="#5a4a2f" font-size="13">logins: password hash, wrapped key</text>
+    <text x="639" y="262" text-anchor="middle" fill="#5a4a2f" font-size="13">view: workload, counted from metadata</text>
+    <text x="639" y="292" text-anchor="middle" fill="#8a5713" font-size="12" font-weight="700">every payload column is ciphertext</text>
+    <!-- what is stored -->
+    <rect x="828" y="14" width="262" height="308" rx="18" fill="#fff" stroke="#e1e8e5" stroke-width="2"/>
+    <text x="959" y="42" text-anchor="middle" fill="#111c19" font-size="17" font-weight="700">What a row holds</text>
+    <text x="846" y="76" fill="#0b3f37" font-size="12" font-weight="800" letter-spacing="1">CLEAR, FOR ROUTING</text>
+    <text x="846" y="98" fill="#465853" font-size="13">event type · category · member id</text>
+    <text x="846" y="118" fill="#465853" font-size="13">time · handoff id · family id</text>
+    <text x="846" y="156" fill="#8a5713" font-size="12" font-weight="800" letter-spacing="1">SEALED, AES-GCM, FRESH IV</text>
+    <text x="846" y="178" fill="#465853" font-size="13">names · notes · summaries</text>
+    <text x="846" y="198" fill="#465853" font-size="13">preferences · routine · contacts</text>
+    <text x="846" y="218" fill="#465853" font-size="13">acknowledgements · the elder's name</text>
+    <text x="846" y="256" fill="#465853" font-size="12.5" font-style="italic">The server can count and route.</text>
+    <text x="846" y="276" fill="#465853" font-size="12.5" font-style="italic">It cannot read. Neither can we.</text>
+    <!-- arrows -->
+    <line x1="200" y1="110" x2="260" y2="110" stroke="#5f7d76" stroke-width="2.5" marker-end="url(#ar)"/><text x="230" y="100" text-anchor="middle" fill="#5f7d76" font-size="11">write</text>
+    <line x1="260" y1="170" x2="200" y2="170" stroke="#5f7d76" stroke-width="2.5" marker-end="url(#ar)"/><text x="230" y="190" text-anchor="middle" fill="#5f7d76" font-size="11">read, live</text>
+    <line x1="452" y1="80" x2="512" y2="70" stroke="#5f7d76" stroke-width="2.5" marker-end="url(#ar)"/><text x="482" y="60" text-anchor="middle" fill="#5f7d76" font-size="11">XADD</text>
+    <line x1="639" y1="132" x2="639" y2="148" stroke="#5f7d76" stroke-width="2.5" marker-end="url(#ar)"/><text x="700" y="145" text-anchor="middle" fill="#5f7d76" font-size="11">projector · notifier</text>
+    <line x1="512" y1="210" x2="452" y2="190" stroke="#5f7d76" stroke-width="2.5" marker-end="url(#ar)"/><text x="482" y="228" text-anchor="middle" fill="#5f7d76" font-size="11">read models</text>
+    <line x1="512" y1="100" x2="452" y2="130" stroke="#5f7d76" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#ar)"/><text x="470" y="150" text-anchor="middle" fill="#5f7d76" font-size="11">announce</text>
+  </svg>
+  <p class="mut" style="font-size:16px">Every action is an event. Dashboards, alerts, the hospital sheet and the recommendations are projections over one log. A test proves a written note appears in no row, no stream entry, no response. 114 tests, 99.9% line coverage. Docker Compose, six containers, one command.</p>
   <div class="foot"><span>Amanah Care</span><span>8</span></div>
 </section>
 
 <!-- 9 -->
-<section class="slide" style="gap:30px">
-  <h1>What it is not.</h1>
-  <div class="kv" style="font-size:24px;gap:22px 26px;margin-top:6px">
-    <b>Not a chat</b><span>A record. Nothing to scroll up for. Nothing forwarded to a cousin by mistake.</span>
-    <b>Not a doctor</b><span>It never diagnoses, doses or triages. Patterns are counts: "agitated on 3 of the last 7 evenings." The family and the doctor decide what that means.</span>
-    <b>Not an AI</b><span>No model in the loop. Recommendations are rules over the record, on the phone, not machine learning. When AI comes, it runs on the phone, opt in, and the server still reads nothing.</span>
-    <b>Not finished</b><span>Support workers share the family key for now. No key recovery yet. No Urdu screen yet. Designed, on the roadmap, not hidden.</span>
+<section class="slide" style="gap:22px">
+  <h1 style="font-size:52px">The service, and who pays for it.</h1>
+  <div class="cols" style="align-items:start;gap:40px">
+    <div class="lines" style="font-size:20px;gap:12px">
+      <b style="font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">What is delivered</b>
+      <span><b>To the family:</b> the plan, the log, the handoff that writes itself, the hospital sheet, recommendations. Private by construction.</span>
+      <span><b>To a home-care agency:</b> a handoff log for every visit, scoped access for its workers, families who stop calling to ask what happened.</span>
+      <span><b>To the elder:</b> her own screen, her wishes on every card, and the truth that nobody outside her family can read her record.</span>
+    </div>
+    <div class="lines" style="font-size:20px;gap:12px">
+      <b style="font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Who pays, and why it holds</b>
+      <span><b>Families: free, always.</b> The record must never be a paywall between siblings.</span>
+      <span><b>Home-care agencies and support services:</b> per elder per month, for the handoff log, worker access and visit proof. Illustrative: $30.</span>
+      <span><b>Community organisations:</b> sponsor the families they already serve. A welfare committee carries fifty families for less than one event.</span>
+      <span><b>Public home care, later:</b> fewer coordination failures are worth paying for. A year-three conversation.</span>
+    </div>
   </div>
-  <p class="lead serif" style="margin-top:auto;color:var(--green);font-size:28px">We would rather be exact than impressive.</p>
+  <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end">
+    <p style="font-size:18px;line-height:1.45;color:var(--ink2)">Quebec alone: about <b>85</b> social-economy home-care enterprises, <b>110,000</b> clients, <b>8 million</b> hours a year, <b>10,000</b> workers. <span class="mut">Réseau de coopération des EÉSAD, 2024.</span> One client in a hundred on an agency plan pays for the team.</p>
+    <p style="font-size:18px;line-height:1.45;color:var(--ink2)">Sound because the payer's gain is operational and measurable, the family's privacy does not depend on the payer, and there is no readable data to sell. Running cost is cents per family; the real cost is people: support, and a nurse reviewing every recommendation.</p>
+  </div>
   <div class="foot"><span>Amanah Care</span><span>9</span></div>
 </section>
 
 <!-- 10 -->
-<section class="slide dark" style="gap:24px;justify-content:center">
-  <p class="quote serif">Care was already happening.<br>Now it has a record.<br>And only the family can read it.</p>
-  <div class="kv" style="margin-top:30px;font-size:19px;color:#d6e6e1">
-    <b>Monday</b><span>Five Montreal families, one month. Then scoped keys for support workers, push, Urdu and Arabic on Ammi's screen.</span>
-    <b>Who pays</b><span>Families, never. Home-care agencies and community programs, per elder, for handoff logs and scoped access.</span>
-    <b>We ask</b><span>Introductions to community care programs. Five families. A designer for her screen.</span>
+<section class="slide dark" style="gap:18px;justify-content:center">
+  <div class="eyebrow">What comes next</div>
+  <div class="kv" style="font-size:19px;color:#d6e6e1;grid-template-columns:120px 1fr;gap:12px 22px">
+    <b>Now</b><span>Everything you saw. Six containers, 114 tests, one family in the room.</span>
+    <b>Month 1</b><span>Five Montreal families, one month. Urdu and Arabic on Ammi's screen. Key recovery between two relatives. Push notifications.</span>
+    <b>Month 3</b><span>One home-care agency pilot with a scoped key for its workers and visit proof. A geriatric nurse reviews the recommendation table. Condition packs as content: dementia first.</span>
+    <b>Month 6</b><span>Native apps, offline first. Voice to structured log, on the phone, opt in. Night-activity sensor with her consent.</span>
+    <b>Year 1</b><span>A thousand families, ten agencies, four languages. The recommendation table opened to community review. A first conversation with public home care.</span>
   </div>
+  <p class="quote serif" style="font-size:36px;margin-top:26px">Care was already happening. Now it has a record. And only the family can read it.</p>
+  <p class="mut" style="font-size:17px">We ask for introductions to community care programs, five families, and a designer for her screen.</p>
   <div class="foot"><span>Abdul Quayum Adekunle · safio · github.com/Adekunes/amanah-care</span><span>10</span></div>
 </section>
 

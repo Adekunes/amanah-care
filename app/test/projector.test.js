@@ -88,12 +88,18 @@ describe('projector applyEvent', () => {
     await db.query("INSERT INTO families(id,key_check) VALUES($1,'kc')", [fam]);
     for (let i = 0; i < 3; i++) await applyEvent(db, `8-${i}`, base({ family_id: fam, actor_id: 'a' }));
     await applyEvent(db, '8-9', base({ family_id: fam, actor_id: 'b', type: 'HandoffAcknowledged', handoff_id: 'x' }));
+    // A CareLogged then a CareRetracted by the same actor on the same day nets to 0
+    // (CareRetracted reuses handoff_id to point at the CareLogged event it undoes).
+    const careId = uuid();
+    await applyEvent(db, '8-10', base({ family_id: fam, actor_id: 'c', id: careId }));
+    await applyEvent(db, '8-11', base({ family_id: fam, actor_id: 'c', type: 'CareRetracted', category: '', handoff_id: careId, iv: '', payload_cipher: '' }));
     const r = await db.query(
       `SELECT member_id, sum(care_count)::int AS care_count, sum(handoff_count)::int AS handoff_count
          FROM workload_view WHERE family_id=$1 GROUP BY member_id ORDER BY member_id`, [fam]);
     assert.deepEqual(r.rows, [
       { member_id: 'a', care_count: 3, handoff_count: 0 },
       { member_id: 'b', care_count: 0, handoff_count: 1 },
+      { member_id: 'c', care_count: 0, handoff_count: 0 },
     ]);
   });
 });

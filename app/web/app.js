@@ -29,20 +29,27 @@ let HANDOFFS = [];              // handoff read-model rows for the family
 let MEMBERS = [];               // {id, role}
 let PREFS = null;               // decrypted PreferenceSet
 
+// Categories and their presets. Pick several presets at once; each becomes its
+// own event, so counts and patterns stay exact. The note applies to all of them.
 const CATS = [
-  ['meds',        ['meds given','meds skipped','meds refused']],
-  ['meal',        ['ate full','ate half','refused food']],
-  ['prayer',      ['Fajr prayed','Dhuhr prayed','Asr prayed','Maghrib prayed','Isha prayed']],
-  ['mobility',    ['walked','physio done','rested']],
-  ['mood',        ['calm','tired','agitated','cheerful']],
-  ['appointment', ['doctor','pharmacy','clinic']],
-  ['transport',   ['drop-off done','pickup done','pickup needed']],
-  ['note',        ['note']],
+  ['meds',          ['meds given','meds skipped','meds refused','meds given late','pharmacy called']],
+  ['meal',          ['ate full','ate half','ate a little','refused food','snack','drank water','drank tea','no appetite']],
+  ['prayer',        ['Fajr prayed','Dhuhr prayed','Asr prayed','Maghrib prayed','Isha prayed','prayed sitting','helped with wudu','missed a prayer']],
+  ['mobility',      ['walked','walked with support','physio done','went outside','stairs done','rested','stayed in bed','slipped or fell']],
+  ['mood',          ['calm','cheerful','tired','agitated','confused','sad','anxious','complained of pain']],
+  ['sleep',         ['slept well','slept badly','nap taken','up at night','woke early']],
+  ['personal care', ['bath done','dressed','toileting help','hair and nails','changed bedding','skin checked']],
+  ['readings',      ['blood pressure','blood sugar','weight','temperature']],
+  ['appointment',   ['doctor','pharmacy','clinic','blood test','physio visit','dentist','eye exam','rebooked']],
+  ['transport',     ['drop-off done','pickup done','pickup needed','taxi booked','drove her']],
+  ['note',          ['note','phone call','visitor came','for the next caregiver']],
 ];
+const NOTE_HINT = { readings:'the number, e.g. 128/82, 6.4, 62 kg', meds:'e.g. with breakfast', meal:'e.g. half the rice, all the soup',
+  mood:'e.g. after the visitors left', mobility:'e.g. to the mailbox and back', note:'anything the next person should know' };
 const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
 const DAY_LABEL = { daily:'every day', weekdays:'weekdays', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat', sun:'Sun' };
 
-let pick = { category: null, preset: null };
+let pick = { category: null, presets: new Set() };
 
 const esc = (v)=>String(v ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtTime = (iso)=>new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -53,6 +60,13 @@ const cap = (s)=>{ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1);
 
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
+// A toast with one action, for the moment right after a mistake.
+function toastAction(msg, label, fn, ms=8000){
+  const t=document.createElement('div'); t.className='toast action';
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button">${esc(label)}</button>`;
+  t.querySelector('button').onclick = async ()=>{ t.remove(); try{ await fn(); }catch(e){ toast(e.message); } };
+  document.body.appendChild(t); setTimeout(()=>t.remove(), ms);
+}
 
 // One browser tab is one phone: the session lives in sessionStorage, so three
 // tabs on the same origin can be three family members. Survives reload, not close.
@@ -66,6 +80,7 @@ const isElder = ()=> ME?.role === 'elder';
 
 // Wipe every trace of this session from this tab and drop back to the landing card.
 function logout(){
+  document.body.classList.remove('support');
   $('#emg-banner').classList.add('hide');
   if(SERVER_VIEW){ SERVER_VIEW=false; document.body.classList.remove('serverview'); $('#sv-banner').classList.add('hide'); $('#btn-serverview').textContent='Server view'; }
   stopLive();
@@ -229,13 +244,48 @@ async function loginWithPassword(){
   let r;
   try{ r = await api('/auth/login', { method:'POST', body: JSON.stringify({ login, password }) }); }
   catch{ return toast('Wrong login or password'); }
-  const h = await unwrapKey(r, password);                  // only the password opens the family key
-  if(!h) return toast('Could not unlock the family key');
-  KEY = await importKeyRaw(h);
-  ME = { family_id: r.family_id, member_id: r.member_id, role: r.role, h, my_name: '', login };
+  // One login may open several families (a support worker). Unwrap each family key
+  // with the password, name each family from its own encrypted record, then pick.
+  const fams = Array.isArray(r.families) && r.families.length ? r.families : [r];
+  const unlocked = [];
+  for(const f of fams){ const h = await unwrapKey(f, password); if(h) unlocked.push({ family_id:f.family_id, member_id:f.member_id, role:f.role, h, name:'' }); }
+  if(!unlocked.length) return toast('Could not unlock the family key');
+  for(const f of unlocked){
+    try{ const k = await importKeyRaw(f.h);
+      for(const e of await api(`/families/${f.family_id}/events?type=FamilyCreated`)){ const p = await decryptReal(k, e.iv, e.payload_cipher);
+        if(p?.family_name) f.name = p.family_name; else if(p?.elder_name) f.name = `${p.elder_name}'s family`; } }catch{}
+    if(!f.name) f.name = `family ${f.family_id}`;
+  }
+  if(unlocked.length === 1) return enterFamily(unlocked[0], login, unlocked);
+  showFamilyPicker(unlocked, login);
+}
+async function enterFamily(f, login, families){
+  KEY = await importKeyRaw(f.h);
+  ME = { family_id: f.family_id, member_id: f.member_id, role: f.role, h: f.h, my_name: '', login, families };
   await loadNames();
   ME.my_name = nameCache[ME.member_id] || login;
   save(); enterApp();
+}
+function showFamilyPicker(families, login){
+  const box = $('#fam-pick'), list = $('#fam-pick-list'); list.innerHTML='';
+  for(const f of families){ const b=document.createElement('button'); b.type='button'; b.className='ghost';
+    b.textContent = `${f.name} · ${f.role==='support' ? 'support worker' : f.role}`;
+    b.onclick = ()=>{ box.classList.add('hide'); enterFamily(f, login, families).catch(e=>toast(e.message)); };
+    list.appendChild(b); }
+  box.classList.remove('hide'); show('landing'); box.scrollIntoView({ block:'center' });
+}
+// Leave the current family without forgetting the others: same reset as logout, keys kept.
+function switchFamily(){
+  const families = ME?.families || [], login = ME?.login || '';
+  if(families.length < 2) return;
+  if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+  stopLive();
+  for(const k of Object.keys(nameCache)) delete nameCache[k];
+  KEY=null; ME=null; ELDER='Elder'; FAMILY=''; ROUTINE=[]; routineDirty=false; WEEK=[]; HANDOFFS=[]; MEMBERS=[]; PREFS=null;
+  lastHandoffAt=null; homeSig=null; inboxSig=null; lastTrace=null; LOG_ITEMS=[]; lastLogCount=-1;
+  document.body.classList.remove('elder','support','serverview'); SERVER_VIEW=false;
+  $('#sv-banner').classList.add('hide'); $('#emg-banner').classList.add('hide'); $('#btn-serverview').textContent='Server view';
+  showFamilyPicker(families, login);
 }
 
 // encrypt a payload then post with clear routing fields
@@ -252,20 +302,23 @@ function renderWhoAmI(){
   const name = SERVER_VIEW ? 'member ' + ME.member_id.slice(0,6) : (ME.my_name || 'Me');
   const role = ME.role || '';
   const el = document.getElementById('who-name'); if(el) el.textContent = name;
-  const rl = document.getElementById('who-role'); if(rl) rl.textContent = role;
+  const rl = document.getElementById('who-role'); if(rl) rl.textContent = role==='support' ? 'support worker' : role;
   const dot = document.getElementById('who-dot');
   let hsh=0; for(const c of name) hsh=(hsh*31 + c.charCodeAt(0))>>>0;
   if(dot) dot.style.background = `hsl(${hsh % 360} 60% 45%)`;
   document.title = `${name} · Amanah Care`;
+  const sw = $('#btn-switch'); if(sw) sw.classList.toggle('hide', !(ME.families && ME.families.length > 1));
 }
 // The elder gets a different app: Today, My week, My preferences, Invite. Big type, read-only.
 const ELDER_TABS = { home:'Today', record:'My week', prefs:'My preferences', invite:'Invite' };
+const SUPPORT_HIDE = new Set(['invite']);   // a support worker never invites into the family
 function setTabsForRole(){
   document.body.classList.toggle('elder', isElder());
+  document.body.classList.toggle('support', ME?.role==='support');
   $$('.tabs button').forEach(b=>{
     const t=b.dataset.tab;
     if(isElder()){ b.classList.toggle('hide', !(t in ELDER_TABS)); if(ELDER_TABS[t]) b.firstChild.nodeValue = ELDER_TABS[t]; }
-    else b.classList.remove('hide');
+    else b.classList.toggle('hide', ME?.role==='support' && SUPPORT_HIDE.has(t));
   });
 }
 async function enterApp(){
@@ -326,10 +379,12 @@ async function renderStrip(){
 }
 
 // ---- care data (decrypted, cached for the week) ----
-async function careSince(since){
+// Retracted items are dropped unless `all` is set (the log and record show them struck through).
+async function careSince(since, all=false){
   const rows = await api(`/families/${ME.family_id}/care?since=${encodeURIComponent(since||'1970-01-01')}`);
   const out=[];
-  for(const r of rows){ const p = await decryptJSON(KEY, r.iv, r.payload_cipher);
+  for(const r of rows){ if(r.retracted && !all) continue;
+    const p = await decryptJSON(KEY, r.iv, r.payload_cipher);
     out.push({ ...r, text: p?.text ?? (SERVER_VIEW ? sealed(r.payload_cipher) : '🔒 locked'), routine_id: p?.routine_id || null }); }
   return out;
 }
@@ -498,19 +553,19 @@ function renderHome(){
   $('#home').innerHTML = `
     <div class="hero">
       <div class="date">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
-      <h1>${esc(ELDER)}'s day</h1>
+      <h1>${ME.role==='support' ? `Your shift with ${esc(ELDER)}` : `${esc(ELDER)}'s day`}</h1>
       <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
       <div class="progress"><div class="top"><span>Today's plan</span><b class="tnum">${done} of ${rows.length} done</b></div>
         <div class="bar"><span style="width:${rows.length?Math.round(done/rows.length*100):0}%;background:#7fe3cd"></span></div></div>
       <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
     </div>
-    <div class="tiles">${tiles}</div>
-    <div class="card"><div class="card-head"><h2>Patterns, not predictions</h2><span class="muted">last 7 days</span></div>
+    <div class="tiles h-tiles">${tiles}</div>
+    <div class="card h-patterns"><div class="card-head"><h2>Patterns, not predictions</h2><span class="muted">last 7 days</span></div>
       ${patternsHtml(7)}
       <p class="muted" style="font-size:12.5px">Counted from the record. The family and the doctor decide what it means.</p></div>
-    <div class="card"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
+    <div class="card h-plan"><div class="card-head"><h2>Today's plan</h2><span class="pill">${rows.length-done} left</span></div>
       <div class="plan">${plan}</div></div>
-    <div class="card"><div class="card-head"><h2>Your part today</h2><span class="muted">${esc(ME.my_name)}</span></div>
+    <div class="card"><div class="card-head"><h2>${ME.role==='support' ? 'Your visit today' : 'Your part today'}</h2><span class="muted">${esc(ME.my_name)}</span></div>
       <div class="mine">
         <div><b>${mine}</b><span>items you logged</span></div>
         <div><b>${myNext?esc(myNext.it.time):'—'}</b><span>${myNext?esc(myNext.it.label):'nothing assigned to you next'}</span></div>
@@ -566,7 +621,7 @@ const has = (c, w) => String(c.text || '').toLowerCase().includes(w);
 const daysOf = (list) => new Set(list.map(c => new Date(c.occurred_at).toDateString())).size;
 function computePatterns(days = 7){
   const since = midnight(); since.setDate(since.getDate() - (days - 1));
-  const items = LOG_ITEMS.filter(c => new Date(c.occurred_at) >= since);
+  const items = LOG_ITEMS.filter(c => !c.retracted && new Date(c.occurred_at) >= since);
   const lines = [];
   for(const w of ['agitated', 'confused', 'tired', 'cheerful', 'calm']){
     const m = items.filter(c => c.category === 'mood' && has(c, w)); const d = daysOf(m);
@@ -599,7 +654,7 @@ async function openSheet(){
   await loadLog(); await loadMembers(); await loadNames(); await loadRoutine();
   HANDOFFS = await api(`/families/${ME.family_id}/handoffs`).catch(()=>HANDOFFS);
   const since = midnight(); since.setDate(since.getDate() - 13);
-  const items = LOG_ITEMS.filter(c => new Date(c.occurred_at) >= since);
+  const items = LOG_ITEMS.filter(c => !c.retracted && new Date(c.occurred_at) >= since);
   const byDay = {};
   for(const c of items){ const k = new Date(c.occurred_at).toDateString(); (byDay[k] = byDay[k] || []).push(c); }
   const days = Object.keys(byDay).sort((a, b) => new Date(b) - new Date(a));
@@ -676,29 +731,44 @@ function buildChipsets(){
   selectCategory(CATS[0][0], row.firstElementChild);
 }
 function selectCategory(cat, el){
-  pick = { category:cat, preset:null };
+  pick = { category:cat, presets:new Set() };
   $$('#cat-row .chip').forEach(x=>x.classList.remove('on'));
   el?.classList.add('on');
   const presets = (CATS.find(c=>c[0]===cat) || [,[]])[1];
   const row = $('#preset-row'); row.innerHTML='';
   for(const pr of presets){
-    const b = document.createElement('button'); b.className='chip'; b.textContent=pr;
-    b.onclick = ()=>{ pick.preset = pr;
-      $$('#preset-row .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-      $('#btn-log').disabled = false; };
+    const b = document.createElement('button'); b.className='chip'; b.textContent=pr; b.type='button';
+    b.onclick = ()=>{ if(pick.presets.has(pr)) pick.presets.delete(pr); else pick.presets.add(pr);
+      b.classList.toggle('on', pick.presets.has(pr)); updateLogButton(); };
     row.appendChild(b);
   }
-  $('#btn-log').disabled = true;
+  $('#log-note').placeholder = NOTE_HINT[cat] || 'optional';
+  updateLogButton();
+}
+function updateLogButton(){
+  const n = pick.presets.size; const b = $('#btn-log');
+  b.disabled = n===0; b.textContent = n<=1 ? 'Log item' : `Log ${n} items`;
 }
 async function logItem(){
-  if(!pick.preset) return;
+  if(!pick.presets.size) return;
   const note = $('#log-note').value.trim();
-  const text = note ? `${pick.preset} (${note})` : pick.preset;
-  await postEncEvent('CareLogged', { text }, { actor_id: ME.member_id, category: pick.category });
+  const ids = [];
+  for(const preset of pick.presets){
+    const text = note ? `${preset} (${note})` : preset;
+    const r = await postEncEvent('CareLogged', { text }, { actor_id: ME.member_id, category: pick.category });
+    if(r?.id) ids.push(r.id);
+  }
   $('#log-note').value='';
   $$('#preset-row .chip').forEach(x=>x.classList.remove('on'));
-  pick.preset=null; $('#btn-log').disabled=true;
-  toast('Logged'); await renderCareToday();
+  pick.presets = new Set(); updateLogButton();
+  toastAction(ids.length>1 ? `Logged ${ids.length} items` : 'Logged', 'Undo', async ()=>{ for(const id of ids) await retractCare(id, false); toast('Undone'); await refreshAll(); });
+  await renderCareToday();
+}
+// A mistake is not deleted; it is retracted by a second event that points at it.
+// Counts and patterns drop it, the record shows it struck through.
+async function retractCare(id, refresh=true){
+  await postEvent({ family_id: ME.family_id, type:'CareRetracted', actor_id: ME.member_id, handoff_id: id, occurred_at: now(), id: uuid() });
+  if(refresh){ toast('Undone'); await refreshAll(); }
 }
 // ---- the care log, grouped: day / week / month, each group foldable ----
 // Shared by the Log page and the Record tab. Re-rendered on every live
@@ -706,7 +776,7 @@ async function logItem(){
 let LOG_ITEMS = [];                                          // last 90 days, decrypted, oldest first
 const logView = { by: 'day', collapsed: new Set(), allCollapsed: false };
 async function loadLog(){ const since = new Date(Date.now()-90*86400e3); since.setHours(0,0,0,0);
-  LOG_ITEMS = await careSince(since.toISOString()).catch(()=>LOG_ITEMS); }
+  LOG_ITEMS = await careSince(since.toISOString(), true).catch(()=>LOG_ITEMS); }
 function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
 function groupKey(iso){ const d=new Date(iso);
   if(logView.by==='week') return mondayOf(d).toISOString().slice(0,10);
@@ -733,10 +803,13 @@ function renderGrouped(box, items, flashFirst){
   const when=(i)=> logView.by==='day' ? fmtTime(i.occurred_at)
     : new Date(i.occurred_at).toLocaleString([], {weekday:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
   box.innerHTML = groups.map(({k,list})=>{ const closed=logView.collapsed.has(k);
-    const rows=list.map(i=>{ const cls=first&&flashFirst?' flash':''; first=false; return `<div class="item${cls}">
-        <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
-        <div class="muted">${esc(nameOf(i.actor_id))} · ${when(i)}</div></div>`; }).join('');
+    const rows=list.map(i=>{ const cls=(first&&flashFirst?' flash':'')+(i.retracted?' retracted':''); first=false;
+      const mine = i.actor_id===ME.member_id && !i.retracted && Date.now()-new Date(i.occurred_at) < 24*3600e3;
+      return `<div class="item${cls}">
+        <div class="top"><b>${esc(i.text)}</b><span class="pill">${i.retracted?'retracted':esc(i.category)}</span></div>
+        <div class="muted">${esc(nameOf(i.actor_id))} · ${when(i)}${i.retracted?` · undone by ${esc(nameOf(i.retracted_by))}`:''}${mine?` · <a href="#" data-undo="${esc(i.id)}">undo</a>`:''}</div></div>`; }).join('');
     return `<div class="grp${closed?' closed':''}"><div class="rec-day grp-head" data-toggle="${esc(k)}"><b><i class="chev">${closed?'▸':'▾'}</i>${esc(groupLabel(k))}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div><div class="grp-body${closed?' hide':''}">${rows}</div></div>`; }).join('');
+  box.querySelectorAll('[data-undo]').forEach(a=>a.onclick=(e)=>{ e.preventDefault(); if(confirm('Undo this entry? It stays in the record, marked as undone.')) retractCare(a.dataset.undo).catch(err=>toast(err.message)); });
   box.querySelectorAll('[data-toggle]').forEach(h=>h.onclick=()=>{ const k=h.dataset.toggle;
     if(logView.collapsed.has(k)) logView.collapsed.delete(k); else logView.collapsed.add(k);
     logView.allCollapsed=false; rerenderLogs(); });
@@ -758,7 +831,7 @@ let lastLogCount = -1;
 async function renderCareToday(reload=true){
   if(reload) await loadLog();
   const items = [...LOG_ITEMS].reverse();
-  $('#today-count').textContent = LOG_ITEMS.filter(c=>new Date(c.occurred_at)>=midnight()).length;
+  $('#today-count').textContent = LOG_ITEMS.filter(c=>!c.retracted && new Date(c.occurred_at)>=midnight()).length;
   const grew = lastLogCount >= 0 && items.length > lastLogCount; lastLogCount = items.length;
   renderLogControls();
   renderGrouped($('#care-today'), items, grew);
@@ -1085,6 +1158,7 @@ $('#btn-login').onclick  = ()=>loginWithPassword().catch(e=>toast(e.message));
 $('#l-pass').onkeydown   = (e)=>{ if(e.key==='Enter') loginWithPassword().catch(e=>toast(e.message)); };
 $('#btn-setlogin').onclick = ()=>saveLogin().catch(e=>toast(e.message));
 $('#btn-serverview').onclick = ()=>toggleServerView().catch(e=>toast(e.message));
+$('#btn-switch').onclick = switchFamily;
 $('#btn-sheet-back').onclick = ()=>show('app');
 $('#btn-sheet-print').onclick = ()=>window.print();
 $('#emg-sheet').onclick = ()=>openSheet().catch(e=>toast(e.message));

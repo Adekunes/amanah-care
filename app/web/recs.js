@@ -19,7 +19,7 @@ async function items14(){
   const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 13);
   const rows = await A.api(`/families/${A.me.family_id}/care?since=${encodeURIComponent(since.toISOString())}`);
   const out = [];
-  for(const r of rows){ const p = await A.decryptJSON(A.key, r.iv, r.payload_cipher);
+  for(const r of rows){ if(r.retracted) continue; const p = await A.decryptJSON(A.key, r.iv, r.payload_cipher);
     out.push({ id: r.id, actor_id: r.actor_id, category: r.category, text: p?.text ?? '', routine_id: p?.routine_id || null, occurred_at: r.occurred_at }); }
   return out;
 }

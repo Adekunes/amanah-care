@@ -21,7 +21,7 @@ export const ELDER_ONLY = new Set(['ConsentChanged']);
 export const LISTABLE = new Set([
   'FamilyCreated', 'MemberJoined', 'PreferenceSet', 'RoutineSet',
   'CareLogged', 'HandoffOpened', 'HandoffAcknowledged', 'ConsentChanged',
-  'EmergencyRaised', 'PatternAcknowledged',
+  'EmergencyRaised', 'PatternAcknowledged', 'CareRetracted',
 ]);
 
 // Express 4 does not catch rejected promises. Every async route goes through this.
@@ -125,8 +125,14 @@ export function createApp({ db, redis, stream = 'events', bus = new LocalBus() }
     const fam = (await db.query('SELECT key_check FROM families WHERE id=$1', [family_id])).rows[0];
     if (!fam || fam.key_check !== key_check) return res.status(403).json({ error: 'wrong key' });
     if (!(await isMember(family_id, member_id))) return res.status(403).json({ error: 'not a member of this family' });
-    const taken = (await db.query('SELECT member_id FROM logins WHERE login=$1', [l])).rows[0];
-    if (taken && taken.member_id !== member_id) return res.status(409).json({ error: 'login already taken' });
+    // One login may hold several families (a support worker serving many homes),
+    // under one password: a second family must be registered with the same password.
+    const existing = (await db.query('SELECT member_id, family_id, pw_salt, pw_hash FROM logins WHERE login=$1', [l])).rows;
+    const sameFamily = existing.find((x) => x.family_id === family_id);
+    if (sameFamily && sameFamily.member_id !== member_id) return res.status(409).json({ error: 'login already taken' });
+    const other = existing.find((x) => x.family_id !== family_id);
+    if (other && !timingSafeEqual(Buffer.from(hashPw(password, other.pw_salt), 'hex'), Buffer.from(other.pw_hash, 'hex')))
+      return res.status(403).json({ error: 'this login already exists with a different password' });
     const pw_salt = randomBytes(16).toString('hex');
     await db.query('DELETE FROM logins WHERE member_id=$1', [member_id]);   // one login per member; re-register replaces it
     await db.query(
@@ -141,15 +147,18 @@ export function createApp({ db, redis, stream = 'events', bus = new LocalBus() }
     const { login, password } = req.body || {};
     const l = normLogin(login);
     if (!l || !password) return res.status(400).json({ error: 'login and password required' });
-    const row = (await db.query(
-      `SELECT l.member_id, l.family_id, l.pw_salt, l.pw_hash, l.wrap_salt, l.wrap_iv, l.wrapped_h, m.role, f.key_version
+    const rows = (await db.query(
+      `SELECT l.member_id, l.family_id, l.pw_salt, l.pw_hash, l.wrap_salt, l.wrap_iv, l.wrapped_h, l.created_at, m.role, f.key_version
          FROM logins l JOIN members m ON m.id = l.member_id JOIN families f ON f.id = l.family_id
-        WHERE l.login=$1`, [l])).rows[0];
-    const ok = row && timingSafeEqual(Buffer.from(hashPw(password, row.pw_salt), 'hex'), Buffer.from(row.pw_hash, 'hex'));
-    if (!ok) return res.status(401).json({ error: 'wrong login or password' });
+        WHERE l.login=$1`, [l])).rows;
+    const ok = rows.filter((row) => timingSafeEqual(Buffer.from(hashPw(password, row.pw_salt), 'hex'), Buffer.from(row.pw_hash, 'hex')));
+    if (!ok.length) return res.status(401).json({ error: 'wrong login or password' });
+    ok.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     await db.query('UPDATE logins SET last_login_at=now() WHERE login=$1', [l]);
-    res.json({ family_id: row.family_id, member_id: row.member_id, role: row.role, key_version: row.key_version,
-               wrap_salt: row.wrap_salt, wrap_iv: row.wrap_iv, wrapped_h: row.wrapped_h });
+    const pick = (row) => ({ family_id: row.family_id, member_id: row.member_id, role: row.role, key_version: row.key_version,
+                             wrap_salt: row.wrap_salt, wrap_iv: row.wrap_iv, wrapped_h: row.wrapped_h });
+    // Every family this login can open, plus the first one at the top level for older clients.
+    res.json({ ...pick(ok[0]), login: l, families: ok.map(pick) });
   }));
 
   // Read models -----------------------------------------------------------------
@@ -164,13 +173,27 @@ export function createApp({ db, redis, stream = 'events', bus = new LocalBus() }
     res.json(await latestOfType(req.params.id, 'RoutineSet'));
   }));
 
-  // Care items since a given time (client decrypts).
+  // Care items since a given time (client decrypts). LEFT JOINed with any
+  // CareRetracted event for the same row: CareRetracted carries no payload
+  // and reuses the `handoff_id` routing column (no schema change) to hold
+  // the id of the CareLogged event it undoes, so a member can retract a
+  // mistaken log without deleting the original event (event sourcing).
+  // The join is against a GROUP BY handoff_id subquery, not EXISTS/DISTINCT
+  // ON, so a second retraction of the same id cannot duplicate the row and
+  // pg-mem (used by the tests) runs it unchanged.
   app.get('/families/:id/care', wrap(async (req, res) => {
     const since = req.query.since || '1970-01-01';
     const r = await db.query(
-      `SELECT id, actor_id, category, iv, payload_cipher, key_version, occurred_at
-         FROM events WHERE family_id=$1 AND type='CareLogged' AND occurred_at >= $2
-         ORDER BY occurred_at ASC`, [req.params.id, since]);
+      `SELECT c.id, c.actor_id, c.category, c.iv, c.payload_cipher, c.key_version, c.occurred_at,
+              (ret.handoff_id IS NOT NULL) AS retracted, ret.actor_id AS retracted_by
+         FROM events c
+         LEFT JOIN (
+           SELECT handoff_id, min(actor_id) AS actor_id
+             FROM events WHERE family_id=$1 AND type='CareRetracted'
+             GROUP BY handoff_id
+         ) ret ON ret.handoff_id = c.id
+        WHERE c.family_id=$1 AND c.type='CareLogged' AND c.occurred_at >= $2
+        ORDER BY c.occurred_at ASC`, [req.params.id, since]);
     res.json(r.rows);
   }));
 

@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS events (
   category      TEXT,                   -- clear routing field for CareLogged
   from_id       TEXT,
   to_id         TEXT,
-  handoff_id    TEXT,
+  handoff_id    TEXT,                   -- also reused by CareRetracted: holds the id of
+                                         -- the CareLogged event it undoes, not a handoff
+                                         -- (no schema change; see api/app.js GET .../care)
   occurred_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   key_version   INT NOT NULL DEFAULT 1,
   iv            TEXT,                   -- base64 96-bit nonce, unique per ciphertext (SR-10)
@@ -52,11 +54,15 @@ CREATE INDEX IF NOT EXISTS handoffs_to_idx ON handoffs(family_id, to_id, status)
 -- Workload = metadata counts only. No ciphertext touched. History, not roster.
 -- count(CASE ...) rather than count(*) FILTER: same result in Postgres, and it
 -- also runs unchanged in the in-memory Postgres the test suite uses.
+-- care_count nets CareLogged minus CareRetracted per family/actor/day, so a
+-- member who undoes their own mistaken log is not credited for it (CareRetracted
+-- is an undo event, not a deletion; see api/app.js GET .../care for the read side).
 CREATE OR REPLACE VIEW workload_view AS
 SELECT family_id,
        actor_id AS member_id,
        date_trunc('day', occurred_at)::date AS day,
-       count(CASE WHEN type = 'CareLogged' THEN 1 END)          AS care_count,
+       count(CASE WHEN type = 'CareLogged' THEN 1 END)
+         - count(CASE WHEN type = 'CareRetracted' THEN 1 END)   AS care_count,
        count(CASE WHEN type = 'HandoffAcknowledged' THEN 1 END) AS handoff_count
 FROM events
 WHERE actor_id IS NOT NULL
@@ -68,7 +74,7 @@ GROUP BY family_id, actor_id, date_trunc('day', occurred_at)::date;
 -- stores the wrapped copy and a scrypt hash of the password. It can verify the
 -- password; it cannot open the wrap. Default demo password is 333 (SR-11 stub).
 CREATE TABLE IF NOT EXISTS logins (
-  login          TEXT PRIMARY KEY,               -- lowercased email or chosen login
+  login          TEXT NOT NULL,                  -- lowercased email or chosen login; one login can hold several families
   member_id      TEXT NOT NULL UNIQUE REFERENCES members(id),
   family_id      TEXT NOT NULL REFERENCES families(id),
   pw_salt        TEXT NOT NULL,
@@ -77,7 +83,8 @@ CREATE TABLE IF NOT EXISTS logins (
   wrap_iv        TEXT NOT NULL,                  -- AES-GCM IV, base64
   wrapped_h      TEXT NOT NULL,                  -- H under the password key, base64
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_login_at  TIMESTAMPTZ
+  last_login_at  TIMESTAMPTZ,
+  PRIMARY KEY (login, family_id)                 -- a support worker keeps one login across the families she serves
 );
 
 -- Alerts. A member subscribes to kinds of events; the notifier (its own consumer

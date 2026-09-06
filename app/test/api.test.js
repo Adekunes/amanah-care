@@ -216,6 +216,42 @@ describe('api', () => {
     });
   });
 
+  describe('CareRetracted: undo a mistaken log without deleting it', () => {
+    test('GET /care marks the retracted row, leaves others alone, and a repeat retraction does not duplicate it', async () => {
+      const f = await family();
+      const c1 = await enc(f.key, { text: 'meds given' });
+      const c2 = await enc(f.key, { text: 'meal given' });
+      const posted = await t.post('/events', { family_id: f.fid, type: 'CareLogged', actor_id: f.sis, category: 'meds', ...c1 });
+      const { id: careId } = await posted.json();
+      await t.post('/events', { family_id: f.fid, type: 'CareLogged', actor_id: f.sis, category: 'meal', ...c2 });
+      await t.project();
+
+      // Retract the first log from the same member. No payload; handoff_id
+      // is reused to point at the CareLogged event id being undone.
+      await t.post('/events', { family_id: f.fid, type: 'CareRetracted', actor_id: f.sis, handoff_id: careId });
+      await t.project();
+
+      let rows = await (await t.get(`/families/${f.fid}/care`)).json();
+      assert.equal(rows.length, 2);
+      const retracted = rows.find((r) => r.id === careId);
+      const untouched = rows.find((r) => r.id !== careId);
+      assert.equal(retracted.retracted, true);
+      assert.equal(retracted.retracted_by, f.sis);
+      assert.equal(untouched.retracted, false);
+      assert.equal(untouched.retracted_by, null);
+      // The original ciphertext is still there: nothing was deleted.
+      assert.deepEqual(await decryptJSON(f.key, retracted.iv, retracted.payload_cipher), { text: 'meds given' });
+
+      // A second retraction of the same id must not duplicate the row.
+      await t.post('/events', { family_id: f.fid, type: 'CareRetracted', actor_id: f.sis, handoff_id: careId });
+      await t.project();
+      rows = await (await t.get(`/families/${f.fid}/care`)).json();
+      assert.equal(rows.length, 2);
+      assert.equal(rows.filter((r) => r.id === careId).length, 1);
+      assert.equal(rows.find((r) => r.id === careId).retracted, true);
+    });
+  });
+
   describe('login: code once, then login + password', () => {
     async function reg(f, member, login, password = '333') {
       const w = await wrapKey(await exportKeyRaw(f.key), password);
@@ -252,7 +288,9 @@ describe('api', () => {
       const r = await t.post('/auth/login', { login: email.toLowerCase(), password: '333' });
       assert.equal(r.status, 200);
       const body = await r.json();
-      assert.deepEqual(Object.keys(body).sort(), ['family_id', 'key_version', 'member_id', 'role', 'wrap_iv', 'wrap_salt', 'wrapped_h']);
+      assert.deepEqual(Object.keys(body).sort(), ['families', 'family_id', 'key_version', 'login', 'member_id', 'role', 'wrap_iv', 'wrap_salt', 'wrapped_h']);
+      assert.equal(JSON.stringify(body).includes('333'), false);   // never the password
+      assert.equal(body.families.length, 1);
       assert.equal(body.member_id, f.sis);
       assert.equal(body.role, 'family');
       const raw = await unwrapKey(body, '333');
