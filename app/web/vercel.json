@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://consider-marked-introduced-sing.trycloudflare.com/api/:path*" }
+    { "source": "/api/:path*", "destination": "https://mandatory-province-sleeps-cio.trycloudflare.com/api/:path*" }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [ { "key": "Cache-Control", "value": "no-store" } ] }
