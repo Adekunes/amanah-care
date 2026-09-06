@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amanah Care · MuslimHacks 2026 pitch</title>
+<style>
+  :root{--ink:#0f1f1b;--ink2:#3f524d;--mut:#7a8985;--line:#dfe7e4;--bg:#f3f6f5;--card:#fff;
+        --brand:#0b7a6b;--brand2:#063f38;--soft:#e2f0ec;--warn:#b4451f;--warnsoft:#fbe9dc;--seal:#8a5713;--sealsoft:#f7ecd9;--mint:#7fe3cd}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0b1512;color:var(--ink);font:20px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+  .deck{width:100vw;height:100vh;overflow:hidden;position:relative}
+  .slide{position:absolute;inset:0;margin:auto;width:1280px;height:720px;background:var(--bg);padding:64px 80px;display:none;flex-direction:column;gap:22px;
+         transform-origin:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .slide.on{display:flex}
+  .slide.dark{background:var(--brand2);color:#fff}
+  .slide.dark .mut,.slide.dark .eyebrow{color:#9fd3c7}
+  .slide.dark h1,.slide.dark h2{color:#fff}
+  .eyebrow{font-size:14px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--brand)}
+  h1{font-size:56px;line-height:1.05;letter-spacing:-.03em;margin:0;color:var(--brand2);max-width:1000px}
+  h2{font-size:40px;line-height:1.1;letter-spacing:-.025em;margin:0;color:var(--brand2);max-width:1050px}
+  h3{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+  p{margin:0;max-width:1000px}
+  .lead{font-size:26px;line-height:1.4;color:var(--ink2);max-width:1000px}
+  .mut{color:var(--mut)}
+  ul{margin:0;padding-left:26px;display:flex;flex-direction:column;gap:10px;font-size:24px}
+  ul.tight{font-size:20px;gap:6px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+  .cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px;align-items:stretch}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:8px;
+        box-shadow:0 1px 2px rgba(6,63,56,.05),0 14px 30px -20px rgba(6,63,56,.35)}
+  .card h3{color:var(--brand2)}
+  .card p,.card li{font-size:18px;color:var(--ink2)}
+  .card ul{font-size:18px;gap:5px;padding-left:20px}
+  .big{font-size:84px;font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--brand)}
+  .big small{font-size:28px;color:var(--mut);font-weight:600;letter-spacing:-.01em}
+  .stat{display:flex;flex-direction:column;gap:6px}
+  .stat .lab{font-size:20px;color:var(--ink);font-weight:600;line-height:1.3}
+  .stat .src{font-size:14px;color:var(--mut)}
+  .foot{position:absolute;left:80px;right:80px;bottom:28px;display:flex;justify-content:space-between;font-size:14px;color:var(--mut)}
+  .slide.dark .foot{color:#7fb6aa}
+  table{border-collapse:collapse;width:100%;font-size:20px}
+  th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+  td.no{color:var(--warn)} td.yes{color:var(--brand);font-weight:700}
+  .tag{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;margin-right:6px}
+  .tag.read{background:var(--soft);color:var(--brand)} .tag.seal{background:var(--sealsoft);color:var(--seal)} .tag.warn{background:var(--warnsoft);color:var(--warn)}
+  .pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:stretch}
+  .hop{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:16px 14px;display:flex;flex-direction:column;gap:6px;position:relative}
+  .hop .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--soft);color:var(--brand)}
+  .hop.sealed .n{background:var(--sealsoft);color:var(--seal)}
+  .hop b{font-size:17px} .hop span{font-size:14px;color:var(--ink2);line-height:1.35}
+  .hop.sealed{border-color:#e8d3b3}
+  .quote{font-size:34px;line-height:1.3;letter-spacing:-.02em;color:#fff;max-width:1000px;font-weight:600}
+  .story{display:grid;grid-template-columns:1.1fr 1fr;gap:34px;align-items:center}
+  .chat{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:9px;font-size:17px}
+  .msg{background:#eef3f1;border-radius:14px;padding:9px 13px;max-width:88%}
+  .msg.me{background:#dcf5ea;align-self:flex-end}
+  .msg i{display:block;font-size:12px;color:var(--mut);font-style:normal;margin-bottom:2px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;font-size:19px}
+  .kv b{color:var(--brand2)}
+  .qa{display:flex;flex-direction:column;gap:12px}
+  .qa div{display:grid;grid-template-columns:330px 1fr;gap:16px;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .qa b{font-size:17px;color:var(--brand2);line-height:1.3}
+  .qa span{font-size:17px;color:var(--ink2);line-height:1.35}
+  .nav{position:fixed;right:18px;bottom:14px;color:#6c8a84;font-size:13px;z-index:9;font-family:ui-monospace,Menlo,monospace}
+  .cov{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .cov .card{align-items:flex-start}
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    html,body{background:#fff}
+    .deck{width:auto;height:auto;overflow:visible}
+    .slide{display:flex !important;position:relative;inset:auto;transform:none !important;box-shadow:none;page-break-after:always;break-after:page;margin:0}
+    .nav{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide dark">
+  <div class="eyebrow">MuslimHacks 2026 · Elderly Care · Concordia University</div>
+  <h1 style="font-size:88px;margin-top:40px">Amanah Care</h1>
+  <p class="quote" style="margin-top:6px">The care record only your family can read.</p>
+  <p class="mut" style="font-size:22px;margin-top:auto">Abdul Quayum Adekunle · safio</p>
+  <div class="foot"><span>amanah = a trust you are responsible for</span><span>1</span></div>
+</section>
+
+<!-- 2 DIAGNOSIS: one family -->
+<section class="slide">
+  <div class="eyebrow">The diagnosis</div>
+  <h2>Ammi is 78. Three of her children share her care. Here is the system.</h2>
+  <div class="story">
+    <div class="chat">
+      <div class="msg"><i>Fatima · 07:52</i>did she take the morning ones?</div>
+      <div class="msg me"><i>Sister A · 08:10</i>yes. she ate half. who has her this afternoon?</div>
+      <div class="msg"><i>Abdullah · 08:41</i>I thought Fatima. I have the pharmacy at 11 I think?</div>
+      <div class="msg"><i>Fatima · 09:15</i>no that was last week. what did Dr Rahman say wednesday??</div>
+      <div class="msg me"><i>Sister A · 09:20</i>scroll up 🙃</div>
+    </div>
+    <div>
+      <ul>
+        <li>No plan, so things get missed or done twice.</li>
+        <li>No handoff, so the next person does not know what happened.</li>
+        <li>No record of who did what, so one sibling carries it all.</li>
+        <li>And the whole history of her health sits with a chat company.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>2</span></div>
+</section>
+
+<!-- 3 EVIDENCE -->
+<section class="slide">
+  <div class="eyebrow">Care is already happening. It is just not tracked.</div>
+  <div class="cols3" style="margin-top:2px">
+    <div class="card stat"><div class="big">1 in 4</div><div class="lab">American Muslims care for an older adult, versus 16% of the general public.</div><div class="src">ISPU, Support and Sacrifice, 2026 (American Muslim Poll 2025)</div></div>
+    <div class="card stat"><div class="big">52%</div><div class="lab">of Muslims aged 30 to 49 care for an elder. 21% of 18 to 29, 31% of 50 and over.</div><div class="src">ISPU, Sandwiched</div></div>
+    <div class="card stat"><div class="big">42%</div><div class="lab">of Canadians 15 and over gave unpaid care in 2022: 13.4 million people, 1.8 million of them sandwiched.</div><div class="src">Statistics Canada, Canadian Social Survey 2022</div></div>
+  </div>
+  <div class="cols" style="margin-top:2px">
+    <div class="card"><p><b>31% depression, 49% burden</b> among family caregivers of people with dementia, across 43 studies.</p><p class="src mut" style="font-size:14px">Collins & Kishita, Ageing & Society, 2020, meta-analysis</p></div>
+    <div class="card"><p><b>18% vs 7%</b> of Muslim caregivers report difficulty finding culturally appropriate care.</p><p class="src mut" style="font-size:14px">ISPU 2026, cited in the MuslimHacks 2026 Challenge Guide</p></div>
+  </div>
+  <p class="lead" style="font-size:20px">"Medication, appointments, meals, transport and personal care may be tracked across WhatsApp, memory and separate calendars." <span class="mut">Challenge Guide.</span> Health information needs consent and privacy protection under Quebec Law 25, Ontario PHIPA and PIPEDA. A chat group meets none of that.</p>
+  <div class="foot"><span>Amanah Care</span><span>3</span></div>
+</section>
+
+<!-- 4 ROOT CAUSE -->
+<section class="slide">
+  <div class="eyebrow">Root cause</div>
+  <h2>WhatsApp is a conversation. Care needs a record.</h2>
+  <p class="lead">A record has five parts. Existing tools each do one. None do all five with the elder's preferences built in, and none keep the family in control of the data.</p>
+  <div class="cols3" style="grid-template-columns:repeat(5,1fr);gap:14px">
+    <div class="card"><h3>Plan</h3><p>Her routine: meds, meals, prayers, walk, pickups.</p></div>
+    <div class="card"><h3>Actuals</h3><p>What was really done, by whom, when.</p></div>
+    <div class="card"><h3>Handoff</h3><p>What happened. What is next.</p></div>
+    <div class="card"><h3>Load</h3><p>Who carried the week.</p></div>
+    <div class="card"><h3>Privacy</h3><p>Only the family can read it.</p></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>4</span></div>
+</section>
+
+<!-- 5 SOLUTION -->
+<section class="slide dark">
+  <div class="eyebrow">What we built</div>
+  <h2 style="color:#fff">Amanah Care: a private care record for families.</h2>
+  <p class="quote" style="font-weight:500;font-size:28px;color:#cfe9e2">The next caregiver always knows what happened and what is next. The family sees who did what. Nobody else can read a word of it.</p>
+  <div class="kv" style="margin-top:8px;color:#e6f3ef">
+    <b style="color:#7fe3cd">Routine</b><span>Ammi's plan, once. Every day becomes a checklist measured against it.</span>
+    <b style="color:#7fe3cd">Log</b><span>Two taps: category, what happened. A note if you want.</span>
+    <b style="color:#7fe3cd">Hand off</b><span>Summary written for you from the log. "What is next" written for you from the routine.</span>
+    <b style="color:#7fe3cd">Dashboard</b><span>Who has Ammi right now. Meds 2 of 3. Mood, last logged. Next pickup and who is on it. Who carried the week.</span>
+    <b style="color:#7fe3cd">Family key</b><span>Made on the phone, shared by QR in person. The server stores scrambled text and nothing else.</span>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>5</span></div>
+</section>
+
+<!-- 6 DEMO -->
+<section class="slide">
+  <div class="eyebrow">Live demo</div>
+  <h2>One afternoon with Ammi's family, on two phones.</h2>
+  <div class="cols">
+    <ol style="font-size:23px;display:flex;flex-direction:column;gap:10px;margin:0;padding-left:28px">
+      <li><b>Sister A</b> opens Home: Ammi's day, 8 of 12 done, meds 2 of 3, next pickup Sunday 11:00, Abdullah.</li>
+      <li>She taps <b>Done</b> on dinner. The plan and the tiles update.</li>
+      <li>She opens <b>Hand off</b> to Fatima. What happened and what is next are already written. She sends.</li>
+      <li><b>Fatima's phone</b> lights up. She reads the card with Ammi's preferences on top, and accepts.</li>
+      <li>Home now says <b>Fatima has Ammi</b>. The week's load bar moves.</li>
+      <li>We open the <b>database</b>. Every row is scrambled text.</li>
+    </ol>
+    <div class="card" style="gap:12px">
+      <h3>What the judges should watch for</h3>
+      <ul>
+        <li>Nothing typed except one line, everything else composed from the record.</li>
+        <li>Two real browsers, one real backend, live handoff in seconds.</li>
+        <li>The same data, readable on the phones, unreadable on the server.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>6</span></div>
+</section>
+
+<!-- 7 VS WHATSAPP -->
+<section class="slide">
+  <div class="eyebrow">Why this beats the family group chat</div>
+  <table>
+    <tr><th>Question a caregiver asks</th><th>WhatsApp group</th><th>Amanah Care</th></tr>
+    <tr><td>What is Ammi's plan today?</td><td class="no">In someone's head</td><td class="yes">Today's plan, 8 of 12 done</td></tr>
+    <tr><td>Did she take her afternoon meds?</td><td class="no">Scroll and ask</td><td class="yes">Meds 2 of 3, ✓ Sister A 14:05</td></tr>
+    <tr><td>What do I need to know for tonight?</td><td class="no">Whatever got typed</td><td class="yes">Handoff card: what happened, what is next</td></tr>
+    <tr><td>Who is taking her to the pharmacy?</td><td class="no">"I thought you were"</td><td class="yes">Sunday 11:00, Abdullah, on the dashboard</td></tr>
+    <tr><td>Is one of us doing everything?</td><td class="no">Invisible until someone burns out</td><td class="yes">Who carried the week, per person</td></tr>
+    <tr><td>Her language, diet, prayer, modesty?</td><td class="no">Retold every time</td><td class="yes">On top of every handoff card</td></tr>
+    <tr><td>Who can read her health history?</td><td class="no">Meta, and anyone forwarded</td><td class="yes">Only phones holding the family key</td></tr>
+  </table>
+  <div class="foot"><span>Amanah Care</span><span>7</span></div>
+</section>
+
+<!-- 8 ARCHITECTURE -->
+<section class="slide">
+  <div class="eyebrow">How it works</div>
+  <h2>Every action is an event. Every event is sealed before it leaves the phone.</h2>
+  <div class="pipe">
+    <div class="hop"><div class="n">1</div><b>Phone</b><span>Plaintext + family key H. Encrypts with AES-GCM, fresh IV each time.</span><span class="tag read">readable</span></div>
+    <div class="hop sealed"><div class="n">2</div><b>API</b><span>Node. Checks membership, appends. Holds no key.</span><span class="tag seal">sealed</span></div>
+    <div class="hop sealed"><div class="n">3</div><b>Redis Streams</b><span>Append-only event log. Replayable.</span><span class="tag seal">sealed</span></div>
+    <div class="hop sealed"><div class="n">4</div><b>Projector</b><span>Consumer group. Idempotent by event id.</span><span class="tag seal">sealed</span></div>
+    <div class="hop sealed"><div class="n">5</div><b>Postgres</b><span>4 tables + 1 view. Read models from metadata only.</span><span class="tag seal">sealed</span></div>
+    <div class="hop"><div class="n">6</div><b>Family phones</b><span>Poll, decrypt, compute the dashboard locally.</span><span class="tag read">readable</span></div>
+  </div>
+  <div class="cols" style="margin-top:4px">
+    <div class="card"><h3>Why event sourcing</h3><p>The dashboard, the routine, the record and the workload were added without touching the write path. They are projections over the same log. Replay rebuilds everything.</p></div>
+    <div class="card"><h3>Runs in one command</h3><p>Docker Compose: web, api, projector, redis, postgres. Fallback: one node process runs the same api and projector on an in-memory Postgres.</p></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>8</span></div>
+</section>
+
+<!-- 9 PRIVACY -->
+<section class="slide dark">
+  <div class="eyebrow">Privacy by design, not by policy</div>
+  <h2 style="color:#fff">Even we, the operators, cannot read Ammi's day.</h2>
+  <div class="cols" style="color:#e6f3ef;margin-top:6px">
+    <ul style="font-size:22px">
+      <li>The family key is made in the browser. It is never sent anywhere.</li>
+      <li>The server keeps a SHA-256 check of the key: enough to prove you hold it, never to read with it.</li>
+      <li>Every payload is AES-GCM with a fresh 96-bit IV. Tampering fails to decrypt.</li>
+      <li>Members join by QR, face to face. The app never offers "share to WhatsApp".</li>
+    </ul>
+    <ul style="font-size:22px">
+      <li>Clear on the server: event type, category, who, when. Sealed: names, notes, summaries, preferences, routine.</li>
+      <li>Workload is counted from metadata. No decryption needed.</li>
+      <li>No LLM anywhere in the loop. The server could not run one on this data if it wanted to.</li>
+      <li>A test asserts a logged note appears in no server-side row, no stream entry, no API response.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>9</span></div>
+</section>
+
+<!-- 10 TESTED -->
+<section class="slide">
+  <div class="eyebrow">Tested</div>
+  <h2>40 automated tests. Real routes, real schema, in process.</h2>
+  <div class="cov">
+    <div class="card"><div class="big">100%</div><p><b>line coverage</b><br>api/app.js · projector/apply.js · web/crypto.js</p></div>
+    <div class="card"><div class="big">90%</div><p><b>branch coverage</b><br>Node's built-in test runner and coverage. No mocks of our own code.</p></div>
+    <div class="card"><div class="big">100%</div><p><b>function coverage</b><br>Every exported function exercised.</p></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>What the suite checks</h3><ul>
+      <li>Guards: non-members rejected, only the elder may change consent.</li>
+      <li>Stream fields, idempotent replay, handoff lifecycle open → acknowledged.</li>
+      <li>AES-GCM round trip, fresh IV per message, wrong key and tampering give null.</li>
+      <li>Privacy: the plaintext note is absent from every server-side row.</li></ul></div>
+    <div class="card"><h3>How it runs</h3><p>The real <code>init.sql</code> loads into an in-memory Postgres. Requests hit the real Express app. A fake stream records every XADD and pushes it through the real projector before the read models are checked. <code>npm test</code>, 2.5 seconds, no Docker.</p></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>10</span></div>
+</section>
+
+<!-- 11 HONESTY -->
+<section class="slide">
+  <div class="eyebrow">What is real, what is simplified, what is not built</div>
+  <div class="cols3">
+    <div class="card"><h3><span class="tag read">real</span></h3><ul>
+      <li>Create family, join by QR or code</li><li>Log, routine, today's plan</li><li>Handoff: compose, send, accept</li>
+      <li>Dashboard, record, workload</li><li>End-to-end encryption, ciphertext-only server</li><li>Redis Streams → projector → Postgres</li><li>Test suite with coverage</li></ul></div>
+    <div class="card"><h3><span class="tag seal">simplified</span></h3><ul>
+      <li>Notifications by polling every 4 s, not push</li><li>Identity is a trusted member id, no login yet</li><li>One Redis stream for all families, one consumer group</li><li>Support workers hold the same key as family</li></ul></div>
+    <div class="card"><h3><span class="tag warn">not built</span></h3><ul>
+      <li>Elder consent filter (needs a scoped support key)</li><li>Key rotation after a lost phone</li><li>Reminders on open handoffs</li><li>Elder large-print view, Urdu and Arabic</li><li>Native mobile apps</li></ul></div>
+  </div>
+  <p class="lead" style="font-size:22px">We chose one workflow, the handoff, and built it properly. Everything on the right is designed and on the roadmap, not hidden.</p>
+  <div class="foot"><span>Amanah Care</span><span>11</span></div>
+</section>
+
+<!-- 12 BUSINESS -->
+<section class="slide">
+  <div class="eyebrow">Who pays, and what it costs to run</div>
+  <div class="cols3">
+    <div class="card"><h3>Families: free</h3><p>The record is theirs. Free keeps the WhatsApp-replacement honest and adoption in-person, family to family, masjid to masjid.</p></div>
+    <div class="card"><h3>Agencies and community care: paid</h3><p>Home-care agencies and community programs that place support workers need handoff logs and scoped access. Per elder, per month. The support role already exists in the model.</p></div>
+    <div class="card"><h3>Cost of running: small</h3><p>Stateless API, a stream, a database. The server holds ciphertext only, so it is not a health-data honeypot. One small VM serves thousands of families.</p></div>
+  </div>
+  <div class="card"><h3>How we know it works</h3><p>Plan adherence per day. Handoffs accepted within 30 minutes. Number of active caregivers per family, because the point is spreading the load. Weekly return rate.</p></div>
+  <div class="foot"><span>Amanah Care</span><span>12</span></div>
+</section>
+
+<!-- 13 ROADMAP -->
+<section class="slide">
+  <div class="eyebrow">What is next</div>
+  <div class="cols3">
+    <div class="card"><h3>Monday</h3><ul><li>Five Montreal families, Urdu and Arabic speaking, one month pilot</li><li>Elder large-print "today" view for the tablet on the kitchen table</li></ul></div>
+    <div class="card"><h3>Next month</h3><ul><li>Scoped key for support workers, so the consent filter is cryptographic, not cosmetic</li><li>Push notifications, key rotation, real login</li></ul></div>
+    <div class="card"><h3>Later</h3><ul><li>Native apps, offline first</li><li>Voice to structured log, on the phone, opt in per family. AI at the edge, never on the server</li><li>Per-family streams, multi-region</li></ul></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>13</span></div>
+</section>
+
+<!-- 13b AI -->
+<section class="slide">
+  <div class="eyebrow">Where AI fits</div>
+  <h2>On the phone, where the plaintext already is. Never on the server.</h2>
+  <div class="cols3">
+    <div class="card"><h3>Say it, do not type it</h3><p>"Ammi ate half her lunch, took her meds, seemed tired" becomes three log items: meal, meds, mood. The log already takes structured items, so a parser plugs in front of it.</p></div>
+    <div class="card"><h3>Read it her way</h3><p>Handoff summary in plain sentences, and in Urdu or Arabic for the elder's large-print view. Translation on the device.</p></div>
+    <div class="card"><h3>Patterns, not predictions</h3><p>"Refused lunch 3 of the last 5 days." Counted from the record, shown as a fact. The family decides what it means. No diagnosis, no triage.</p></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>How, without breaking the privacy claim</h3><p>Chrome's built-in on-device APIs (Prompt, Summarizer, Translator on Gemini Nano, stable on desktop since Chrome 148) and Apple's on-device models in the native app. Opt in per family. Nothing leaves the phone.</p></div>
+    <div class="card"><h3>Why not tonight</h3><p>A cloud model call from the demo would contradict "the server cannot read it" on stage. So it is roadmap, designed to fit the architecture rather than bolted on.</p></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>14</span></div>
+</section>
+
+<!-- 14 CLOSE -->
+<section class="slide dark">
+  <div class="eyebrow">Remember this</div>
+  <p class="quote" style="font-size:44px;margin-top:30px">Care was already happening.<br>Now it has a record.<br>And only the family can read it.</p>
+  <div class="kv" style="margin-top:auto;color:#e6f3ef">
+    <b style="color:#7fe3cd">We ask</b><span>Introductions to community care programs and five families for the pilot.</span>
+    <b style="color:#7fe3cd">Team</b><span>Abdul Quayum Adekunle · safio</span>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>15</span></div>
+</section>
+
+<!-- APPENDIX: judge questions -->
+<section class="slide">
+  <div class="eyebrow">Appendix · Technical implementation</div>
+  <div class="qa">
+    <div><b>Delivery format?</b><span>Web app, phone first, any browser. Two windows on stage stand in for two phones. Native mobile is roadmap.</span></div>
+    <div><b>Technologies?</b><span>Node/Express API, Redis Streams event log, Postgres read models, vanilla JS + WebCrypto AES-GCM, nginx, Docker Compose. Node's built-in test runner. Vendored QR library. No frameworks, no CDNs, so the demo needs no internet.</span></div>
+    <div><b>Behind the scenes?</b><span>Phone encrypts → POST /events → membership check → XADD to the stream → projector consumer group → Postgres events + handoffs + workload view → phones poll and decrypt. The dashboard is computed on the phone.</span></div>
+    <div><b>Built from scratch here?</b><span>Spec, requirements and two audit rounds were planned ahead. All code was written during the hackathon window. QR generation is a vendored library.</span></div>
+    <div><b>Tradeoffs?</b><span>Polling over push, trusted member id over login, one stream over per-family streams, consent filter deferred. Each one on the honesty slide with the reason.</span></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>A1</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Appendix · Impact and users</div>
+  <div class="qa">
+    <div><b>Target user?</b><span>Adult children sharing care of an elderly parent. The elder is the subject and owner of the preferences, not the app user. Support workers join with their own role.</span></div>
+    <div><b>Discovery and adoption?</b><span>Family to family, by QR, in person, by design. Community care programs and masjid welfare committees as the channel. Agencies bring their families.</span></div>
+    <div><b>How many benefit?</b><span>1 in 4 American Muslims already care for an older adult (ISPU 2026). Muslims are 8.7% of Greater Montreal (Census 2021). Start with Montreal families, then any family with a shared care load.</span></div>
+    <div><b>Impact if fully developed?</b><span>Fewer missed meds and appointments, a fairer split of the load, and less of the strain ISPU documents. A family-owned health record the family never had.</span></div>
+    <div><b>Success measure?</b><span>Plan adherence, handoff acceptance time, active caregivers per family, weekly return rate.</span></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>A2</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Appendix · Demo, functionality, business</div>
+  <div class="qa">
+    <div><b>Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Notifications are polling. Identity is stubbed. The consent filter is not built. Nothing on stage is faked.</span></div>
+    <div><b>Most important feature?</b><span>The handoff, composed from the record: what happened from the log, what is next from the routine, the elder's preferences on top.</span></div>
+    <div><b>Hardest part?</b><span>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from client-side decryption.</span></div>
+    <div><b>Business model?</b><span>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</span></div>
+    <div><b>Scale beyond the prototype?</b><span>Per-family streams, push, scoped keys, real login, offline. Ciphertext-only storage keeps compliance and hosting light.</span></div>
+    <div><b>Who pays?</b><span>Agencies and community organisations. Families optionally for extras like key escrow between two relatives.</span></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>A3</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Appendix · Team, process, data and privacy</div>
+  <div class="qa">
+    <div><b>How did you divide the work?</b><span>Abdul: architecture, event model, crypto, api and projector, dashboard, tests. safio: in-app invite flow, interface cleanup, the flow view that traces a write hop by hop.</span></div>
+    <div><b>What did you learn?</b><span>Cut scope early and say so. One workflow done well beats five half done. Privacy shapes every feature, including which ones you cannot build yet.</span></div>
+    <div><b>Differently next time?</b><span>Tests from hour one. Push notifications budgeted from the start.</span></div>
+    <div><b>How did you prioritise?</b><span>Requirement register of 46 items, two audit rounds on feasibility in 24 hours, then "cut core": the handoff loop first, everything else labelled roadmap.</span></div>
+    <div><b>What data?</b><span>Care events, handoff summaries, preferences, routine, member names, all encrypted. Clear: event type, category, member id, timestamps.</span></div>
+    <div><b>Ethical risks?</b><span>Support workers currently hold the same key, so hiding categories is UI only. Lost key means lost data until rotation ships. No diagnosis, dosage or triage anywhere, and the metrics are counts, never judgments.</span></div>
+    <div><b>Depends on an LLM?</b><span>No. By design the server cannot run one on this data.</span></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>A4</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Appendix · Future and closing</div>
+  <div class="qa">
+    <div><b>Next if more time?</b><span>Elder large-print view in Urdu and Arabic, scoped support key, push, key rotation.</span></div>
+    <div><b>Continue after today?</b><span>Yes. Five-family pilot in Montreal next week.</span></div>
+    <div><b>First step after today?</b><span>Commit and publish the repo, deploy on one small VM, recruit the pilot families through community care contacts.</span></div>
+    <div><b>Different from existing options?</b><span>Task apps organise chores, med apps remind, marketplaces find carers. None connect plan, actuals, handoff and load with the elder's preferences, and none let only the family read the data.</span></div>
+    <div><b>Help needed?</b><span>Introductions to community care programs and agencies, pilot families, and a designer for the elder view.</span></div>
+    <div><b>Remember most?</b><span>The server cannot read it. Open the database and see for yourself.</span></div>
+    <div><b>Why should this win?</b><span>It solves the coordination problem the track asked for, with the elder's preferences built in, privacy that is cryptographic rather than a promise, an honest scope, and a test suite behind it.</span></div>
+  </div>
+  <div class="foot"><span>Amanah Care</span><span>A5</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Appendix · Sources</div>
+  <ul class="tight" style="font-size:17px;gap:9px">
+    <li>ISPU, <i>Support and Sacrifice: Muslims Who Care for Older Adults Face Emotional Strain</i>, 2026, drawing on American Muslim Poll 2025. ispu.org/reports-and-analysis/support-and-sacrifice/</li>
+    <li>ISPU, <i>Sandwiched: Muslims Are Most Likely to Be Caring for Aging Parents and Have School-Aged Children</i>. ispu.org/muslim-families/</li>
+    <li>Statistics Canada, <i>More than half of women provide care to children and care-dependent adults in Canada, 2022</i>, The Daily, 8 Nov 2022. www150.statcan.gc.ca/n1/daily-quotidien/221108/dq221108b-eng.htm</li>
+    <li>Statistics Canada, <i>Study: "Sandwiched" between multiple unpaid caregiving responsibilities</i>, The Daily, 2 Apr 2024. www150.statcan.gc.ca/n1/daily-quotidien/240402/dq240402d-eng.htm</li>
+    <li>Collins, R. N. and Kishita, N., <i>Prevalence of depression and burden among informal care-givers of people with dementia: a meta-analysis</i>, Ageing & Society, 2020.</li>
+    <li>MuslimHacks 2026 Challenge Guide, Elderly Care (research and fact sheets by Process Plus). References EC1 to EC6 therein, including Law 25, PHIPA, PIPEDA and Attum et al., <i>Cultural Competence in the Care of Muslim Patients and Their Families</i>, StatPearls.</li>
+    <li>Statistics Canada, Census 2021 religion release: Muslims 4.9% of Canada, 8.7% of Greater Montreal (cited in the Challenge Guide).</li>
+    <li>Chrome for Developers, <i>Built-in AI</i>: Prompt, Summarizer and Translator APIs on Gemini Nano. developer.chrome.com/docs/ai/built-in</li>
+  </ul>
+  <div class="foot"><span>Amanah Care</span><span>A6</span></div>
+</section>
+
+</div>
+<div class="nav" id="nav">← → to move · 1/19</div>
+<script>
+  const slides=[...document.querySelectorAll('.slide')]; let i=0;
+  function fit(){ const s=Math.min(innerWidth/1280, innerHeight/720); slides.forEach(el=>el.style.transform=`scale(${s})`); }
+  function go(n){ i=(n+slides.length)%slides.length; slides.forEach((s,k)=>s.classList.toggle('on',k===i)); location.hash=i+1; document.getElementById('nav').textContent=`← → to move · ${i+1}/${slides.length}`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)) go(i+1); if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) go(i-1); if(e.key==='Home') go(0); });
+  addEventListener('click',e=>{ if(e.clientX>innerWidth/2) go(i+1); else go(i-1); });
+  addEventListener('resize',fit); fit();
+  go(Math.max(0,(parseInt(location.hash.slice(1))||1)-1));
+</script>
+</body>
+</html>

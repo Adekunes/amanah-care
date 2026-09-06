@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Amanah Care, explained in simple English</title>
+<style>
+ @page{size:A4;margin:18mm 17mm}
+ body{font:11.5pt/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;color:#14201d;max-width:760px;margin:30px auto;padding:0 20px}
+ h1{font-size:26pt;letter-spacing:-.02em;margin:0 0 4px;color:#063f38}
+ h2{font-size:15pt;margin:26px 0 8px;color:#063f38;letter-spacing:-.01em;border-bottom:2px solid #dfe7e4;padding-bottom:4px;break-after:avoid}
+ h3{font-size:12pt;margin:14px 0 4px;color:#0b7a6b}
+ p,li{margin:0 0 8px} ul,ol{padding-left:22px;margin:0 0 8px}
+ .sub{color:#6b7a75;font-size:11pt;margin-bottom:16px}
+ .box{background:#eef4f2;border:1px solid #cfe0da;border-radius:10px;padding:10px 14px;margin:10px 0}
+ .warn{background:#fdeede;border-color:#f0c7ad}
+ table{border-collapse:collapse;width:100%;margin:8px 0 12px;font-size:10.5pt} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #dfe7e4;vertical-align:top}
+ th{font-size:9pt;letter-spacing:.08em;text-transform:uppercase;color:#6b7a75}
+ code,pre{font-family:ui-monospace,Menlo,monospace;font-size:10pt} pre{background:#0e1b18;color:#7fe3cd;padding:10px 12px;border-radius:8px;white-space:pre-wrap}
+ .qa b{display:block;color:#063f38;margin-top:8px} .qa p{margin:0 0 4px}
+ .src{font-size:9.5pt;color:#6b7a75}
+</style></head><body>
+<h1>Amanah Care, explained in simple English</h1>
+<p class="sub">MuslimHacks 2026 · Elderly Care track · Concordia University, Montreal · 5 to 6 September 2026 · Team: Abdul Quayum Adekunle, safio</p>
+
+<h2>1. What it is, in three sentences</h2>
+<p>Amanah Care is a private record for a family looking after an elderly parent. The family writes down the elder's routine, logs what was done, and hands the day over to the next person with a clear card: what happened, what is next. Everything is scrambled on the phone before it is sent, so only the family can read it. Not the server, not us.</p>
+<p>"Amanah" means a trust you are responsible for. Caring for a parent is exactly that.</p>
+
+<h2>2. The problem, in plain words</h2>
+<p>Ammi is 78. She speaks Urdu, eats halal and soft food, and her prayer times matter to her. Three of her children share her care. Today the whole system is a WhatsApp group. "Did she take the morning ones?" "Who has her this afternoon?" "What did Dr. Rahman say on Wednesday?" "Scroll up."</p>
+<p>A chat is a conversation. Care needs a record. Without one, four things go wrong:</p>
+<ul>
+ <li><b>No plan.</b> Things get missed, or done twice.</li>
+ <li><b>No handoff.</b> The next person does not know what happened.</li>
+ <li><b>No record of who did what.</b> One sibling ends up carrying everything, and nobody sees it until they burn out.</li>
+ <li><b>No privacy.</b> The whole history of her health lives with a chat company, and with anyone a message was forwarded to.</li>
+</ul>
+<div class="box">
+<p><b>Evidence.</b> 1 in 4 American Muslims care for an older adult, versus 16% of the general public (ISPU, <i>Support and Sacrifice</i>, 2026). 52% of Muslims aged 30 to 49 care for an elder (ISPU, <i>Sandwiched</i>). In Canada, 42% of people 15 and over gave unpaid care in 2022, 13.4 million people, and 1.8 million of them cared for both children and adults (Statistics Canada, Canadian Social Survey 2022). Among family caregivers of people with dementia, about 31% have depression and 49% report burden (Collins & Kishita, 2020, meta-analysis). 18% of Muslim caregivers report difficulty finding culturally appropriate care, versus 7% (ISPU 2026, via the MuslimHacks guide). Health information needs consent and privacy protection under Quebec Law 25, Ontario PHIPA and PIPEDA.</p>
+</div>
+
+<h2>3. What the app does</h2>
+<h3>Routine</h3><p>The family enters Ammi's plan once: morning meds at 8, breakfast at 8:30, Dhuhr at 1, walk after Asr, night meds at 9 (Fatima), pharmacy pickup on Sundays at 11 (Abdullah), Dr. Rahman on Wednesdays (Fatima). Each item has a category, a time, which days, and who does it.</p>
+<h3>Today's plan</h3><p>Every day the routine becomes a checklist. Tap "Done" and it is logged with your name and the time. Items that are past their time and not logged say "not yet". No alarms, no judgment, just what is done and what is open.</p>
+<h3>Log</h3><p>Anything else, in two taps: pick a category (meds, meal, prayer, mobility, mood, appointment, transport, note), then what happened ("ate half", "refused food", "walked", "tired"). Add a note if you want.</p>
+<h3>Hand off</h3><p>When you leave, you pick who takes over. "What happened" is written for you from your log. "What is next" is written for you from the routine: everything still open today, in order, with who is on it. You can edit both. You send. Their phone shows the card within seconds, with Ammi's preferences on top (language, diet, prayer, modesty). They tap "Accept". You see "accepted" on your side.</p>
+<h3>Home</h3><p>The dashboard. Who has Ammi right now. Today's plan, 8 of 12 done. Meds 2 of 3, meals 2 of 3, prayers 3 of 5. Her mood and mobility, last logged, by whom, when. Handoffs waiting. Next pickup and next appointment, with who is on it. Your own part today. The last 7 days. Who carried the week.</p>
+<h3>Record</h3><p>Everything logged in the last 30 days, day by day, newest first, with a filter per category. This is the "track of everything" that WhatsApp never gives you.</p>
+<h3>Privacy</h3><p>When the family is created, the phone makes a secret key. It never leaves the phone. Other family members get it by scanning a QR code in person. Every note, name, summary and preference is scrambled with that key before it is sent. The server stores the scrambled text and only enough to route it: what type of event, which category, which member id, when.</p>
+
+<h2>4. A day with Ammi's family (the demo)</h2>
+<ol>
+ <li>Sister A opens Home. It says "Sister A has Ammi since Friday 12:04", 8 of 12 done, next pickup Sunday 11:00, Abdullah.</li>
+ <li>She taps Done on dinner. The plan and the tiles update.</li>
+ <li>She opens Hand off, picks Fatima. What happened and what is next are already filled in. She sends. An animation shows the card travelling: readable on her phone, scrambled on the server, readable again on Fatima's phone.</li>
+ <li>Fatima's phone shows the card, with Ammi's preferences on top. She accepts.</li>
+ <li>Home now says "Fatima has Ammi". The week's load bar moves.</li>
+ <li>We open the database. Every row is scrambled text. We, the operators, cannot read a word of it.</li>
+</ol>
+
+<h2>5. How the privacy works, in plain words</h2>
+<ul>
+ <li>The key is 256 random bits made by the browser (WebCrypto, AES-GCM). It is never sent to the server.</li>
+ <li>The server keeps a fingerprint of the key (a SHA-256 hash). That is enough to check you are family when you join, but it cannot be used to read anything.</li>
+ <li>Each message is scrambled with a fresh random number (a 96-bit IV), so two identical notes look different on the wire, and any tampering makes the message unreadable rather than wrong.</li>
+ <li>Members join by QR code, face to face. The app never offers "share to WhatsApp", because that is exactly where the key must not go.</li>
+ <li>The server can count things it can see (how many events per person, per day) without reading any content. That is how the workload bar works.</li>
+ <li>There is no AI model anywhere in the loop. The server could not run one on this data even if we wanted it to.</li>
+</ul>
+
+<h2>6. How it is built</h2>
+<p>Every action is an event: "care logged", "handoff opened", "handoff acknowledged", "preferences set", "routine set". Events go into an append-only log (Redis Streams). A small program called the projector copies each event into a database (Postgres) and keeps two simple views current: the list of handoffs, and the counts per person. Phones read those views every few seconds and decrypt what belongs to them. The dashboard is calculated on the phone.</p>
+<p>Because everything is an event, we added the whole dashboard, the routine and the record without changing how data is written. They are new ways of reading the same log. Replaying the log rebuilds everything.</p>
+<p>It runs with one command (Docker Compose: web, api, projector, redis, postgres). As a fallback, one node command runs the same api and projector with an in-memory database, so the demo does not depend on Docker being alive.</p>
+
+<h2>7. What is real, what is simplified, what is not built</h2>
+<table>
+<tr><th>Real and working</th><th>Simplified on purpose</th><th>Not built yet</th></tr>
+<tr><td>Create a family, join by QR or code<br>Log, routine, today's plan<br>Handoff: compose, send, accept<br>Dashboard, record, workload<br>End-to-end encryption, ciphertext-only server<br>Redis Streams → projector → Postgres<br>Automated tests with coverage</td>
+<td>Notifications by polling every 4 seconds, not push<br>Identity is a trusted member id, no login yet<br>One Redis stream for all families<br>Support workers hold the same key as family, so hiding categories from them is only visual</td>
+<td>Elder consent filter (needs a separate key for support workers)<br>Key rotation after a lost phone<br>Reminders on open handoffs<br>Elder large-print view in Urdu and Arabic<br>Native mobile apps</td></tr>
+</table>
+<p>We chose one workflow, the handoff, and built it properly. The right-hand column is designed and on the roadmap, not hidden.</p>
+
+<h2>8. What we tested</h2>
+<p>40 automated tests run the real API routes in-process against the real database schema (loaded into an in-memory Postgres) and push every write through the real projector before checking the results. Coverage on the api, the projector and the client crypto: 100% of lines, 90% of branches, 100% of functions. One test writes a private note ("Ammi refused breakfast, said she felt dizzy"), then checks that the sentence appears in no database row, no stream entry and no API response, and that it decrypts correctly with the family key and not with any other key. <code>npm test</code> runs in about 2.5 seconds with no Docker.</p>
+
+<h2>9. What comes next</h2>
+<ul>
+ <li><b>Monday:</b> a one-month pilot with five Montreal families, Urdu and Arabic speaking. An elder large-print "today" view for the tablet on the kitchen table.</li>
+ <li><b>Next month:</b> a separate key for support workers so the consent filter is real, not visual. Push notifications. Key rotation. Real login.</li>
+ <li><b>Later:</b> native apps, offline first, per-family streams.</li>
+</ul>
+
+<h2>10. Where AI fits</h2>
+<p>Only on the phone, where the readable data already is. Never on the server. Three uses, all opt in per family:</p>
+<ul>
+ <li><b>Say it, do not type it.</b> "Ammi ate half her lunch, took her meds, seemed tired" becomes three log items. The log already accepts structured items, so a parser plugs in front of it.</li>
+ <li><b>Read it her way.</b> Handoff summaries in plain sentences, and in Urdu or Arabic for the elder's view.</li>
+ <li><b>Patterns, not predictions.</b> "Refused lunch 3 of the last 5 days." A count shown as a fact. The family decides what it means. No diagnosis, no triage.</li>
+</ul>
+<p>Chrome now ships on-device AI (Prompt, Summarizer and Translator APIs on Gemini Nano, stable on desktop), and phones have on-device models. That is how we add AI without breaking "the server cannot read it". We did not ship it in 24 hours because calling a cloud model from the demo would contradict that claim on stage.</p>
+
+<h2>11. How to run the demo</h2>
+<pre>cd app
+docker compose up -d --build            # web :8080, api :4000, projector, redis, postgres
+cd seed && npm install && API=http://localhost:4000 node seed.js   # prints the join codes
+
+# fallback, no Docker: same api and projector, in-memory database
+cd app && npm install && node dev/stack.mjs
+</pre>
+<p>Open <code>http://localhost:8080</code> in one window and <code>http://127.0.0.1:8080</code> in another (two origins, two separate sessions). Paste the Sister A code into one Join box and the Fatima code into the other. Tests: <code>cd app && npm test</code>, coverage: <code>npm run coverage</code>.</p>
+
+<h2>12. Judge questions, with our answers</h2>
+<div class="qa">
+<h3>Technical implementation</h3>
+<b>What is the delivery format?</b><p>A web app, phone first, any browser. Two windows on stage stand in for two phones. Native mobile is roadmap.</p>
+<b>What technologies did you use?</b><p>Node and Express for the API, Redis Streams for the event log, Postgres for the read models, plain JavaScript with WebCrypto (AES-GCM) in the browser, nginx, Docker Compose. Node's built-in test runner. A vendored QR library. No frameworks and no CDNs, so the demo needs no internet.</p>
+<b>How does it work behind the scenes?</b><p>The phone encrypts, then POSTs an event. The API checks membership and appends it to the stream. The projector copies it into Postgres and updates the handoff and workload views. Phones poll the views and decrypt. The dashboard is computed on the phone.</p>
+<b>Did you build this from scratch during the hackathon?</b><p>The spec, the requirement list and two feasibility audits were prepared ahead. All code was written during the hackathon window. QR generation uses a vendored library.</p>
+<b>What technical tradeoffs did you make?</b><p>Polling instead of push, a trusted member id instead of login, one stream instead of one per family, and the consent filter deferred. Each is on the honesty slide with the reason.</p>
+<h3>Impact and users</h3>
+<b>Who is your target user?</b><p>Adult children sharing the care of an elderly parent. The elder is the subject and the owner of the preferences, not the app user. Support workers join with their own role.</p>
+<b>How would users discover or adopt it?</b><p>Family to family, by QR, in person, by design. Community care programs and masjid welfare committees as the channel. Agencies bring their families.</p>
+<b>How many people could benefit?</b><p>1 in 4 American Muslims already care for an older adult. Muslims are 8.7% of Greater Montreal. We start with Montreal families, then any family with a shared care load.</p>
+<b>What impact could it have?</b><p>Fewer missed meds and appointments, a fairer split of the load, less of the strain the research documents, and a health record the family owns.</p>
+<b>How would you measure success?</b><p>Plan adherence per day, time to accept a handoff, active caregivers per family, and weekly return rate.</p>
+<h3>Demo and functionality</h3>
+<b>Is the demo fully functional or partly mocked?</b><p>The core loop is real end to end: encrypt, stream, project, store, decrypt. Notifications are polling. Identity is stubbed. The consent filter is not built. Nothing on stage is faked.</p>
+<b>Most important feature?</b><p>The handoff composed from the record: what happened from the log, what is next from the routine, the elder's preferences on top.</p>
+<b>Hardest part?</b><p>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from decryption on the phone.</p>
+<b>Completed versus prototyped?</b><p>See section 7.</p>
+<h3>Business and scalability</h3>
+<b>Business model?</b><p>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</p>
+<b>How would it scale?</b><p>Per-family streams, push, scoped keys, real login, offline. Ciphertext-only storage keeps compliance and hosting light.</p>
+<b>What would it take to make it a real product?</b><p>Login and key recovery, native apps, scoped support keys, push, offline, accessibility, Urdu and Arabic.</p>
+<b>Who would pay?</b><p>Agencies and community organisations. Families optionally for extras such as key escrow between two relatives.</p>
+<h3>Team and process</h3>
+<b>How did you divide the work?</b><p>Abdul: architecture, event model, crypto, api and projector, dashboard, tests. safio: in-app invite flow, interface cleanup, and the flow view that traces a write hop by hop.</p>
+<b>What did you learn?</b><p>Cut scope early and say so. One workflow done well beats five half done. Privacy shapes every feature, including the ones you cannot build yet.</p>
+<b>What would you do differently?</b><p>Tests from hour one. Push notifications budgeted from the start.</p>
+<b>How did you prioritise?</b><p>A requirement register of 46 items, two audit rounds on what fits in 24 hours, then "cut core": the handoff loop first, everything else labelled roadmap.</p>
+<h3>Data and privacy</h3>
+<b>What data does it use?</b><p>Care events, handoff summaries, preferences, the routine and member names, all encrypted. In the clear: event type, category, member id and timestamps.</p>
+<b>How do you handle privacy?</b><p>Family key made in the browser and never sent. AES-GCM per message with a fresh IV. A SHA-256 check of the key on the server. QR in person. Ciphertext-only storage. No third party.</p>
+<b>Ethical risks?</b><p>Support workers currently hold the same key, so hiding categories from them is visual only. A lost key means lost data until rotation ships. No diagnosis, dosage or triage anywhere, and the metrics are counts, never judgments.</p>
+<b>Does it depend on an LLM?</b><p>No. By design the server cannot run one on this data.</p>
+<h3>Future plans and closing</h3>
+<b>What would you build next?</b><p>The elder large-print view in Urdu and Arabic, a scoped support key, push, key rotation.</p>
+<b>Will you continue?</b><p>Yes. A five-family pilot in Montreal next week.</p>
+<b>First step after today?</b><p>Publish the repo, deploy on one small VM, recruit the pilot families through community care contacts.</p>
+<b>What makes it different?</b><p>Task apps organise chores, medication apps remind, marketplaces find carers. None connect plan, actuals, handoff and load with the elder's preferences, and none let only the family read the data.</p>
+<b>What help do you need?</b><p>Introductions to community care programs and agencies, pilot families, and a designer for the elder view.</p>
+<b>What should we remember?</b><p>The server cannot read it. Open the database and see.</p>
+<b>Why should this win?</b><p>It solves the coordination problem the track asked for, with the elder's preferences built in, privacy that is cryptographic rather than a promise, an honest scope, and a test suite behind it.</p>
+</div>
+
+<h2>13. Sources</h2>
+<p class="src">ISPU, Support and Sacrifice: Muslims Who Care for Older Adults Face Emotional Strain, 2026, from American Muslim Poll 2025 (ispu.org/reports-and-analysis/support-and-sacrifice/). ISPU, Sandwiched: Muslims Are Most Likely to Be Caring for Aging Parents and Have School-Aged Children (ispu.org/muslim-families/). Statistics Canada, The Daily, 8 November 2022, Canadian Social Survey 2022; and 2 April 2024, "Sandwiched" between multiple unpaid caregiving responsibilities. Collins, R. N. and Kishita, N., Prevalence of depression and burden among informal care-givers of people with dementia: a meta-analysis, Ageing & Society, 2020. MuslimHacks 2026 Challenge Guide, Elderly Care, research and fact sheets by Process Plus. Statistics Canada, Census 2021, religion release. Chrome for Developers, Built-in AI (developer.chrome.com/docs/ai/built-in).</p>
+</body></html>
