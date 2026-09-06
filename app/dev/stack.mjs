@@ -25,10 +25,12 @@ const bus = new LocalBus();
 let n = 0;
 // Fake stream: every XADD is projected on the spot, so reads are immediate.
 const redis = { async xAdd(_stream, _id, fields) { const id = `${Date.now()}-${n++}`; await applyEvent(db, id, fields); await notify(db, id, fields); await bus.publish(fields.family_id, announcement(fields)); return id; } };
-createApp({ db, redis, bus }).listen(API_PORT, () => console.log(`[stack] api http://localhost:${API_PORT} (in-memory postgres, inline projector)`));
+const apiServer = createApp({ db, redis, bus }); apiServer.listen(API_PORT, () => console.log(`[stack] api http://localhost:${API_PORT} (in-memory postgres, inline projector), also at /api on the web port`));
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
+const apiApp = createApp({ db, redis, bus });
 http.createServer((req, res) => {
+  if (req.url.startsWith('/api/') || req.url === '/api') { req.url = req.url.slice(4) || '/'; return apiApp(req, res); }
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p === '/') p = '/index.html';
   const file = path.normalize(path.join(WEB, p));

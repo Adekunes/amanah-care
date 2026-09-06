@@ -152,7 +152,7 @@
           <span class="who-role" id="who-role"></span>
           <div class="who-actions">
             <button id="btn-switch" class="ghost small sv-btn hide" type="button" title="Open another family you belong to">Switch family</button>
-            <button id="btn-serverview" class="ghost small sv-btn" type="button" title="See this screen the way the server sees it">Server view</button>
+            <button id="btn-serverview" class="ghost small sv-btn hide" type="button" title="See this screen the way the server sees it">Server view</button>
             <button id="btn-logout" class="ghost small" type="button">Log out</button>
           </div>
         </div>
@@ -164,10 +164,10 @@
       <button data-tab="inbox">Inbox<span id="inbox-badge" class="badge hide">0</span></button>
       <button data-tab="patterns">Patterns</button>
       <button data-tab="record">Record</button>
-      <button data-tab="alerts">Alerts<span id="alerts-badge" class="badge hide">0</span></button>
+      <button data-tab="alerts">Validation<span id="alerts-badge" class="badge hide">0</span></button>
       <button data-tab="routine">Routine</button>
       <button data-tab="prefs">Prefs</button>
-      <button data-tab="flow">Flow</button>
+      <button data-tab="flow" class="hide">Flow</button>
     </nav>
     </header>
 
@@ -262,15 +262,15 @@
     <div id="tab-alerts" class="tabview hide">
       <div class="card">
         <div class="group">
-          <h2>What to be told about</h2>
-          <p class="muted">Pick what should ping you. Everyone chooses for themselves.</p>
+          <h2>Validation: what you want to be told about</h2>
+          <p class="muted">Pick what should reach you when someone else moves a card or hands off. Everyone chooses for themselves.</p>
         </div>
         <div id="alerts-subs" class="subs"></div>
         <button id="btn-subs-save">Save alerts</button>
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>Alerts</h2><span class="pill" id="alerts-count">0</span></div>
+        <div class="card-head"><h2>Validations</h2><span class="pill" id="alerts-count">0</span></div>
         <p class="muted">Newest first. Decrypted on this phone.</p>
         <div id="alerts-list"><p class="muted">Nothing yet.</p></div>
         <button id="btn-alerts-read" class="ghost small">Mark all read</button>
@@ -371,7 +371,8 @@
         <div id="members" class="members"><p class="muted">Loading…</p></div>
       </div>
       <div class="card">
-        <div class="card-head"><h2>The week, person by person</h2><span class="muted">cards done per day</span></div>
+        <div class="card-head"><h2>The week, person by person</h2><span class="muted">cards moved to Done, per day</span></div>
+        <p class="muted">Every number here is a count of cards moved on the family's phones. Nothing is guessed or predicted.</p>
         <div id="fam-heat" class="heat"></div>
       </div>
       <div class="card fam-invite">

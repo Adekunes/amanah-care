@@ -11,7 +11,8 @@ let SERVER_VIEW = false;
 const decryptJSON = (k, iv, c) => SERVER_VIEW ? Promise.resolve(null) : decryptReal(k, iv, c);
 const sealed = (cipher) => cipher ? `🔒 ${String(cipher).slice(0, 22)}…` : '🔒 (no payload)';
 
-const API = (window.AMANAH_API || `http://${location.hostname}:4000`);
+// Same origin in production (/api behind nginx or the one-process stack); port 4000 on a dev box.
+const API = (window.AMANAH_API || (['localhost','127.0.0.1'].includes(location.hostname) && location.port!=='' ? `http://${location.hostname}:4000` : `${location.origin}/api`));
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const uuid = () => crypto.randomUUID();
@@ -106,7 +107,7 @@ function logout(){
   WEEK = []; HANDOFFS = []; MEMBERS = []; PREFS = null;
   lastHandoffAt = null; homeSig = null; inboxSig = null; lastTrace = null;
   document.body.classList.remove('elder');
-  const ORIG_TABS = { home:'Home', record:'Record', prefs:'Prefs', family:'Family' };  // undo ELDER_TABS renames
+  const ORIG_TABS = { home:'Home', record:'Record', prefs:'Prefs', family:'Family', alerts:'Validation' };  // undo ELDER_TABS renames
   $$('.tabs button').forEach(b=>{
     b.classList.remove('hide');
     if(ORIG_TABS[b.dataset.tab]) b.firstChild.nodeValue = ORIG_TABS[b.dataset.tab];
@@ -229,7 +230,7 @@ async function joinFamily(){
   try{
     await api('/families/'+payload.f+'/join', { method:'POST', body: JSON.stringify({
       key_check: kc, member:{ id:member_id, role } }) });
-  }catch(e){ return toast('Join failed: wrong key or no family'); }
+  }catch(e){ return toast(/404/.test(e.message) ? 'That family does not exist any more. Ask for a fresh code from the Family tab.' : 'Join failed: this code does not open that family. Ask for a fresh code.'); }
   ME = { family_id: payload.f, member_id, role, h: payload.h, my_name: name };
   if(!pinned) await postEncEvent('MemberJoined', { name }, { actor_id: member_id });
   save();
@@ -585,10 +586,10 @@ function renderHome(){
     ${board.length || !past ? `<div class="board">${cols}</div>` : `<div class="card"><p class="muted">No cards that day.</p></div>`}
     ${!board.length && !past && !ROUTINE.length ? `<div class="card"><p class="muted">${SERVER_VIEW ? 'The cards are inside the encrypted routine. The server cannot show them.' : `No cards yet. Add ${esc(ELDER)}'s first card above.`}</p></div>` : ''}
     <div class="board-foot">
-      <span><b class="tnum">${c.done}/${board.length}</b> done today</span>
-      <span><b class="tnum">${c.blocked}</b> blocked</span>
-      <span><b class="tnum">${weekDone.length}</b> done in 7 days</span>
-      <span>${top ? `<b>${esc(nameOf(top[0]))}</b> carried ${share}%` : 'nobody carried the week yet'}</span>
+      <span title="Cards in Done today, out of the cards on the board"><b class="tnum">${c.done}/${board.length}</b> done today</span>
+      <span title="Cards in Blocked today: could not happen, with a reason"><b class="tnum">${c.blocked}</b> blocked</span>
+      <span title="Cards moved to Done in the last 7 days, all people"><b class="tnum">${weekDone.length}</b> done this week</span>
+      <span title="Share of this week's Done cards moved by one person">${top ? `<b>${esc(nameOf(top[0]))}</b> did ${share}% of the week` : 'nobody carried the week yet'}</span>
       <a href="#" data-gopatterns>Patterns and recommendations →</a>
     </div>`;
   wireBoard();
@@ -1260,7 +1261,7 @@ async function renderFamily(){
     return `<div class="member ${m.role} ${withNow===m.id?'now':''}">
       <div class="m-top">${avatar(m.id,'big')}<div class="m-name"><b>${esc(nameOf(m.id))}${me?' (you)':''}</b><span class="m-role">${ROLE_LABEL[m.role]||m.role}${withNow===m.id?` · <i>with ${esc(ELDER)} now</i>`:''}</span></div>
         <span class="pill ${m.role==='support'?'support':''}">${m.role==='support'?'support':'family'}</span></div>
-      <div class="m-stats"><div><b>${done}</b><span>done, 7 days</span></div><div><b>${share}%</b><span>of the week</span></div><div><b>${daysActive}<i>/7</i></b><span>days active</span></div><div><b>${accepted}</b><span>handoffs taken</span></div></div>
+      <div class="m-stats"><div title="Cards this person moved to Done in the last 7 days"><b>${done}</b><span>cards done, 7 days</span></div><div title="Their share of every card the family moved to Done this week"><b>${share}%</b><span>of the week's cards</span></div><div title="Days in the last 7 with at least one card moved by them"><b>${daysActive}<i>/7</i></b><span>days they showed up</span></div><div title="Handoffs they accepted"><b>${accepted}</b><span>handoffs accepted</span></div></div>
       <div class="m-bar"><span style="width:${share}%"></span></div>
       <div class="m-meta"><span>${lastAt ? `Last move ${fmtWhen(lastAt)}` : 'No moves yet'}${blocked?` · ${blocked} blocked`:''}</span>${phone ? `<a class="m-call" href="tel:${phone.replace(/[^\d+]/g,'')}">📞 ${esc(phone)}</a>` : ''}</div>
       <div class="m-assign"><span class="eyebrow">Their cards</span><div class="m-cards">${assign || '<span class="muted">no cards yet</span>'}</div></div>

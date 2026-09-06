@@ -1,7 +1,7 @@
 /* Amanah Care. Phone-first, one column, 44px targets (PR-02).
    System font stack on purpose: the demo must render with no network. */
 :root{
-  --bg:#f2f5f4; --card:#ffffff;
+  --bg:#f3f1ea; --card:#fffdf8;
   --ink:#14201d; --ink-2:#4a5a56; --muted:#5a655f;
   --line:#e0e7e4; --line-2:#cbd8d3;
   --brand:#0b7a6b; --brand-ink:#063f38; --brand-soft:#e4f0ed; --brand-tint:#8fd6c6;
@@ -770,3 +770,20 @@ body.support .hero.photo::after{background:linear-gradient(90deg,rgba(12,40,80,.
 .flow-strip.done{border-left-color:var(--brand);background:linear-gradient(90deg,#fff,#eef8f5)}
 .flow-strip.wait{border-left-color:var(--seal)} .flow-strip.wait .f-ico{background:var(--seal-soft)}
 @media (max-width:599px){ .flow-strip{flex-wrap:wrap} .flow-strip .f-acts{width:100%;justify-content:flex-end} }
+
+/* ---- warmth: cream ground, tinted columns, softer whites ---- */
+body{background-image:radial-gradient(900px 420px at 8% -10%,rgba(224,169,81,.16),transparent 60%),radial-gradient(900px 500px at 100% 0,rgba(11,122,107,.14),transparent 60%),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M24 6l4.5 13.5L42 24l-13.5 4.5L24 42l-4.5-13.5L6 24l13.5-4.5z' fill='%230b7a6b' fill-opacity='.035'/%3E%3C/svg%3E");background-attachment:fixed}
+.col.todo{background:linear-gradient(180deg,#fffdf8,#f7f3ea)}
+.col.done{background:linear-gradient(180deg,#fffdf8,#eaf5f0)}
+.col.blocked{background:linear-gradient(180deg,#fffdf8,#fbeee3)}
+.kcard{background:#fff}
+.topbar{background:rgba(255,253,248,.92);backdrop-filter:blur(8px)}
+.strip{background:linear-gradient(90deg,#e4f0ed,#f3ecd9);border-color:#e6dcc4}
+.sbit i{color:var(--seal)}
+.member{background:linear-gradient(180deg,#fffdf8,#fbf8f0)}
+.member.elder{background:linear-gradient(160deg,#fffdf8,#fbf1dc)}
+.flow-strip{background:linear-gradient(90deg,#fffdf8,#f3f7f4)}
+.board-foot{background:linear-gradient(90deg,#fffdf8,#f6f2e6)}
+.auth-side{background:linear-gradient(180deg,#fffdf8,#f7f3ea)}
+body.support{--bg:#eef2f7;--card:#fbfcfe}
