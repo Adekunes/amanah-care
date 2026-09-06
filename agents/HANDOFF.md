@@ -48,20 +48,19 @@ Tests: `cd ~/code/amanah-care/app && npm test` (40 tests, ~2.5 s) and `npm run c
 
 ---
 
-## 3. Docker on this Mac (open blocker for the compose demo)
+## 3. Docker on this Mac (DONE 2026-09-05 ~22:10)
 
-`brew install --cask docker-desktop` was started by the agent and **rolled back**: the cask runs `sudo mkdir -p /usr/local/bin` and there is no TTY for the password. The 580 MB dmg is cached in `~/Library/Caches/Homebrew/downloads/`. **The owner must run this in his own Terminal:**
-```bash
-brew install --cask docker-desktop
-```
-then open Docker from Applications, accept the service agreement, wait for "Engine running". Then:
-```bash
-cd ~/code/amanah-care/app && docker compose up -d --build
-cd seed && npm install && API=http://localhost:4000 node seed.js
-```
-Note `docker compose` will build with the NEW Dockerfiles (`api` copies `app.js`, `projector` copies `apply.js`, `web` copies the new html/js/css). Until Docker exists, demo and develop on `node dev/stack.mjs` (same api/projector code, in-memory Postgres via pg-mem, inline projector, no-store static server). Redis and Postgres are replaced in that mode; say so if asked.
+Docker Desktop 4.89 (engine 29.7.2) is installed in `/Applications/Docker.app`; CLI at `/usr/local/bin/docker` (not in the agent shell's PATH by default: `export PATH="/usr/local/bin:$PATH"`). Context `desktop-linux`, socket `~/.docker/run/docker.sock`. The owner ran the brew cask install himself (it needs sudo). The compose stack was built and verified: 5 containers, Postgres has `families, members, events, handoffs, logins` + `workload_view`, the projector consumer group `projector` reads `events`, seed produced 105 events / 4 handoffs / 4 logins, login works against real Postgres. The `web` image serves the new UI with no-store.
 
----
+```bash
+export PATH="/usr/local/bin:$PATH"
+cd ~/code/amanah-care/app
+docker compose up -d --build                      # start / rebuild
+docker compose down && docker compose up -d --build   # clean reset (no named volume, data is gone)
+cd seed && API=http://localhost:4000 node seed.js     # new family + logins sistera/abdullah/fatima/ammi, pw 333
+docker compose ps; docker compose logs -f projector
+```
+`node dev/stack.mjs` stays as the fallback (same api/projector code, in-memory Postgres). Ports clash: stop one before starting the other (`pkill -f dev/stack.mjs` / `docker compose stop`).
 
 ## 4. What is BUILT (all local, committed, not pushed)
 
@@ -162,7 +161,7 @@ Fallback if Docker misbehaves on stage: `node dev/stack.mjs` (identical UI and A
 
 ## 13. Recommended next tasks (priority order)
 
-1. **Owner installs Docker** (§3), then `docker compose up -d --build`, seed, run the demo script end to end in two windows on Docker. Confirm the `web` image picked up the new files (`curl -s localhost:8080/ | grep -c 'data-tab="home"'` should be 1).
+1. Docker stack is up and seeded (§3). Run the demo script end to end (§9) once more before the pitch; `docker compose down && docker compose up -d --build` + seed for a clean start on the day.
 2. **Rehearse the pitch** from `pitch/deck.html` with the demo script (§9). Time it: 5–7 min talk + demo, keep the appendix for Q&A.
 3. **Push when approved**; coordinate with safio; then share `pitch/*.pdf`.
 4. Optional, if time: deterministic **Quick log** (free text → category/preset, on-device, no LLM) as the seam for edge AI; a **patterns card** ("refused lunch 3 of last 5 days", counts only); elder large-print today view; README screenshots.
