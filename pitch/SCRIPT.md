@@ -24,7 +24,7 @@
 (If time: Nurse Layla, blue, one login, two families.)
 
 **4:00 · Box 6 · After Sunday.** (slide 6)
-"Monday: five Montreal families for a month. We pull in a geriatric nurse to review every recommendation, one EÉSAD home-care agency for a worker-login pilot, masjid welfare committees as the family channel, and CLSC and Islamic Relief Canada's network once the pilot has numbers. It pays for itself without touching families: agencies at eight to fifteen dollars per elder a month; eighty-four elders cover the server. Care was already happening. Now it has a record. And only the family can read it. We ask for introductions, five families, and one agency."
+"Monday: five Montreal families for a month. We pull in a geriatric nurse to review every recommendation, one EÉSAD home-care agency for a worker-login pilot, masjid welfare committees as the family channel, and CLSC and Islamic Relief Canada's network once the pilot has numbers. It pays for itself without touching families: agencies at three hundred dollars per elder a year, one invoice; forty elders cover the server. Care was already happening. Now it has a record. And only the family can read it. We ask for introductions, five families, and one agency."
 
 Backup slides (press End): how it works (diagram), packages, her screen, the verse, judge Q&A, sources.
 
