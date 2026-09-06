@@ -545,6 +545,23 @@ function renderHome(){
         <div class="bs-actions"><button type="button" class="ghost" data-addcancel>Cancel</button><button type="submit">Add</button></div></form>` : ''}
     </section>`).join('');
   const dayLabel = boardDay===0 ? 'Today' : (boardDay===-1 ? 'Yesterday' : day.toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'}));
+  // What comes next, one line, always. The day flows: accept, do, hand off.
+  let flow = '';
+  if(!past){
+    const full = boardFor(planFor(), WEEK);
+    const nm = nowMin();
+    const toMe = open.find(h=>h.to_id===ME.member_id);
+    const late = full.filter(b=>b.state==='todo' && hm(b.card.time) < nm-60).sort((a,b)=>hm(a.card.time)-hm(b.card.time))[0];
+    const next = full.filter(b=>b.state==='todo' && hm(b.card.time) >= nm-60).sort((a,b)=>hm(a.card.time)-hm(b.card.time))[0];
+    const mineOpen = open.find(h=>h.from_id===ME.member_id);
+    const step = (cls, icon, title, sub, acts)=>`<div class="flow-strip ${cls}"><span class="f-ico">${icon}</span><div class="f-txt"><b>${title}</b><span>${sub}</span></div><div class="f-acts">${acts}</div></div>`;
+    if(toMe) flow = step('accept','📥', `${esc(nameOf(toMe.from_id))} handed ${esc(ELDER)} to you`, `Waiting ${Math.round((Date.now()-new Date(toMe.opened_at))/60000)} min. Read the card, then accept.`, `<button type="button" data-gotab="inbox">Open the handoff →</button>`);
+    else if(late) flow = step('late', iconFor(late.card), `${esc(late.card.label)} was due at ${esc(late.card.time)}`, `Still in To do. Done, or say why not.`, `<button type="button" data-move="done" data-card="${esc(late.card.id)}">Done</button><button type="button" class="ghost" data-move="blocked" data-card="${esc(late.card.id)}">Blocked</button>`);
+    else if(next) flow = step('next', iconFor(next.card), `Next: ${esc(next.card.label)} at ${esc(next.card.time)}`, `${next.card.who ? `${esc(nameOf(next.card.who))} has it` : 'Anyone can take it'}${full.filter(b=>b.state==='todo').length>1 ? ` · ${full.filter(b=>b.state==='todo').length-1} more after this` : ' · last one today'}.`, `<button type="button" data-move="done" data-card="${esc(next.card.id)}">Done</button><button type="button" class="ghost" data-move="blocked" data-card="${esc(next.card.id)}">Blocked</button>`);
+    else if(mineOpen) flow = step('wait','⏳', `Handed off to ${esc(nameOf(mineOpen.to_id))}`, `Sent ${fmtWhen(mineOpen.opened_at)}. You are done once they accept.`, `<button type="button" class="ghost" data-gotab="handoff">See it →</button>`);
+    else if(full.length) flow = step('done','✅', `All ${full.length} cards decided. Alhamdulillah.`, `${c.done} done${c.blocked?`, ${c.blocked} blocked`:''}. Hand ${esc(ELDER)} to the next person; the card writes itself.`, `<button type="button" data-gotab="handoff">Hand off →</button>`);
+    else flow = step('start','🗂️', `Start ${esc(ELDER)}'s board`, `Add the first card below, then say who does what in Family.`, `<button type="button" class="ghost" data-gotab="family">Family →</button>`);
+  }
 
   const hr = new Date().getHours(); const greet = hr<12 ? 'Good morning' : (hr<18 ? 'Good afternoon' : 'Good evening');
   $('#home').innerHTML = `
@@ -560,6 +577,7 @@ function renderHome(){
       <div class="progress"><div class="top"><span>${dayLabel}</span><b class="tnum">${c.done} of ${board.length} done${c.blocked?` · ${c.blocked} blocked`:''}</b></div>
         <div class="bar"><span style="width:${board.length?Math.round(c.done/board.length*100):0}%"></span></div></div>
     </div>
+    ${flow}
     <div class="board-bar">
       <div class="pager"><button type="button" class="ghost small" data-day="-1" ${boardDay<=-6?'disabled':''}>‹</button><b>${dayLabel}</b><button type="button" class="ghost small" data-day="1" ${boardDay>=0?'disabled':''}>›</button>${past?`<button type="button" class="ghost small" data-day="0">Back to today</button>`:''}</div>
       <div class="chips"><button type="button" class="chip ${boardFilter==='all'?'on':''}" data-filter="all">Everyone</button><button type="button" class="chip ${boardFilter==='mine'?'on':''}" data-filter="mine">Mine</button></div>
@@ -576,6 +594,7 @@ function renderHome(){
   wireBoard();
   wireEmergencyButtons();
   $('#home').querySelector('[data-gopatterns]').onclick = (e)=>{ e.preventDefault(); tab('patterns'); };
+  $$('#home [data-gotab]').forEach(b=>b.onclick=()=>tab(b.dataset.gotab));
   $$('#home [data-day]').forEach(b=>b.onclick=()=>{ const v=+b.dataset.day; boardDay = v===0 ? 0 : Math.max(-6, Math.min(0, boardDay+v)); renderHome(); });
   $$('#home [data-filter]').forEach(b=>b.onclick=()=>{ boardFilter=b.dataset.filter; renderHome(); });
   const addBtn=$('#home [data-addcard]'), addForm=$('#home [data-addform]');
@@ -1039,6 +1058,7 @@ async function openHandoff(){
   lastHandoffAt = now(); $('#ho-next').value=''; $('#ho-preview').classList.add('hide');
   toast('Handoff sent to ' + nameOf(to));
   await renderSent(true);            // land in the sender's record, highlighted
+  setTimeout(()=>tab('home'), 900);  // and flow back to the board, which now says "handed off
 }
 
 // live preview of what will be sent, so it is never a mystery
@@ -1186,7 +1206,8 @@ async function renderInbox(rows){
 async function ack(handoff_id){
   await postEvent({ family_id:ME.family_id, type:'HandoffAcknowledged',
     actor_id:ME.member_id, handoff_id, occurred_at:now(), id:uuid() });
-  toast('Accepted'); setTimeout(refreshInbox, 600);
+  toast(`Accepted. ${ELDER} is with you now.`); setTimeout(refreshInbox, 600);
+  setTimeout(()=>tab('home'), 1100);   // flow on: the board is yours now
 }
 async function renderWorkload(){
   const since = new Date(Date.now()-6*86400e3); since.setHours(0,0,0,0);
