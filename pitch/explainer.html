@@ -136,10 +136,10 @@ cd app && npm install && node dev/stack.mjs
 <b>Hardest part?</b><p>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from decryption on the phone.</p>
 <b>Completed versus prototyped?</b><p>See section 7.</p>
 <h3>Business and scalability</h3>
-<b>Business model?</b><p>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</p>
+<b>Business model?</b><p>Free for families, always, with no limit on elders or members. A voluntary support option, $3 to $5 a month, unlocks extras only. Agencies and care organisations pay $8 to $15 per elder a month for worker accounts, a handoff log at every visit and alerts to the coordinator. Community organisations sponsor the families they serve on a yearly package, about $600 for 50 families. Organisations that self-host the open-source containers buy support and updates. The server, about $1,000 a month, is covered by 84 elders on agency plans at $12. All estimates, to validate with five pilot families and two agencies. Full model in pitch/BUSINESS.md.</p>
 <b>How would it scale?</b><p>Per-family streams, push, scoped keys, password policy, offline. Ciphertext-only storage keeps compliance and hosting light.</p>
 <b>What would it take to make it a real product?</b><p>Password policy and key recovery, native apps, scoped support keys, push, offline, accessibility, Urdu and Arabic.</p>
-<b>Who would pay?</b><p>Agencies and community organisations. Families optionally for extras such as key escrow between two relatives.</p>
+<b>Who would pay?</b><p>Agencies and care organisations per elder, community organisations per year for the families they sponsor, and organisations that self-host, for support. Families never pay for the record itself; some choose to support it.</p>
 <h3>Team and process</h3>
 <b>How did you divide the work?</b><p>Abdul: architecture, event model, crypto, api and projector, dashboard, tests. safio: in-app invite flow, interface cleanup, and the flow view that traces a write hop by hop.</p>
 <b>What did you learn?</b><p>Cut scope early and say so. One workflow done well beats five half done. Privacy shapes every feature, including the ones you cannot build yet.</p>

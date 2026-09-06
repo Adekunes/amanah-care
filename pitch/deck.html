@@ -81,6 +81,13 @@
   .plan.hot .pwho,.plan.hot .pprice small,.plan.hot .feat,.plan.hot .pwhen{color:#c9e4dc}
   .plan.hot .pwhen{border-top-color:rgba(255,255,255,.2)}
   .plan .ribbon{position:absolute;top:-12px;left:16px;background:var(--gold);color:#3b2a08;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+  .pricing.five{grid-template-columns:repeat(5,1fr);gap:12px}
+  .pricing.five .plan{padding:14px 13px 12px}
+  .pricing.five .pname{font-size:15px}
+  .pricing.five .pwho{font-size:11.5px;min-height:32px}
+  .pricing.five .pprice{font-size:30px}
+  .pricing.five .pprice small{font-size:11px;line-height:1.3}
+  .pricing.five .feat{font-size:12.5px;gap:4px}
   .pricing-low{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:14px;margin-top:auto;align-items:stretch}
   .plan.mini{padding:12px 14px;gap:4px}
   .plan.mini .pprice{font-size:26px;margin:2px 0 2px}
@@ -266,47 +273,48 @@
 </section>
 
 <!-- 9 -->
-<section class="slide" style="gap:14px;padding:44px 64px 56px">
+<section class="slide" style="gap:12px;padding:40px 56px 54px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:20px">
-    <h1 style="font-size:40px">Packages.</h1>
-    <p style="font-size:17px;color:var(--ink2);max-width:640px;text-align:right">Families never pay for the record. Agencies and sponsors carry the cost, and get something real for it.</p>
+    <h1 style="font-size:38px">Free for families. Paid by those with a professional need.</h1>
   </div>
-  <div class="pricing">
+  <div class="pricing five">
     <div class="plan">
-      <div class="pname">Family</div><div class="pwho">Any family</div>
+      <div class="pname">Family</div><div class="pwho">Any family, any number of elders and members</div>
       <div class="pprice">$0<small>always</small></div>
-      <ul class="feat"><li>Plan, log, handoff</li><li>Alerts and live updates</li><li>The elder's own screen</li><li>Hospital sheet</li><li>Recommendations</li></ul>
-      <div class="pwhen">Available now</div>
+      <ul class="feat"><li>Plan, log, handoff</li><li>Alerts, live updates</li><li>The elder's own screen</li><li>Hospital sheet</li><li>Recommendations</li><li>Full export, any time</li></ul>
+      <div class="pwhen">Now</div>
     </div>
     <div class="plan">
-      <div class="pname">Family Plus</div><div class="pwho">Families who want more</div>
-      <div class="pprice">$4<small>per month</small></div>
-      <ul class="feat"><li>Everything in Family</li><li>Key recovery between two relatives</li><li>Printed monthly sheet</li><li>Full export</li><li>Priority help</li></ul>
+      <div class="pname">Family support</div><div class="pwho">Voluntary. Extras only, never the essentials</div>
+      <div class="pprice">$3 to $5<small>per month</small></div>
+      <ul class="feat"><li>Unlimited hospital-sheet PDF export</li><li>Key backup between two relatives</li><li>Large-format themes</li></ul>
       <div class="pwhen">Month 1</div>
     </div>
     <div class="plan hot">
-      <div class="ribbon">Most agencies start here</div>
-      <div class="pname">Agency Starter</div><div class="pwho">Home-care agencies, up to 25 elders</div>
-      <div class="pprice">$30<small>per elder, per month</small></div>
-      <ul class="feat"><li>Worker logins across all their families</li><li>Worker dashboard and visit log</li><li>Professional recommendations</li><li>Hospital sheet</li><li>Alerts to the coordinator</li></ul>
-      <div class="pwhen">Available now</div>
+      <div class="ribbon">Where the revenue is</div>
+      <div class="pname">Agencies and care organisations</div><div class="pwho">Home care, EÉSAD, cooperatives, CLSC</div>
+      <div class="pprice">$8 to $15<small>per elder, per month</small></div>
+      <ul class="feat"><li>Worker accounts across all their families</li><li>Handoff log at every visit</li><li>Alerts to the coordinator</li><li>Professional recommendations</li><li>Scoped worker key (month 3)</li></ul>
+      <div class="pwhen">Now</div>
     </div>
     <div class="plan">
-      <div class="pname">Agency Pro</div><div class="pwho">Agencies with 25 elders or more</div>
-      <div class="pprice">$22<small>per elder, per month</small></div>
-      <ul class="feat"><li>Everything in Starter</li><li>Scoped key per worker</li><li>Visit-proof export</li><li>Coordinator dashboard</li><li>French and English support</li></ul>
+      <div class="pname">Community organisations</div><div class="pwho">Masjids, community centres, cooperatives</div>
+      <div class="pprice">$600<small>a year for 50 sponsored families, about $1 per family a month</small></div>
+      <ul class="feat"><li>The Family plan for the families they serve</li><li>One invoice</li><li>Anonymous count of active families</li><li>No access to any data</li></ul>
+      <div class="pwhen">Now</div>
+    </div>
+    <div class="plan">
+      <div class="pname">Self-hosting</div><div class="pwho">Open source. Install the six containers yourself</div>
+      <div class="pprice">$150<small>a month per organisation for support and updates</small></div>
+      <ul class="feat"><li>One command to run</li><li>We sell support and updates, not access</li><li>The key stays with the family</li></ul>
       <div class="pwhen">Month 3</div>
     </div>
   </div>
-  <div class="pricing-low">
-    <div class="plan mini"><div class="pname">Community sponsor</div><div class="pprice">$3<small>per family, per month, packs of 50</small></div><p>Masjids and community organisations carry the Family plan for the families they already serve. One invoice.</p><div class="pwhen">Available now</div></div>
-    <div class="plan mini"><div class="pname">Public home care</div><div class="pprice" style="font-size:22px;padding-top:6px">Negotiated<small>per client</small></div><p>Agency Pro, plus Quebec data residency, audit export and service levels. CLSC and provincial programs.</p><div class="pwhen">Year 3</div></div>
-    <div class="numbers">
-      <p><b>Cost to run, year one:</b> about $27,300 a month. Two developers, a part-time nurse reviewing every recommendation, one support lead, servers for 5,000 families, counsel and insurance. The machine cost per family is cents.</p>
-      <p><b>Break-even:</b> about 1,000 elders on agency plans. Quebec's social-economy home-care network alone serves 110,000 clients. One in a hundred. <span class="mut">EÉSAD network, 2024. Prices and costs are our estimates.</span></p>
-    </div>
+  <div class="numbers" style="margin-top:auto;margin-bottom:22px;display:grid;grid-template-columns:1fr 1fr;gap:30px">
+    <p><b>Server:</b> about $1,000 a month all included, sized for 1 million CPU-hours a year, that is 114 cores busy around the clock. Enough for 19,000 to 150,000 active families by our estimate. Founder's estimate, to validate with two quotes and a load test.</p>
+    <p><b>Break-even, N = cost ÷ price per elder:</b> the server alone is covered by 84 elders on agency plans at $12. Fixed costs plus a first partial salary, $5,000 a month, by about 420 elders. Quebec's EÉSAD network serves about 110,000 clients. <span class="mut">EÉSAD network, 2024. Prices are a proposal, taxes extra, to validate with five pilot families and two agencies.</span></p>
   </div>
-  <div class="foot"><span>Amanah Care</span><span>9</span></div>
+  <div class="foot"><span>Amanah Care · full model in pitch/BUSINESS.md</span><span>9</span></div>
 </section>
 
 <!-- 10 -->
@@ -362,9 +370,9 @@
     <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Login is real, with a demo default password. Updates are live over server-sent events, with polling as the safety net. The consent filter is not built. Nothing on stage is faked.</span></div>
     <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Most important feature?</b><span>The record itself, private by construction. From it: the handoff that writes itself, and the hospital sheet the ER can read in a minute.</span></div>
     <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Hardest part?</b><span>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from client-side decryption.</span></div>
-    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Business model?</b><span>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</span></div>
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Business model?</b><span>Free for families, always, with a voluntary support option for extras only. Paid by agencies and care organisations at $8 to $15 per elder a month, by community organisations on a yearly package (about $600 for 50 sponsored families), and by support contracts for self-hosting. The server, about $1,000 a month, is covered by 84 elders on agency plans at $12; $5,000 a month by about 420. Estimates, to validate with five pilot families and two agencies. Full model in pitch/BUSINESS.md.</span></div>
     <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Scale beyond the prototype?</b><span>Per-family streams, push, scoped keys, password policy, offline. Ciphertext-only storage keeps compliance and hosting light.</span></div>
-    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Who pays?</b><span>Agencies and community organisations. Families optionally for extras like key escrow between two relatives.</span></div>
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">Who pays?</b><span>Agencies and care organisations per elder, community organisations per year for the families they sponsor, organisations that self-host for support. Families never pay for the record; some choose to support it.</span></div>
     <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:7px;font-size:15px;line-height:1.35"><b style="color:var(--green)">What would it take to make it a real product?</b><span>Password policy and key recovery, native apps, scoped support keys, push, offline, accessibility, Urdu and Arabic.</span></div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>A3</span></div>
