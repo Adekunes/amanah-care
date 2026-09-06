@@ -60,6 +60,8 @@
   .kv{display:grid;grid-template-columns:200px 1fr;gap:12px 22px;font-size:21px;line-height:1.4;max-width:980px}
   .kv b{color:var(--green)} .slide.dark .kv b{color:var(--mint)}
   .nav{position:fixed;right:18px;bottom:14px;color:#5f7d76;font-size:12px;z-index:9;font-family:ui-monospace,Menlo,monospace}
+  .slide.compact table td{padding:10px 8px;vertical-align:top;border-bottom:1px solid var(--line)}
+  .slide.compact table{border-collapse:collapse;width:100%}
   @media print{
     @page{size:1280px 720px;margin:0}
     html,body{background:#fff}
@@ -238,26 +240,31 @@
 </section>
 
 <!-- 9 -->
-<section class="slide" style="gap:22px">
-  <h1 style="font-size:52px">The service, and who pays for it.</h1>
-  <div class="cols" style="align-items:start;gap:40px">
-    <div class="lines" style="font-size:20px;gap:12px">
-      <b style="font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">What is delivered</b>
-      <span><b>To the family:</b> the plan, the log, the handoff that writes itself, the hospital sheet, recommendations. Private by construction.</span>
-      <span><b>To a home-care agency:</b> a handoff log for every visit, scoped access for its workers, families who stop calling to ask what happened.</span>
-      <span><b>To the elder:</b> her own screen, her wishes on every card, and the truth that nobody outside her family can read her record.</span>
+<section class="slide compact" style="gap:14px;padding-top:48px">
+  <h1 style="font-size:46px">What it costs, and who carries it.</h1>
+  <div class="cols" style="align-items:start;gap:40px;margin-top:6px">
+    <div>
+      <b style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Cost to run · year one · per month · our estimate</b>
+      <table style="font-size:18px;margin-top:10px">
+        <tr><td>Servers, stream and database, up to 5,000 families. Ciphertext only, tiny payloads.</td><td style="text-align:right;white-space:nowrap">$300</td></tr>
+        <tr><td>Two developers, a part-time nurse reviewing every recommendation, one support and community lead.</td><td style="text-align:right;white-space:nowrap">$25,000</td></tr>
+        <tr><td>Privacy counsel, insurance, accounting.</td><td style="text-align:right;white-space:nowrap">$2,000</td></tr>
+        <tr><td><b>Total</b></td><td style="text-align:right;white-space:nowrap"><b>$27,300</b></td></tr>
+      </table>
+      <p style="font-size:17px;margin-top:12px;color:var(--ink2);line-height:1.45">The machine cost per family is cents. The real cost is people. A family's free use is paid by the agency that serves it, or by a sponsor.</p>
     </div>
-    <div class="lines" style="font-size:20px;gap:12px">
-      <b style="font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Who pays, and why it holds</b>
-      <span><b>Families: free, always.</b> The record must never be a paywall between siblings.</span>
-      <span><b>Home-care agencies and support services:</b> per elder per month, for the handoff log, worker access and visit proof. Illustrative: $30.</span>
-      <span><b>Community organisations:</b> sponsor the families they already serve. A welfare committee carries fifty families for less than one event.</span>
-      <span><b>Public home care, later:</b> fewer coordination failures are worth paying for. A year-three conversation.</span>
+    <div>
+      <b style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Who pays what · per month</b>
+      <table style="font-size:18px;margin-top:10px">
+        <tr><td><b>Home-care agencies</b>, per elder: handoff log for every visit, scoped worker access, visit proof, families who stop calling.</td><td style="text-align:right;white-space:nowrap">$30</td></tr>
+        <tr><td><b>Community sponsors</b>, per family they already serve.</td><td style="text-align:right;white-space:nowrap">$3</td></tr>
+        <tr><td><b>Family Plus</b>, optional: key recovery between two relatives, printed monthly sheet, full export.</td><td style="text-align:right;white-space:nowrap">$4</td></tr>
+        <tr><td><b>Families</b>, the record itself. Never a paywall between siblings.</td><td style="text-align:right;white-space:nowrap">$0</td></tr>
+      </table>
     </div>
   </div>
-  <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end">
-    <p style="font-size:18px;line-height:1.45;color:var(--ink2)">Quebec alone: about <b>85</b> social-economy home-care enterprises, <b>110,000</b> clients, <b>8 million</b> hours a year, <b>10,000</b> workers. <span class="mut">Réseau de coopération des EÉSAD, 2024.</span> One client in a hundred on an agency plan pays for the team.</p>
-    <p style="font-size:18px;line-height:1.45;color:var(--ink2)">Sound because the payer's gain is operational and measurable, the family's privacy does not depend on the payer, and there is no readable data to sell. Running cost is cents per family; the real cost is people: support, and a nurse reviewing every recommendation.</p>
+  <div class="card" style="margin-top:auto;padding:18px 22px">
+    <p style="font-size:20px;line-height:1.4"><b style="color:var(--green)">Break-even: about 900 elders on agency plans.</b> Quebec's social-economy home-care network alone serves about 110,000 clients with 10,000 workers across 85 enterprises. Nine hundred is under one in a hundred. At 10,000 elders the same team runs at a 90% margin, and public home care becomes a conversation, not a hope. <span class="mut">Réseau de coopération des EÉSAD, 2024. Prices and costs are our estimates.</span></p>
   </div>
   <div class="foot"><span>Amanah Care</span><span>9</span></div>
 </section>
