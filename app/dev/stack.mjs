@@ -27,7 +27,7 @@ let n = 0;
 const redis = { async xAdd(_stream, _id, fields) { const id = `${Date.now()}-${n++}`; await applyEvent(db, id, fields); await notify(db, id, fields); await bus.publish(fields.family_id, announcement(fields)); return id; } };
 createApp({ db, redis, bus }).listen(API_PORT, () => console.log(`[stack] api http://localhost:${API_PORT} (in-memory postgres, inline projector)`));
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
 http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p === '/') p = '/index.html';
