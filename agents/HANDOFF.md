@@ -1,4 +1,4 @@
-# Amanah Care — full handoff for the next AI agent
+# Walidayn — full handoff for the next AI agent
 
 Read this top to bottom before touching anything. Current as of **2026-09-05, 19:20 EDT** (hackathon day 1 evening). It supersedes `agents/README.md` where they disagree. `agents/OWNER-NOTES.md` holds the owner's verbatim directives; read it too.
 
@@ -6,7 +6,7 @@ Read this top to bottom before touching anything. Current as of **2026-09-05, 19
 
 ## 0. Take over in 60 seconds
 
-- Project: **Amanah Care**, a private care record for families caring for an elderly Muslim parent. **MuslimHacks 2026, Elderly Care track**, Concordia University, Montreal, 5–6 Sep 2026. Demo/judging is day 2 (Sun 6 Sep).
+- Project: **Walidayn**, a private care record for families caring for an elderly Muslim parent. **MuslimHacks 2026, Elderly Care track**, Concordia University, Montreal, 5–6 Sep 2026. Demo/judging is day 2 (Sun 6 Sep).
 - Owner: **Abdul Quayum Adekunle** (GitHub `Adekunes`). Partner: **safio** (GitHub), write access on the repo.
 - GitHub: `git@github.com:Adekunes/amanah-care.git` (private). GitHub `main` is at `48f7ee0`. **Four local commits since are NOT pushed** (see §6). Do not push without the owner saying so.
 - Two machines:
@@ -76,8 +76,8 @@ Added this session:
 - **Seed** (`app/seed/seed.js`): Ammi's 15-item routine, six days of history with rotating caregivers, four accepted past handoffs, today's items before now−90 min already logged by Sister A, mood at 10:00. Prints `SISTER_A_CODE`, `ABDULLAH_CODE`, `FATIMA_CODE`, `AMMI_CODE`. Each run makes a NEW family; old codes die with the old family (and the in-memory stack forgets everything on restart).
 - **Dev stack** (`app/dev/stack.mjs`), **`app/package.json`** with `test` and `coverage` scripts, devDependency `pg-mem`.
 - **Login + elder view + per-tab sessions** (commit after `d8e7ac4`): `logins` table; `POST /auth/register` (needs family `key_check` + existing member; stores scrypt hash + PBKDF2/AES-GCM-wrapped H made on the phone) and `POST /auth/login` (returns wrapped material; browser unwraps with the password). `web/crypto.js` `wrapKey`/`unwrapKey`. Landing has a Log in card; create/join end on a "Set your login" screen (skippable). Seed registers `sistera`, `abdullah`, `fatima`, `ammi`, password `333`. Sessions are in `sessionStorage` (one tab = one phone; three tabs on one origin = three members). `role === 'elder'` switches to the elder view (`renderElderHome()`, tabs Today / My week / My preferences / Invite, `body.elder` styles). 46 tests.
-- **Pitch** (`6034913`, `pitch/`): `deck.html` (21 slides, arrow keys, click, `#n`), `Amanah-Care-pitch-deck.pdf`, `explainer.html` + `Amanah-Care-explained.pdf` (simple English, demo commands, all judge Q&A, sources). Regenerate PDFs with headless Chrome:
-  `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/Amanah-Care-pitch-deck.pdf" "file://$PWD/deck.html"` (the CVDisplayLink errors it prints are harmless).
+- **Pitch** (`6034913`, `pitch/`): `deck.html` (21 slides, arrow keys, click, `#n`), `Walidayn-pitch-deck.pdf`, `explainer.html` + `Walidayn-explained.pdf` (simple English, demo commands, all judge Q&A, sources). Regenerate PDFs with headless Chrome:
+  `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/Walidayn-pitch-deck.pdf" "file://$PWD/deck.html"` (the CVDisplayLink errors it prints are harmless).
 - **Alerts + logout** (session 3, ten agents in parallel, contract in `spec/NOTIFY-SPEC.md`): a new `notifier` service (`app/notifier/index.js`, `apply.js`, `match.js`) reads the same `events` stream in its own consumer group (`notifier`) and, per event, matches it against per-member `subscriptions` and inserts rows into `notifications` (both new tables in `db/init.sql`). Routes: `app/api/routes/subscriptions.js` (GET/PUT a member's kinds) and `app/api/routes/notifications.js` (GET the list, POST to mark read). `app/web/alerts.js` renders the Alerts tab (subscriptions editor, alert list, unread badge) through the `onEnter`/`onPoll`/`onTab` hooks `app.js` exposes. Seed gives Sister A, Fatima and Abdullah a few default kinds each and Ammi none; elder members get no default subscriptions and no Alerts tab in v1. Logout (`app.js` `logout()`, wired to `#btn-logout`) stops the poll timer, clears the session, and returns to the landing view.
 
 Added tonight (multi-family login, roles, desktop layout, log categories, undo):
@@ -218,8 +218,8 @@ app/
   test/multifamily.test.js   one login across several families: same-password rule, family ordering, single-family list
 pitch/
   deck.html (10 slides, purpose-first; backup Q&A slides after slide 10, End key, not printed)
-  Amanah-Care-pitch-deck.pdf (10 pages) · qa.html + Amanah-Care-judge-QA.pdf (6 pages, every rubric question + sources)
-  explainer.html, Amanah-Care-explained.pdf (simple English, long form)
+  Walidayn-pitch-deck.pdf (10 pages) · qa.html + Walidayn-judge-QA.pdf (6 pages, every rubric question + sources)
+  explainer.html, Walidayn-explained.pdf (simple English, long form)
 spec/                       SPEC, REQUIREMENTS (46 IDs), TASKS, AUDIT, diagrams, NOTIFY-SPEC
 agents/                     HANDOFF.md (this), README.md (older), OWNER-NOTES.md
 ```

@@ -1,4 +1,4 @@
-# Amanah Care · five-minute pitch script (six boxes)
+# Walidayn · five-minute pitch script (six boxes)
 
 **0:00 · Box 1 · The line.** (slide 1)
 "We help a daughter sharing her mother's care with her brother and sister, who never knows what was given this morning, who has Ammi this afternoon, or what the doctor said on Wednesday, by giving the three of them one private record that writes the handoff for them."
@@ -66,7 +66,7 @@ One person drives the laptop for the whole demo. The other narrates. Do not swap
 1. Clean reset and reseed so today's plan is full: `docker compose down && docker compose up -d --build`, then `cd seed && API=http://localhost:4000 node seed.js`.
 2. Log in the tabs in advance: sistera, fatima, ammi, and layla for the second family. Password 333.
 3. Open `pitch/deck.html` full screen in its own window. Backups are after slide 6, End key.
-4. Have `pitch/Amanah-Care-pitch-deck.pdf` and `pitch/Amanah-Care-judge-QA.pdf` open as the fallback if the browser dies.
+4. Have `pitch/Walidayn-pitch-deck.pdf` and `pitch/Walidayn-judge-QA.pdf` open as the fallback if the browser dies.
 5. Record a screen capture of the full demo beforehand and keep it on the desktop. The workshop
    said this explicitly: present live, but have the recording ready if the network or the machine
    fails. A live demo scores higher, a dead demo scores nothing.
@@ -77,7 +77,7 @@ One person drives the laptop for the whole demo. The other narrates. Do not swap
 
 These are the ones that can actually hurt, drawn from what caregivers say about products like
 ours (`pitch/RESEARCH-REDDIT.md`). Full answers are on the Objections slide of
-`pitch/Amanah-Care-judge-QA.pdf`, page 6.
+`pitch/Walidayn-judge-QA.pdf`, page 6.
 
 1. Why is an app the answer at all, when the real problem is a sibling who will not help?
 2. Does this turn into one sibling surveilling another?

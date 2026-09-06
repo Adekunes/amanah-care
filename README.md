@@ -1,4 +1,4 @@
-# Amanah Care
+# Walidayn
 
 A private care-handoff log for families caring for an elderly parent. Built for MuslimHacks 2026 (Elderly Care track). Every action is an event. Every payload is encrypted with a key only the family holds, so the server, and whoever runs it, sees ciphertext only.
 
@@ -58,7 +58,7 @@ The suite loads the real `db/init.sql` into an in-memory Postgres, runs the real
 
 ## Pitch
 
-`pitch/deck.html` (arrow keys), `pitch/Amanah-Care-pitch-deck.pdf`, and `pitch/Amanah-Care-explained.pdf` (the whole project in simple English, with the judge Q&A).
+`pitch/deck.html` (arrow keys), `pitch/Walidayn-pitch-deck.pdf`, and `pitch/Walidayn-explained.pdf` (the whole project in simple English, with the judge Q&A).
 
 ## Privacy model in one paragraph
 

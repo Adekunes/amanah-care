@@ -1,6 +1,6 @@
-// Amanah Care: Alerts tab. Subscriptions editor + notification feed, wired
-// only through window.amanah — no imports from app.js (SR spec §5).
-const A = window.amanah;
+// Walidayn: Alerts tab. Subscriptions editor + notification feed, wired
+// only through window.walidayn — no imports from app.js (SR spec §5).
+const A = window.walidayn;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 

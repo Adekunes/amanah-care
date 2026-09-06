@@ -1,9 +1,9 @@
 // Recommendations for today. Sibling module: talks to app.js only through
-// window.amanah, like alerts.js. Rules over the decrypted record, on this
+// window.walidayn, like alerts.js. Rules over the decrypted record, on this
 // phone; the server never learns which pattern fired. Never a diagnosis.
 import { detect, parseTable } from './patterns.js';
 
-const A = window.amanah;
+const A = window.walidayn;
 const $ = (s) => document.querySelector(s);
 const TIER = { URGENT_CONTACT: ['contact', 'Contact'], ATTENTION: ['attention', 'Attention'], NOTICE: ['notice', 'Notice'] };
 let TABLE = null, busy = false;

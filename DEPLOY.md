@@ -1,4 +1,4 @@
-# Deploying Amanah Care
+# Deploying Walidayn
 
 ## Live now (demo day, 2026-09-06)
 

@@ -1,4 +1,4 @@
-# Agent handoff: Amanah Care
+# Agent handoff: Walidayn
 
 Read this first if you are a fresh session or a different account picking up this repo. It carries the full story: what the project is, every decision, every change to the plan, what is built, what is verified, what is left, and the gotchas that will bite you. Written 2026-09-05.
 

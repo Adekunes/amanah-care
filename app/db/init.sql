@@ -1,4 +1,4 @@
--- Amanah Care schema. 4 tables + 1 view. Server holds ciphertext only.
+-- Walidayn schema. 4 tables + 1 view. Server holds ciphertext only.
 -- Deviation note: MVP uses a single Redis stream `events` with family_id as a
 -- field, not one stream per family (AR-02). One consumer group. Post-hackathon
 -- change. Everything else matches REQUIREMENTS.md.

@@ -1,4 +1,4 @@
-// Amanah Care client crypto. All plaintext lives and dies in the browser.
+// Walidayn client crypto. All plaintext lives and dies in the browser.
 // H is a 256-bit AES-GCM key made with WebCrypto. Never sent to the server.
 // Every ciphertext carries a fresh random 96-bit IV (SR-10). key_check is the
 // SHA-256 of the raw key bytes, hex (SR-02): proves possession, reveals nothing.

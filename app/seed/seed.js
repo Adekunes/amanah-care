@@ -1,4 +1,4 @@
-// Amanah Care seed (T7.1). Populates a family so the demo is not empty (NR-03).
+// Walidayn seed (T7.1). Populates a family so the demo is not empty (NR-03).
 // Members: Ammi (elder), Sister A, Abdullah, Fatima. Preferences, Ammi's
 // routine, six days of history with rotating caregivers and four past handoffs,
 // and today's morning already logged so the plan shows progress. Everything
@@ -161,7 +161,7 @@ await post('/auth/register',{ family_id:FAM2, member_id:yusuf, key_check:keyChec
 await post('/auth/register',{ family_id:FAM2, member_id:layla2, key_check:keyCheck2, login:'layla', password:'333', ...(await wrapH2('333')) });
 
 function code(m,r,n){ return Buffer.from(JSON.stringify({f:FAM,h:rawH,m,r,n})).toString('base64').replace(/\+/g,'-').replace(/\//g,'_'); }
-console.log('\n=== Amanah Care seeded ===');
+console.log('\n=== Walidayn seeded ===');
 console.log('family_id:', FAM, '| events:', count, '| today already done:', todayDone);
 console.log('\nSISTER_A_CODE='+code(sisA,'family','Sister A'));
 console.log('ABDULLAH_CODE='+code(abd,'family','Abdullah'));

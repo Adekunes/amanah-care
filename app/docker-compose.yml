@@ -1,4 +1,4 @@
-# Amanah Care. One command brings up the whole stack: docker compose up.
+# Walidayn. One command brings up the whole stack: docker compose up.
 # Six services: web, api, projector, notifier, redis, postgres. The notifier
 # consumes the events stream and writes per-member notification rows
 # (see REQUIREMENTS FR-05, KL-03).

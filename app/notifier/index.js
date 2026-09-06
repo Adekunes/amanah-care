@@ -1,4 +1,4 @@
-// Amanah Care notifier. One consumer group on the events stream.
+// Walidayn notifier. One consumer group on the events stream.
 // Reads entries, hands each to notify() (see apply.js), acks on success.
 import { createClient } from 'redis';
 import pg from 'pg';

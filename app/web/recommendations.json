@@ -1,4 +1,4 @@
-/* Amanah Care recommendation table. Rules over the family's own record, run on the phone.
+/* Walidayn recommendation table. Rules over the family's own record, run on the phone.
    Schema per row: pattern_id, pattern_label{fr,en,ar}, signal_source[], detection_rule, confidence_caveats,
    tier (NOTICE|ATTENTION|URGENT_CONTACT: contact urgency, never medical urgency), recommendation_family{fr,en},
    recommendation_pro{fr,en}, cultural_adaptation, escalation_path, suppression_rule, provenance.

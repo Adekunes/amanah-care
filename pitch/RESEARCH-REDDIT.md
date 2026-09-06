@@ -1,4 +1,4 @@
-# Reddit research note: what caregivers say, and what Amanah Care answers
+# Reddit research note: what caregivers say, and what Walidayn answers
 
 Sweep date: 6 September 2026, 11:20 to 11:50 EDT. Companion to `pitch/RESEARCH-FORUMS.md`
 (35 verified pages on AgingCare, AlzConnected, the Alzheimer's Society forum and Mumsnet).
@@ -97,7 +97,7 @@ The workaround the community trusts most is physical proof, not software: bliste
 sorters, because an empty slot or an opened packet is evidence that the dose was served. One
 commenter on the first thread above says the opened packet is what makes it work.
 
-**What Amanah Care answers.** Today's plan with a tap to mark done, one `CareLogged` event per
+**What Walidayn answers.** Today's plan with a tap to mark done, one `CareLogged` event per
 item, the log carrying who did it and when, live on every phone in the family within seconds, and
 `CareRetracted` to undo a mistaken entry without deleting the history. This is the software
 equivalent of the empty blister slot, shared across three phones instead of sitting on one
@@ -132,7 +132,7 @@ Strength: 4 threads.
   on the same page? Apps, calendars, group chats... anything?", 20 Nov 2025, 2 comments,
   https://www.reddit.com/r/AgingParents/comments/1p236ph/for_anyone_caring_for_aging_parents_has_anything/)
 
-**What Amanah Care answers.** The reframe on slide 3, stated by caregivers themselves: a chat is
+**What Walidayn answers.** The reframe on slide 3, stated by caregivers themselves: a chat is
 a conversation, care needs a record. Home shows the state of today rather than the last hundred
 messages. The handoff is a card with what happened and what is next already written, not a
 paragraph somebody has to compose at 9pm. Note the warning in the last thread: people do not want
@@ -175,7 +175,7 @@ Strength: 5 threads.
   (r/eldercare, "Staying organized.....", 16 Aug 2026, 9 comments,
   https://www.reddit.com/r/eldercare/comments/1vq6yza/staying_organized/)
 
-**What Amanah Care answers.** The hospital sheet: 14 days of the record on one printable page,
+**What Walidayn answers.** The hospital sheet: 14 days of the record on one printable page,
 one tap, plus the preference strip so a stand-in knows how care is given, not only what. This is
 the binder these caregivers build by hand at midnight, kept up to date by the logging they were
 already doing.
@@ -245,7 +245,7 @@ Strength: 3 threads.
 - In the group chat thread above, the one substantive reply recommends WhatsApp partly because it
   is secure, and puts documents and the health history in a separate encrypted product.
 
-**What Amanah Care answers.** The key is made on the phone and never sent. The server holds
+**What Walidayn answers.** The key is made on the phone and never sent. The server holds
 ciphertext and routing metadata. Server view on stage shows exactly this. The r/Hijabis thread is
 the clearest evidence that in this specific community, distrust of health apps is already
 mainstream, and that a privacy claim has to be demonstrable rather than promised.

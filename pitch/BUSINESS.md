@@ -1,4 +1,4 @@
-# Amanah Care : modèle d'affaires et tarification
+# Walidayn : modèle d'affaires et tarification
 
 Version 2026-09-06 (jour du pitch). Proposition à valider avec cinq familles pilotes et deux agences. Tous les prix sont en dollars canadiens, taxes en sus. Chaque chiffre sans source est marqué « estimation » avec l'hypothèse qui le produit. Aucune citation inventée.
 

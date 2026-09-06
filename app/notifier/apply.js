@@ -1,4 +1,4 @@
-// Amanah Care notifier, the pure part. notify() reads one stream entry's
+// Walidayn notifier, the pure part. notify() reads one stream entry's
 // fields, works out who is subscribed to it (match.js), and writes one
 // notification row per recipient (idempotent upsert by event id + member
 // id, same shape as the projector's upsert by event id). It never

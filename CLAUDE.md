@@ -1,4 +1,4 @@
-# Amanah Care — coding rules for AI agents (anti-slop)
+# Walidayn — coding rules for AI agents (anti-slop)
 
 This file loads automatically when you work in this repo. Follow it exactly. Read `agents/HANDOFF.md` before touching code.
 

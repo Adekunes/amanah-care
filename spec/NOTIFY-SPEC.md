@@ -49,9 +49,9 @@ Mounted by `app/api/app.js` (already wired): `mountSubscriptions(app, ctx)` and 
 
 ## 5. Web (`app/web/`)
 
-`app.js` exposes (already wired) `window.amanah = { get me(), get key(), api, decryptJSON, nameOf, toast, esc, fmtWhen, isElder, tab, onEnter(fn), onPoll(fn), onTab(name, fn) }`. `onEnter` runs once after the app is entered (after names/members are loaded). `onPoll` runs every poll cycle (4 s). `onTab('alerts', fn)` runs when the Alerts tab is opened. `api(path, opts)` returns parsed JSON and throws on non-2xx. `decryptJSON(key, iv, cipher)` → object or null.
+`app.js` exposes (already wired) `window.walidayn = { get me(), get key(), api, decryptJSON, nameOf, toast, esc, fmtWhen, isElder, tab, onEnter(fn), onPoll(fn), onTab(name, fn) }`. `onEnter` runs once after the app is entered (after names/members are loaded). `onPoll` runs every poll cycle (4 s). `onTab('alerts', fn)` runs when the Alerts tab is opened. `api(path, opts)` returns parsed JSON and throws on non-2xx. `decryptJSON(key, iv, cipher)` → object or null.
 
-`alerts.js` (loaded after app.js by `index.html`, already wired) implements the Alerts tab using only `window.amanah`:
+`alerts.js` (loaded after app.js by `index.html`, already wired) implements the Alerts tab using only `window.walidayn`:
 - Subscriptions editor: one checkbox per kind in `#alerts-subs` with human labels ("Handoffs to me", "My handoff accepted", "Meds logged", …, "Any care logged", "Preferences changed", "Routine changed", "Someone joined"), loaded from GET, saved by `#btn-subs-save` via PUT, toast on save.
 - Alert list in `#alerts-list`: newest first; each row shows who (`nameOf(from_id)`), what (decrypted `text`/`summary` from the event payload when present, else a label from type/category), when (`fmtWhen`), unread rows highlighted; `#btn-alerts-read` marks all read.
 - Badge `#alerts-badge` on the tab button = unread count, updated on every poll; hidden when 0.

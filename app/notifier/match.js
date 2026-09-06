@@ -1,4 +1,4 @@
-// Amanah Care notifier, matching logic. Pure functions, no db and no
+// Walidayn notifier, matching logic. Pure functions, no db and no
 // decryption here — apply.js does the I/O. Kept in sync by hand with
 // app/api/routes/subscriptions.js (no cross-imports between services,
 // per spec/NOTIFY-SPEC.md §1).

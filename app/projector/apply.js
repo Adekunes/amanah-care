@@ -1,4 +1,4 @@
-// Amanah Care projector, the pure part. applyEvent() copies one stream entry
+// Walidayn projector, the pure part. applyEvent() copies one stream entry
 // into Postgres (idempotent upsert by event id) and keeps the handoffs read
 // model current. It never decrypts anything. index.js owns the consume loop.
 export async function applyEvent(db, streamId, f, bus = null) {

@@ -1,4 +1,4 @@
-# Amanah Care — full working codebase (the real thing, use THIS)
+# Walidayn — full working codebase (the real thing, use THIS)
 
 This is the actual, working code. It is **vanilla JS, no build step, no React, no framework.** Do NOT rewrite it in React. Do NOT add a bundler. Edit these files in place. Run with `docker compose up --build` from `app/`.
 
@@ -7,7 +7,7 @@ Order: docker-compose, db schema, api, projector, web (index.html, styles.css, c
 ## app/docker-compose.yml
 
 ```yaml
-# Amanah Care. One command brings up the whole stack: docker compose up.
+# Walidayn. One command brings up the whole stack: docker compose up.
 # Cut-core scope: web, api, projector, redis, postgres. Notifications by polling,
 # so no separate notifier/SSE container (see REQUIREMENTS FR-05, KL-03).
 services:
@@ -62,7 +62,7 @@ services:
 ## app/db/init.sql
 
 ```sql
--- Amanah Care schema. 4 tables + 1 view. Server holds ciphertext only.
+-- Walidayn schema. 4 tables + 1 view. Server holds ciphertext only.
 -- Deviation note: MVP uses a single Redis stream `events` with family_id as a
 -- field, not one stream per family (AR-02). One consumer group. Post-hackathon
 -- change. Everything else matches REQUIREMENTS.md.
@@ -146,7 +146,7 @@ GROUP BY family_id, actor_id, date_trunc('day', occurred_at)::date;
 ## app/api/server.js
 
 ```javascript
-// Amanah Care API. Command handler + read-model reads.
+// Walidayn API. Command handler + read-model reads.
 // Write path: validate member -> XADD to the events stream -> 202.
 // Read path: read Postgres projections. Server never sees plaintext.
 import express from 'express';
@@ -327,7 +327,7 @@ CMD ["node","server.js"]
 ## app/projector/index.js
 
 ```javascript
-// Amanah Care projector. One consumer group on the events stream.
+// Walidayn projector. One consumer group on the events stream.
 // Copies each event into Postgres (idempotent upsert by event id) and keeps
 // the handoffs read model current. Never decrypts anything.
 import { createClient } from 'redis';
@@ -421,7 +421,7 @@ CMD ["node","index.js"]
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#0b7a6b">
-<title>Amanah Care</title>
+<title>Walidayn</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -430,7 +430,7 @@ CMD ["node","index.js"]
   <!-- LANDING -->
   <section id="view-landing">
     <div class="group">
-      <h1>Amanah Care</h1>
+      <h1>Walidayn</h1>
       <p class="muted">A private handoff log for families caring for an elder. Only your family holds the key. The server sees scrambled text.</p>
     </div>
 
@@ -662,7 +662,7 @@ CMD ["node","index.js"]
 ## app/web/styles.css
 
 ```css
-/* Amanah Care. Phone-first, one column, 44px targets (PR-02).
+/* Walidayn. Phone-first, one column, 44px targets (PR-02).
    System font stack on purpose: the demo must render with no network. */
 :root{
   --bg:#f2f5f4; --card:#ffffff;
@@ -871,7 +871,7 @@ label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
 ## app/web/crypto.js
 
 ```javascript
-// Amanah Care client crypto. All plaintext lives and dies in the browser.
+// Walidayn client crypto. All plaintext lives and dies in the browser.
 // H is a 256-bit AES-GCM key made with WebCrypto. Never sent to the server.
 // Every ciphertext carries a fresh random 96-bit IV (SR-10). key_check is the
 // SHA-256 of the raw key bytes, hex (SR-02): proves possession, reveals nothing.
@@ -924,7 +924,7 @@ export async function decryptJSON(key, ivB64, cipherB64) {
 ## app/web/app.js
 
 ```javascript
-// Amanah Care web app. Vanilla ES module. All plaintext stays in this browser.
+// Walidayn web app. Vanilla ES module. All plaintext stays in this browser.
 import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON, b64 }
   from './crypto.js';
 
@@ -1093,7 +1093,7 @@ function renderWhoAmI(){
   const dot = document.getElementById('who-dot');
   let hsh=0; for(const c of name) hsh=(hsh*31 + c.charCodeAt(0))>>>0;
   if(dot) dot.style.background = `hsl(${hsh % 360} 60% 45%)`;
-  document.title = `${name} \u00b7 Amanah Care`;
+  document.title = `${name} \u00b7 Walidayn`;
 }
 async function enterApp(){
   show('app'); renderWhoAmI(); tab('log');
@@ -1454,7 +1454,7 @@ EXPOSE 8080
 ## app/seed/seed.js
 
 ```javascript
-// Amanah Care seed (T7.1). Populates a family so the demo is not empty (NR-03).
+// Walidayn seed (T7.1). Populates a family so the demo is not empty (NR-03).
 // Members: Ammi (elder), Sister A (sender), Abdullah, Fatima. Preferences + a few
 // care items. No handoff is pre-seeded; Sister A creates those live so the sender
 // record fills on screen. All payloads are AES-GCM encrypted here, like the browser.
@@ -1499,7 +1499,7 @@ await ev('FamilyCreated',{elder_name:'Ammi'},{actor_id:elder});
 await ev('PreferenceSet',{lang:'Urdu',diet:'halal, no gelatin',prayer:'prayer times matter',modesty:'female caregiver for personal care'},{actor_id:elder});
 
 function code(m,r,n){ return Buffer.from(JSON.stringify({f:FAM,h:rawH,m,r,n})).toString('base64').replace(/\+/g,'-').replace(/\//g,'_'); }
-console.log('\n=== Amanah Care seeded ===');
+console.log('\n=== Walidayn seeded ===');
 console.log('family_id:', FAM);
 console.log('\nSISTER_A_CODE='+code(sisA,'family','Sister A'));
 console.log('ABDULLAH_CODE='+code(abd,'family','Abdullah'));
@@ -1509,7 +1509,7 @@ console.log('FATIMA_CODE='+code(fat,'family','Fatima'));
 ## CLAUDE.md
 
 ```markdown
-# Amanah Care — coding rules for AI agents (anti-slop)
+# Walidayn — coding rules for AI agents (anti-slop)
 
 This file loads automatically when you work in this repo. Follow it exactly. Read `agents/HANDOFF.md` before touching code.
 

@@ -1,4 +1,4 @@
-// Amanah Care web app. Vanilla ES module. All plaintext stays in this browser.
+// Walidayn web app. Vanilla ES module. All plaintext stays in this browser.
 // The Home dashboard, the routine and the record are all computed here, on the
 // phone, from decrypted events. The server only ever sorts ciphertext.
 import { makeKey, exportKeyRaw, importKeyRaw, keyCheck, encryptJSON, decryptJSON as decryptReal, b64, wrapKey, unwrapKey }
@@ -12,7 +12,7 @@ const decryptJSON = (k, iv, c) => SERVER_VIEW ? Promise.resolve(null) : decryptR
 const sealed = (cipher) => cipher ? `🔒 ${String(cipher).slice(0, 22)}…` : '🔒 (no payload)';
 
 // Same origin in production (/api behind nginx or the one-process stack); port 4000 on a dev box.
-const API = (window.AMANAH_API || (['localhost','127.0.0.1'].includes(location.hostname) && location.port!=='' ? `http://${location.hostname}:4000` : `${location.origin}/api`));
+const API = (window.WALIDAYN_API || (['localhost','127.0.0.1'].includes(location.hostname) && location.port!=='' ? `http://${location.hostname}:4000` : `${location.origin}/api`));
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const uuid = () => crypto.randomUUID();
@@ -84,10 +84,10 @@ function toastAction(msg, label, fn, ms=8000){
 
 // One browser tab is one phone: the session lives in sessionStorage, so three
 // tabs on the same origin can be three family members. Survives reload, not close.
-function save(){ sessionStorage.setItem('amanah', JSON.stringify(ME)); }
+function save(){ sessionStorage.setItem('walidayn', JSON.stringify(ME)); }
 async function loadSession(){
-  localStorage.removeItem('amanah');  // older builds kept it here; never share it across tabs
-  const raw = sessionStorage.getItem('amanah'); if(!raw) return false;
+  localStorage.removeItem('amanah'); sessionStorage.removeItem('amanah');  // pre-rename builds; never share a session across tabs
+  const raw = sessionStorage.getItem('walidayn'); if(!raw) return false;
   ME = JSON.parse(raw); KEY = await importKeyRaw(ME.h); return true;
 }
 const isElder = ()=> ME?.role === 'elder';
@@ -99,7 +99,7 @@ function logout(){
   if(SERVER_VIEW){ SERVER_VIEW=false; document.body.classList.remove('serverview'); $('#sv-banner').classList.add('hide'); $('#btn-serverview').textContent='Server view'; }
   stopLive();
   clearInterval(pollTimer); pollTimer = null;
-  sessionStorage.removeItem('amanah');
+  sessionStorage.removeItem('walidayn');
   KEY = null; ME = null;
   for(const k of Object.keys(nameCache)) delete nameCache[k];
   ELDER = 'Elder'; FAMILY=''; { const fn=$('#fam-name'); if(fn) fn.textContent='—'; }
@@ -113,7 +113,7 @@ function logout(){
     if(ORIG_TABS[b.dataset.tab]) b.firstChild.nodeValue = ORIG_TABS[b.dataset.tab];
   });
   $('#l-login').value = ''; $('#l-pass').value = '333';
-  document.title = 'Amanah Care';
+  document.title = 'Walidayn';
   show('landing');
   toast('Logged out');
 }
@@ -322,7 +322,7 @@ function renderWhoAmI(){
   const dot = document.getElementById('who-dot');
   let hsh=0; for(const c of name) hsh=(hsh*31 + c.charCodeAt(0))>>>0;
   if(dot) dot.style.background = `hsl(${hsh % 360} 60% 45%)`;
-  document.title = `${name} · Amanah Care`;
+  document.title = `${name} · Walidayn`;
   const sw = $('#btn-switch'); if(sw) sw.classList.toggle('hide', !(ME.families && ME.families.length > 1));
 }
 // The elder gets a different app: Today, My week, My preferences, Invite. Big type, read-only.
@@ -846,7 +846,7 @@ async function openSheet(){
   const meds = ROUTINE.filter(i => i.category === 'meds').sort((a, b) => hm(a.time) - hm(b.time)).map(i => `${i.time} ${esc(i.label)}`);
   $('#sheet').innerHTML = `
     <header><h1>Hospital sheet · ${esc(ELDER)}</h1>
-      <div class="meta">Generated ${new Date().toLocaleString([], { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} by ${esc(ME.my_name)} · ${esc(FAMILY)} · Amanah Care</div></header>
+      <div class="meta">Generated ${new Date().toLocaleString([], { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} by ${esc(ME.my_name)} · ${esc(FAMILY)} · Walidayn</div></header>
     <section><h2>About ${esc(ELDER)}</h2><div class="kv">
       <b>Language</b><span>${esc(p.lang || '—')}</span><b>Diet</b><span>${esc(p.diet || '—')}</span>
       <b>Prayer</b><span>${esc(p.prayer || '—')}</span><b>Personal care</b><span>${esc(p.modesty || '—')}</span>
@@ -1362,7 +1362,7 @@ async function toggleServerView(){
 
 // ---- hooks for sibling modules (alerts.js). Kept tiny on purpose. ----
 const enterHooks=[], pollHooks=[], tabHooks={}, homeHooks=[];
-window.amanah = {
+window.walidayn = {
   get me(){ return ME; }, get key(){ return KEY; },
   api, decryptJSON, nameOf, toast, esc, fmtWhen, isElder, tab,
   onEnter(fn){ enterHooks.push(fn); },

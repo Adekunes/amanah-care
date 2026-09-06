@@ -1,4 +1,4 @@
-// Amanah Care API. Command handler + read-model reads.
+// Walidayn API. Command handler + read-model reads.
 // Write path: validate member -> XADD to the events stream -> 202.
 // Read path: read Postgres projections. Server never sees plaintext.
 //

@@ -1,2 +1,2 @@
-{ "name":"amanah-seed","version":"0.1.0","private":true,"type":"module","main":"seed.js",
+{ "name":"walidayn-seed","version":"0.1.0","private":true,"type":"module","main":"seed.js",
   "scripts":{"start":"node seed.js"} }

@@ -1,4 +1,4 @@
-# Amanah Care: Elderly Care handoff, spec for MuslimHacks 2026
+# Walidayn: Elderly Care handoff, spec for MuslimHacks 2026
 
 Plan only. No app code. Built to demo one workflow tomorrow. Each diagram below ships as a PNG, an .excalidraw file in `diagrams/`, and a Mermaid block you can paste straight into excalidraw.com.
 

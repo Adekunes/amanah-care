@@ -1,4 +1,4 @@
-# Build task list: Amanah Care MVP
+# Build task list: Walidayn MVP
 
 Derived from REQUIREMENTS.md. This is the plan only. Nothing built, nothing deployed. Each task names the requirements it satisfies, an estimate, a dependency, and a done-check. Owner column left blank for you to assign.
 

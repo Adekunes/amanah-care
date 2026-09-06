@@ -1,4 +1,4 @@
-// Amanah Care projector. One consumer group on the events stream.
+// Walidayn projector. One consumer group on the events stream.
 // Reads entries, hands each to applyEvent() (see apply.js), acks on success.
 import { createClient } from 'redis';
 import pg from 'pg';

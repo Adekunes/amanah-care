@@ -1,4 +1,4 @@
-# Requirements register: Amanah Care MVP
+# Requirements register: Walidayn MVP
 
 Extracted from SPEC.md, 2026-09-05. One row = one testable requirement. No code here. IDs are stable so the two audit agents can reference them.
 
