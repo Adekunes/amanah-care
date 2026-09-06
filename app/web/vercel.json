@@ -1,8 +1,19 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://mandatory-province-sleeps-cio.trycloudflare.com/api/:path*" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://suites-lasting-renewable-measurement.trycloudflare.com/api/:path*"
+    }
   ],
   "headers": [
-    { "source": "/(.*)", "headers": [ { "key": "Cache-Control", "value": "no-store" } ] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
   ]
 }

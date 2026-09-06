@@ -1,4 +1,4 @@
-app = "amanah-care"
+app = "walidayn-api"
 primary_region = "yyz"
 
 [build]
