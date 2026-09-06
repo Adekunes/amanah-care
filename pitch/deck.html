@@ -152,7 +152,8 @@
     <b style="color:#7fe3cd">Log</b><span>Two taps: category, what happened. A note if you want.</span>
     <b style="color:#7fe3cd">Hand off</b><span>Summary written for you from the log. "What is next" written for you from the routine.</span>
     <b style="color:#7fe3cd">Dashboard</b><span>Who has Ammi right now. Meds 2 of 3. Mood, last logged. Next pickup and who is on it. Who carried the week.</span>
-    <b style="color:#7fe3cd">Family key</b><span>Made on the phone, shared by QR in person. The server stores scrambled text and nothing else.</span>
+    <b style="color:#7fe3cd">Family key</b><span>Made on the phone, shared by QR in person, once. After that you log in with your email and password. The server stores scrambled text and a password-locked copy of the key it cannot open.</span>
+    <b style="color:#7fe3cd">Ammi's screen</b><span>The elder gets her own view, in big type: who is with her, what is coming, her prayers, who can read her record.</span>
   </div>
   <div class="foot"><span>Amanah Care</span><span>5</span></div>
 </section>
@@ -167,7 +168,7 @@
       <li>She taps <b>Done</b> on dinner. The plan and the tiles update.</li>
       <li>She opens <b>Hand off</b> to Fatima. What happened and what is next are already written. She sends.</li>
       <li><b>Fatima's phone</b> lights up. She reads the card with Ammi's preferences on top, and accepts.</li>
-      <li>Home now says <b>Fatima has Ammi</b>. The week's load bar moves.</li>
+      <li>Home now says <b>Fatima has Ammi</b>. Ammi's own screen says it in big type. The week's load bar moves.</li>
       <li>We open the <b>database</b>. Every row is scrambled text.</li>
     </ol>
     <div class="card" style="gap:12px">
@@ -226,7 +227,7 @@
       <li>The family key is made in the browser. It is never sent anywhere.</li>
       <li>The server keeps a SHA-256 check of the key: enough to prove you hold it, never to read with it.</li>
       <li>Every payload is AES-GCM with a fresh 96-bit IV. Tampering fails to decrypt.</li>
-      <li>Members join by QR, face to face. The app never offers "share to WhatsApp".</li>
+      <li>Members join by QR, face to face, once. Later logins fetch a copy of the key locked with the password. The server cannot open it.</li>
     </ul>
     <ul style="font-size:22px">
       <li>Clear on the server: event type, category, who, when. Sealed: names, notes, summaries, preferences, routine.</li>
@@ -263,12 +264,12 @@
   <div class="eyebrow">What is real, what is simplified, what is not built</div>
   <div class="cols3">
     <div class="card"><h3><span class="tag read">real</span></h3><ul>
-      <li>Create family, join by QR or code</li><li>Log, routine, today's plan</li><li>Handoff: compose, send, accept</li>
+      <li>Create family, join by QR or code, then log in with email or login + password</li><li>Elder view in big type</li><li>Log, routine, today's plan</li><li>Handoff: compose, send, accept</li>
       <li>Dashboard, record, workload</li><li>End-to-end encryption, ciphertext-only server</li><li>Redis Streams → projector → Postgres</li><li>Test suite with coverage</li></ul></div>
     <div class="card"><h3><span class="tag seal">simplified</span></h3><ul>
-      <li>Notifications by polling every 4 s, not push</li><li>Identity is a trusted member id, no login yet</li><li>One Redis stream for all families, one consumer group</li><li>Support workers hold the same key as family</li></ul></div>
+      <li>Notifications by polling every 4 s, not push</li><li>Login exists, but the demo default password is 333, with no rate limiting or recovery yet</li><li>One Redis stream for all families, one consumer group</li><li>Support workers hold the same key as family</li></ul></div>
     <div class="card"><h3><span class="tag warn">not built</span></h3><ul>
-      <li>Elder consent filter (needs a scoped support key)</li><li>Key rotation after a lost phone</li><li>Reminders on open handoffs</li><li>Elder large-print view, Urdu and Arabic</li><li>Native mobile apps</li></ul></div>
+      <li>Elder consent filter (needs a scoped support key)</li><li>Key rotation after a lost phone</li><li>Reminders on open handoffs</li><li>Urdu and Arabic for the elder view</li><li>Native mobile apps</li></ul></div>
   </div>
   <p class="lead" style="font-size:22px">We chose one workflow, the handoff, and built it properly. Everything on the right is designed and on the roadmap, not hidden.</p>
   <div class="foot"><span>Amanah Care</span><span>11</span></div>
@@ -290,7 +291,7 @@
 <section class="slide">
   <div class="eyebrow">What is next</div>
   <div class="cols3">
-    <div class="card"><h3>Monday</h3><ul><li>Five Montreal families, Urdu and Arabic speaking, one month pilot</li><li>Elder large-print "today" view for the tablet on the kitchen table</li></ul></div>
+    <div class="card"><h3>Monday</h3><ul><li>Five Montreal families, Urdu and Arabic speaking, one month pilot</li><li>Urdu and Arabic for the elder's screen, on the tablet on the kitchen table</li></ul></div>
     <div class="card"><h3>Next month</h3><ul><li>Scoped key for support workers, so the consent filter is cryptographic, not cosmetic</li><li>Push notifications, key rotation, real login</li></ul></div>
     <div class="card"><h3>Later</h3><ul><li>Native apps, offline first</li><li>Voice to structured log, on the phone, opt in per family. AI at the edge, never on the server</li><li>Per-family streams, multi-region</li></ul></div>
   </div>
@@ -332,7 +333,7 @@
     <div><b>Technologies?</b><span>Node/Express API, Redis Streams event log, Postgres read models, vanilla JS + WebCrypto AES-GCM, nginx, Docker Compose. Node's built-in test runner. Vendored QR library. No frameworks, no CDNs, so the demo needs no internet.</span></div>
     <div><b>Behind the scenes?</b><span>Phone encrypts → POST /events → membership check → XADD to the stream → projector consumer group → Postgres events + handoffs + workload view → phones poll and decrypt. The dashboard is computed on the phone.</span></div>
     <div><b>Built from scratch here?</b><span>Spec, requirements and two audit rounds were planned ahead. All code was written during the hackathon window. QR generation is a vendored library.</span></div>
-    <div><b>Tradeoffs?</b><span>Polling over push, trusted member id over login, one stream over per-family streams, consent filter deferred. Each one on the honesty slide with the reason.</span></div>
+    <div><b>Tradeoffs?</b><span>Polling over push, a demo default password over real credential policy, one stream over per-family streams, consent filter deferred. Each one on the honesty slide with the reason.</span></div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>A1</span></div>
 </section>
@@ -352,7 +353,7 @@
 <section class="slide">
   <div class="eyebrow">Appendix · Demo, functionality, business</div>
   <div class="qa">
-    <div><b>Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Notifications are polling. Identity is stubbed. The consent filter is not built. Nothing on stage is faked.</span></div>
+    <div><b>Fully functional or mocked?</b><span>The core loop is real end to end: encrypt, stream, project, store, decrypt. Login is real, with a demo default password. Notifications are polling. The consent filter is not built. Nothing on stage is faked.</span></div>
     <div><b>Most important feature?</b><span>The handoff, composed from the record: what happened from the log, what is next from the routine, the elder's preferences on top.</span></div>
     <div><b>Hardest part?</b><span>Keeping the server useful while it can read nothing: deciding which fields stay clear for routing and counting, and building a whole dashboard from client-side decryption.</span></div>
     <div><b>Business model?</b><span>Free for families. Paid per elder per month by home-care agencies and community programs that need handoff logs and scoped access.</span></div>
@@ -370,7 +371,7 @@
     <div><b>Differently next time?</b><span>Tests from hour one. Push notifications budgeted from the start.</span></div>
     <div><b>How did you prioritise?</b><span>Requirement register of 46 items, two audit rounds on feasibility in 24 hours, then "cut core": the handoff loop first, everything else labelled roadmap.</span></div>
     <div><b>What data?</b><span>Care events, handoff summaries, preferences, routine, member names, all encrypted. Clear: event type, category, member id, timestamps.</span></div>
-    <div><b>Ethical risks?</b><span>Support workers currently hold the same key, so hiding categories is UI only. Lost key means lost data until rotation ships. No diagnosis, dosage or triage anywhere, and the metrics are counts, never judgments.</span></div>
+    <div><b>Ethical risks?</b><span>Support workers currently hold the same key, so hiding categories is UI only. The password-locked key copy is only as strong as the password, and the demo default is 333. Lost key means lost data until rotation ships. No diagnosis, dosage or triage anywhere, and the metrics are counts, never judgments.</span></div>
     <div><b>Depends on an LLM?</b><span>No. By design the server cannot run one on this data.</span></div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>A4</span></div>
@@ -379,7 +380,7 @@
 <section class="slide">
   <div class="eyebrow">Appendix · Future and closing</div>
   <div class="qa">
-    <div><b>Next if more time?</b><span>Elder large-print view in Urdu and Arabic, scoped support key, push, key rotation.</span></div>
+    <div><b>Next if more time?</b><span>Urdu and Arabic for the elder view, scoped support key, push, key rotation, password policy and recovery.</span></div>
     <div><b>Continue after today?</b><span>Yes. Five-family pilot in Montreal next week.</span></div>
     <div><b>First step after today?</b><span>Commit and publish the repo, deploy on one small VM, recruit the pilot families through community care contacts.</span></div>
     <div><b>Different from existing options?</b><span>Task apps organise chores, med apps remind, marketplaces find carers. None connect plan, actuals, handoff and load with the elder's preferences, and none let only the family read the data.</span></div>
