@@ -66,6 +66,27 @@
   table.pk th{text-align:left;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);padding:6px 10px;border-bottom:2px solid var(--line)}
   table.pk td{padding:7px 10px;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.3}
   table.pk td:nth-child(1){white-space:nowrap} table.pk td:nth-child(3){white-space:nowrap} table.pk td:nth-child(5){white-space:nowrap;color:var(--mut)}
+  .pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:2px}
+  .plan{position:relative;background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:6px;min-height:0}
+  .plan .pname{font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--green)}
+  .plan .pwho{font-size:12px;color:var(--mut);min-height:30px;line-height:1.3}
+  .plan .pprice{font-size:38px;font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--green);margin:4px 0 6px}
+  .plan .pprice small{display:block;font-size:11.5px;font-weight:600;letter-spacing:0;color:var(--mut);margin-top:5px}
+  .plan .feat{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink2);flex:1}
+  .plan .feat li{padding-left:20px;position:relative;line-height:1.3}
+  .plan .feat li::before{content:"✓";position:absolute;left:0;top:0;color:var(--green);font-weight:800}
+  .plan .pwhen{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+  .plan.hot{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 22px 50px -26px rgba(11,63,55,.7)}
+  .plan.hot .pname,.plan.hot .pprice,.plan.hot .feat li::before{color:#fff}
+  .plan.hot .pwho,.plan.hot .pprice small,.plan.hot .feat,.plan.hot .pwhen{color:#c9e4dc}
+  .plan.hot .pwhen{border-top-color:rgba(255,255,255,.2)}
+  .plan .ribbon{position:absolute;top:-12px;left:16px;background:var(--gold);color:#3b2a08;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+  .pricing-low{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:14px;margin-top:auto;align-items:stretch}
+  .plan.mini{padding:12px 14px;gap:4px}
+  .plan.mini .pprice{font-size:26px;margin:2px 0 2px}
+  .plan.mini p{font-size:12.5px;color:var(--ink2);line-height:1.35;flex:1}
+  .numbers{display:flex;flex-direction:column;gap:8px;justify-content:center;font-size:13px;line-height:1.4;color:var(--ink2)}
+  .numbers b{color:var(--green)}
   @media print{
     @page{size:1280px 720px;margin:0}
     html,body{background:#fff}
@@ -244,20 +265,45 @@
 </section>
 
 <!-- 9 -->
-<section class="slide compact" style="gap:12px;padding-top:44px">
-  <h1 style="font-size:40px">Six packages. One question each: who pays, for what.</h1>
-  <table class="pk">
-    <tr><th>Package</th><th>For</th><th>Price</th><th>What you get</th><th>When</th></tr>
-    <tr><td><b>Family</b></td><td>Any family</td><td><b>$0</b>, always</td><td>The record: plan, log, handoff, alerts, the elder's screen, hospital sheet, recommendations. Never a paywall between siblings.</td><td>Now</td></tr>
-    <tr><td><b>Family Plus</b></td><td>Families who want more</td><td><b>$4</b> a month</td><td>Key recovery between two relatives, printed monthly sheet, full export, priority help.</td><td>Month 1</td></tr>
-    <tr><td><b>Agency Starter</b></td><td>Home-care agencies, up to 25 elders</td><td><b>$30</b> per elder a month</td><td>Worker logins across all their families, the worker dashboard, visit log, professional recommendations, hospital sheet, alerts to the coordinator.</td><td>Now</td></tr>
-    <tr><td><b>Agency Pro</b></td><td>Agencies with 25 elders or more</td><td><b>$22</b> per elder a month</td><td>Starter, plus a scoped key per worker, visit-proof export, a coordinator dashboard, French and English support.</td><td>Month 3</td></tr>
-    <tr><td><b>Community sponsor</b></td><td>Masjids, community organisations</td><td><b>$3</b> per family a month, packs of 50</td><td>The Family plan for the families they already serve, on one invoice.</td><td>Now</td></tr>
-    <tr><td><b>Public home care</b></td><td>CLSC, provincial programs</td><td>Per client, negotiated</td><td>Agency Pro, plus Quebec data residency, audit export, service levels.</td><td>Year 3</td></tr>
-  </table>
-  <div class="cols" style="margin-top:auto;margin-bottom:30px;gap:30px;align-items:end">
-    <p style="font-size:15px;line-height:1.4;color:var(--ink2)"><b style="color:var(--green)">Cost to run, year one: about $27,300 a month.</b> Two developers, a part-time nurse reviewing every recommendation, one support and community lead ($25,000); servers, stream and database for 5,000 families ($300); privacy counsel, insurance, accounting ($2,000). The machine cost per family is cents. The cost is people.</p>
-    <p style="font-size:15px;line-height:1.4;color:var(--ink2)"><b style="color:var(--green)">Break-even: about 1,000 elders on agency plans.</b> Quebec's social-economy home-care network alone serves 110,000 clients across 85 enterprises. One in a hundred. At 10,000 elders the same team runs at a 90% margin. <span class="mut">EÉSAD network, 2024. Prices and costs are our estimates.</span></p>
+<section class="slide" style="gap:14px;padding:44px 64px 56px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:20px">
+    <h1 style="font-size:40px">Packages.</h1>
+    <p style="font-size:17px;color:var(--ink2);max-width:640px;text-align:right">Families never pay for the record. Agencies and sponsors carry the cost, and get something real for it.</p>
+  </div>
+  <div class="pricing">
+    <div class="plan">
+      <div class="pname">Family</div><div class="pwho">Any family</div>
+      <div class="pprice">$0<small>always</small></div>
+      <ul class="feat"><li>Plan, log, handoff</li><li>Alerts and live updates</li><li>The elder's own screen</li><li>Hospital sheet</li><li>Recommendations</li></ul>
+      <div class="pwhen">Available now</div>
+    </div>
+    <div class="plan">
+      <div class="pname">Family Plus</div><div class="pwho">Families who want more</div>
+      <div class="pprice">$4<small>per month</small></div>
+      <ul class="feat"><li>Everything in Family</li><li>Key recovery between two relatives</li><li>Printed monthly sheet</li><li>Full export</li><li>Priority help</li></ul>
+      <div class="pwhen">Month 1</div>
+    </div>
+    <div class="plan hot">
+      <div class="ribbon">Most agencies start here</div>
+      <div class="pname">Agency Starter</div><div class="pwho">Home-care agencies, up to 25 elders</div>
+      <div class="pprice">$30<small>per elder, per month</small></div>
+      <ul class="feat"><li>Worker logins across all their families</li><li>Worker dashboard and visit log</li><li>Professional recommendations</li><li>Hospital sheet</li><li>Alerts to the coordinator</li></ul>
+      <div class="pwhen">Available now</div>
+    </div>
+    <div class="plan">
+      <div class="pname">Agency Pro</div><div class="pwho">Agencies with 25 elders or more</div>
+      <div class="pprice">$22<small>per elder, per month</small></div>
+      <ul class="feat"><li>Everything in Starter</li><li>Scoped key per worker</li><li>Visit-proof export</li><li>Coordinator dashboard</li><li>French and English support</li></ul>
+      <div class="pwhen">Month 3</div>
+    </div>
+  </div>
+  <div class="pricing-low">
+    <div class="plan mini"><div class="pname">Community sponsor</div><div class="pprice">$3<small>per family, per month, packs of 50</small></div><p>Masjids and community organisations carry the Family plan for the families they already serve. One invoice.</p><div class="pwhen">Available now</div></div>
+    <div class="plan mini"><div class="pname">Public home care</div><div class="pprice" style="font-size:22px;padding-top:6px">Negotiated<small>per client</small></div><p>Agency Pro, plus Quebec data residency, audit export and service levels. CLSC and provincial programs.</p><div class="pwhen">Year 3</div></div>
+    <div class="numbers">
+      <p><b>Cost to run, year one:</b> about $27,300 a month. Two developers, a part-time nurse reviewing every recommendation, one support lead, servers for 5,000 families, counsel and insurance. The machine cost per family is cents.</p>
+      <p><b>Break-even:</b> about 1,000 elders on agency plans. Quebec's social-economy home-care network alone serves 110,000 clients. One in a hundred. <span class="mut">EÉSAD network, 2024. Prices and costs are our estimates.</span></p>
+    </div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>9</span></div>
 </section>
