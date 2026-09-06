@@ -2,6 +2,15 @@
 
 ## Live now (demo day, 2026-09-06)
 
+**https://walidayn.vercel.app** serves `app/web` from Vercel (project `walidayn`,
+deploy with `cd app/web && npx vercel deploy --prod`). Its `vercel.json`
+forwards `/api/*` to the backend URL; today that is the Cloudflare quick
+tunnel below, so the backend still runs on Abdul's Mac. When the tunnel URL
+changes, edit `destination` in `app/web/vercel.json` and redeploy. Live
+updates over server-sent events may not pass the Vercel proxy; the app
+polls every 4 seconds as its fallback, so the demo still works.
+
+
 A Cloudflare quick tunnel on Abdul's Mac exposes the Docker web container:
 
     cloudflared tunnel --url http://localhost:8080 --no-autoupdate
