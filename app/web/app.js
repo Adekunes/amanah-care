@@ -577,51 +577,82 @@ async function logItem(){
   pick.preset=null; $('#btn-log').disabled=true;
   toast('Logged'); await renderCareToday();
 }
-// The log page shows the last 7 days grouped by day, newest first. It is
-// re-rendered on every live announcement, so a row logged on another phone
-// appears here at once; a new row flashes.
-let lastLogCount = -1;
-async function renderCareToday(){
-  await loadWeek();
-  const items = [...WEEK].reverse();
-  const box = $('#care-today');
-  $('#today-count').textContent = todayItems().length;
-  if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; lastLogCount=0; return; }
-  const grew = lastLogCount >= 0 && items.length > lastLogCount; lastLogCount = items.length;
-  const byDay = {};
-  for(const c of items){ const k=new Date(c.occurred_at).toDateString(); (byDay[k]=byDay[k]||[]).push(c); }
-  const today = new Date().toDateString(), yday = new Date(Date.now()-86400e3).toDateString();
-  let first = true;
-  box.innerHTML = Object.entries(byDay).map(([k,list])=>{
-    const lab = k===today ? 'Today' : (k===yday ? 'Yesterday' : new Date(k).toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'}));
-    return `<div class="rec-day"><b>${esc(lab)}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div>` +
-      list.map(i=>{ const cls = first && grew ? ' flash' : ''; first=false; return `<div class="item${cls}">
+// ---- the care log, grouped: day / week / month, each group foldable ----
+// Shared by the Log page and the Record tab. Re-rendered on every live
+// announcement, so a row logged on another phone appears at once and flashes.
+let LOG_ITEMS = [];                                          // last 90 days, decrypted, oldest first
+const logView = { by: 'day', collapsed: new Set(), allCollapsed: false };
+async function loadLog(){ const since = new Date(Date.now()-90*86400e3); since.setHours(0,0,0,0);
+  LOG_ITEMS = await careSince(since.toISOString()).catch(()=>LOG_ITEMS); }
+function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
+function groupKey(iso){ const d=new Date(iso);
+  if(logView.by==='week') return mondayOf(d).toISOString().slice(0,10);
+  if(logView.by==='month') return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  return d.toDateString(); }
+function groupLabel(key){
+  if(logView.by==='week'){ const m=new Date(key+'T00:00:00'); const weeks=Math.round((mondayOf(new Date())-m)/(7*86400e3));
+    const end=new Date(m); end.setDate(end.getDate()+6);
+    const span=`${m.toLocaleDateString([], {month:'short', day:'numeric'})} to ${end.toLocaleDateString([], {month:'short', day:'numeric'})}`;
+    return weeks===0?`This week · ${span}`:(weeks===1?`Last week · ${span}`:`Week of ${span}`); }
+  if(logView.by==='month'){ const [y,mo]=key.split('-').map(Number); const d=new Date(y,mo-1,1), now=new Date();
+    const lab=d.toLocaleDateString([], {month:'long', year:'numeric'});
+    return (y===now.getFullYear()&&mo===now.getMonth()+1)?`This month · ${lab}`:lab; }
+  const today=new Date().toDateString(), yday=new Date(Date.now()-86400e3).toDateString();
+  return key===today?'Today':(key===yday?'Yesterday':new Date(key).toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'}));
+}
+function renderGrouped(box, items, flashFirst){
+  if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; return; }
+  const groups=[], idx={};
+  for(const c of items){ const k=groupKey(c.occurred_at);
+    if(!(k in idx)){ idx[k]=groups.length; groups.push({k, list:[]}); if(logView.allCollapsed) logView.collapsed.add(k); }
+    groups[idx[k]].list.push(c); }
+  let first=true;
+  const when=(i)=> logView.by==='day' ? fmtTime(i.occurred_at)
+    : new Date(i.occurred_at).toLocaleString([], {weekday:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+  box.innerHTML = groups.map(({k,list})=>{ const closed=logView.collapsed.has(k);
+    const rows=list.map(i=>{ const cls=first&&flashFirst?' flash':''; first=false; return `<div class="item${cls}">
         <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
-        <div class="muted">${esc(nameOf(i.actor_id))} · ${fmtTime(i.occurred_at)}</div>
-      </div>`; }).join('');
-  }).join('');
+        <div class="muted">${esc(nameOf(i.actor_id))} · ${when(i)}</div></div>`; }).join('');
+    return `<div class="grp${closed?' closed':''}"><div class="rec-day grp-head" data-toggle="${esc(k)}"><b><i class="chev">${closed?'▸':'▾'}</i>${esc(groupLabel(k))}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div><div class="grp-body${closed?' hide':''}">${rows}</div></div>`; }).join('');
+  box.querySelectorAll('[data-toggle]').forEach(h=>h.onclick=()=>{ const k=h.dataset.toggle;
+    if(logView.collapsed.has(k)) logView.collapsed.delete(k); else logView.collapsed.add(k);
+    logView.allCollapsed=false; rerenderLogs(); });
+}
+function renderLogControls(){
+  $$('.logview').forEach(box=>{
+    box.innerHTML = ['day','week','month'].map(b=>`<button class="chip ${logView.by===b?'on':''}" data-by="${b}">${b[0].toUpperCase()+b.slice(1)}</button>`).join('')
+      + `<button class="chip" data-collapse="1">Collapse all</button><button class="chip" data-collapse="0">Expand all</button>`;
+    box.querySelectorAll('[data-by]').forEach(b=>b.onclick=()=>{ logView.by=b.dataset.by; logView.collapsed.clear(); logView.allCollapsed=false; rerenderLogs(); });
+    box.querySelectorAll('[data-collapse]').forEach(b=>b.onclick=()=>{ const on=b.dataset.collapse==='1'; logView.allCollapsed=on; logView.collapsed.clear();
+      if(on) for(const c of LOG_ITEMS) logView.collapsed.add(groupKey(c.occurred_at)); rerenderLogs(); });
+  });
+}
+function rerenderLogs(){
+  if(!$('#tab-log').classList.contains('hide')) renderCareToday(false).catch(()=>{});
+  if(!$('#tab-record').classList.contains('hide')) renderRecord(false).catch(()=>{});
+}
+let lastLogCount = -1;
+async function renderCareToday(reload=true){
+  if(reload) await loadLog();
+  const items = [...LOG_ITEMS].reverse();
+  $('#today-count').textContent = LOG_ITEMS.filter(c=>new Date(c.occurred_at)>=midnight()).length;
+  const grew = lastLogCount >= 0 && items.length > lastLogCount; lastLogCount = items.length;
+  renderLogControls();
+  renderGrouped($('#care-today'), items, grew);
 }
 
-// ---- RECORD: everything by day ----
+// ---- RECORD: everything, filtered by category, same grouping ----
 let recFilter = 'all';
-async function renderRecord(){
-  const since = new Date(Date.now()-30*86400e3); since.setHours(0,0,0,0);
-  const all = await careSince(since.toISOString()).catch(()=>[]);
+async function renderRecord(reload=true){
+  if(reload) await loadLog();
+  const all = [...LOG_ITEMS];
   const cats = ['all', ...new Set(all.map(c=>c.category).filter(Boolean))];
   $('#rec-filter').innerHTML = cats.map(c=>`<button class="chip ${c===recFilter?'on':''}" data-rf="${esc(c)}">${esc(c)}</button>`).join('');
-  $$('[data-rf]').forEach(b=>b.onclick=()=>{ recFilter=b.dataset.rf; renderRecord(); });
+  $$('[data-rf]').forEach(b=>b.onclick=()=>{ recFilter=b.dataset.rf; renderRecord(false); });
+  renderLogControls();
   const items = all.filter(c=>recFilter==='all' || c.category===recFilter).reverse();
   $('#rec-count').textContent = items.length;
-  const box=$('#record');
-  if(!items.length){ box.innerHTML='<p class="muted">Nothing here yet.</p>'; return; }
-  const byDay = {};
-  for(const c of items){ const k=new Date(c.occurred_at).toDateString(); (byDay[k]=byDay[k]||[]).push(c); }
-  box.innerHTML = Object.entries(byDay).map(([k,list])=>{
-    const d=new Date(k); const lab = k===new Date().toDateString() ? 'Today' : d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
-    return `<div class="rec-day"><b>${esc(lab)}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div>` +
-      list.map(c=>`<div class="rec-row"><span class="rt">${fmtTime(c.occurred_at)}</span>
-        <div class="rx">${esc(c.text)}<span>${esc(nameOf(c.actor_id))}</span></div><span class="pill">${esc(c.category)}</span></div>`).join('');
-  }).join('');
+  renderGrouped($('#record'), items, false);
 }
 
 // ---- handoff ----

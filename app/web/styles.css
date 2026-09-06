@@ -337,3 +337,10 @@ body.elder input{font-size:19px}
 .eprayer.done{background:var(--brand);color:#fff}
 .eprefs{display:flex;flex-direction:column;gap:10px;font-size:21px;line-height:1.3}
 .eprefs span{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.09em;font-weight:800}
+
+/* ---- grouped care log: foldable day / week / month headings ---- */
+.logview{margin:2px 0 4px}
+.logview .chip{min-height:34px;font-size:12.5px;padding:0 12px}
+.grp-head{cursor:pointer;user-select:none}
+.grp-head .chev{font-style:normal;display:inline-block;width:16px;color:var(--muted)}
+.grp.closed .rec-day{border-bottom-color:var(--line)}
