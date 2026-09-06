@@ -215,7 +215,9 @@ app/
   test/notifier.test.js     match + notify, idempotent replay, no self-notify
   test/subscriptions.test.js  subscription routes, defaults on create/join, read marking
 pitch/
-  deck.html, Amanah-Care-pitch-deck.pdf, explainer.html, Amanah-Care-explained.pdf
+  deck.html (10 slides, purpose-first; backup Q&A slides after slide 10, End key, not printed)
+  Amanah-Care-pitch-deck.pdf (10 pages) · qa.html + Amanah-Care-judge-QA.pdf (6 pages, every rubric question + sources)
+  explainer.html, Amanah-Care-explained.pdf (simple English, long form)
 spec/                       SPEC, REQUIREMENTS (46 IDs), TASKS, AUDIT, diagrams, NOTIFY-SPEC
 agents/                     HANDOFF.md (this), README.md (older), OWNER-NOTES.md
 ```
