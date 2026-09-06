@@ -577,16 +577,29 @@ async function logItem(){
   pick.preset=null; $('#btn-log').disabled=true;
   toast('Logged'); await renderCareToday();
 }
+// The log page shows the last 7 days grouped by day, newest first. It is
+// re-rendered on every live announcement, so a row logged on another phone
+// appears here at once; a new row flashes.
+let lastLogCount = -1;
 async function renderCareToday(){
   await loadWeek();
-  const items = todayItems();
+  const items = [...WEEK].reverse();
   const box = $('#care-today');
-  $('#today-count').textContent = items.length;
-  if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; return; }
-  box.innerHTML = [...items].reverse().map(i=>`<div class="item">
-    <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
-    <div class="muted">${esc(nameOf(i.actor_id))} · ${fmtTime(i.occurred_at)}</div>
-  </div>`).join('');
+  $('#today-count').textContent = todayItems().length;
+  if(!items.length){ box.innerHTML='<p class="muted">Nothing logged yet.</p>'; lastLogCount=0; return; }
+  const grew = lastLogCount >= 0 && items.length > lastLogCount; lastLogCount = items.length;
+  const byDay = {};
+  for(const c of items){ const k=new Date(c.occurred_at).toDateString(); (byDay[k]=byDay[k]||[]).push(c); }
+  const today = new Date().toDateString(), yday = new Date(Date.now()-86400e3).toDateString();
+  let first = true;
+  box.innerHTML = Object.entries(byDay).map(([k,list])=>{
+    const lab = k===today ? 'Today' : (k===yday ? 'Yesterday' : new Date(k).toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'}));
+    return `<div class="rec-day"><b>${esc(lab)}</b><span class="muted">${list.length} item${list.length===1?'':'s'}</span></div>` +
+      list.map(i=>{ const cls = first && grew ? ' flash' : ''; first=false; return `<div class="item${cls}">
+        <div class="top"><b>${esc(i.text)}</b><span class="pill">${esc(i.category)}</span></div>
+        <div class="muted">${esc(nameOf(i.actor_id))} · ${fmtTime(i.occurred_at)}</div>
+      </div>`; }).join('');
+  }).join('');
 }
 
 // ---- RECORD: everything by day ----

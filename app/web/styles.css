@@ -166,7 +166,7 @@ label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
 .sent-row:first-of-type{border-top:0}
 .sent-top{display:flex;gap:8px;align-items:center;margin-bottom:4px}
 .sent-what{font-size:14px;line-height:1.4}
-.sent-row.flash{animation:flash 1.4s ease}
+.sent-row.flash,.item.flash{animation:flash 1.4s ease}
 @keyframes flash{0%{background:#dff0ec}100%{background:transparent}}
 .pill.acknowledged{background:#dff0ec;color:var(--ok,#0b7a6b)}
 .pill.open{background:#fdeede;color:var(--warn,#b4451f)}
