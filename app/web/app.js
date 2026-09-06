@@ -534,11 +534,12 @@ function renderHome(){
       <div class="cards">${board.filter(b=>b.state===key).map(cardHtml).join('') || `<p class="empty">${EMPTY[key]}</p>`}</div>
     </section>`).join('');
 
+  const hr = new Date().getHours(); const greet = hr<12 ? 'Good morning' : (hr<18 ? 'Good afternoon' : 'Good evening');
   $('#home').innerHTML = `
-    <div class="hero compact">
+    <div class="hero compact photo">
       <div class="hero-row">
         <div>
-          <div class="date">${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
+          <div class="date">${greet}, ${esc(ME.my_name)} · ${new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'})}</div>
           <h1>${ME.role==='support' ? `Your shift with ${esc(ELDER)}` : `${esc(ELDER)}'s day`}</h1>
         </div>
         <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
@@ -569,7 +570,7 @@ function cardHtml({card, state, ev}){
   const acts = state==='todo'
     ? `<button data-move="done" data-card="${esc(card.id)}" type="button">Done</button><button class="ghost" data-move="blocked" data-card="${esc(card.id)}" type="button">Blocked</button>`
     : `<button class="ghost" data-move="todo" data-card="${esc(card.id)}" type="button" title="Back to To do">↩ To do</button>`;
-  return `<article class="kcard ${state}" draggable="true" data-card="${esc(card.id)}">
+  return `<article class="kcard ${state}" draggable="true" data-card="${esc(card.id)}" data-cat="${esc(card.category)}">
       <div class="k-top"><span class="k-icon">${iconFor(card)}</span><b>${esc(card.label)}</b><span class="k-time tnum">${esc(card.time)}</span></div>
       <div class="k-meta">${meta}</div>
       <div class="k-acts">${acts}</div>
