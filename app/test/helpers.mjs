@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { newDb, DataType } from 'pg-mem';
 import { createApp } from '../api/app.js';
 import { applyEvent } from '../projector/apply.js';
+import { notify } from '../notifier/apply.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const INIT_SQL = fs.readFileSync(path.join(here, '..', 'db', 'init.sql'), 'utf8');
@@ -36,9 +37,12 @@ export function makeStream() {
   };
 }
 
-// Drain the fake stream through the real projector into the db.
+// Drain the fake stream through the real projector, then the real notifier, into the db.
 export async function project(db, redis) {
-  for (const e of redis.entries.splice(0)) await applyEvent(db, e.id, e.message);
+  for (const e of redis.entries.splice(0)) {
+    await applyEvent(db, e.id, e.message);
+    await notify(db, e.id, e.message);
+  }
 }
 
 export async function startApp(over = {}) {

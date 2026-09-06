@@ -108,12 +108,14 @@
       <span class="who-dot" id="who-dot"></span>
       <span class="who-name" id="who-name">—</span>
       <span class="who-role" id="who-role"></span>
+      <button id="btn-logout" class="ghost small" type="button">Log out</button>
     </div>
     <nav class="tabs">
       <button data-tab="home" class="on">Home</button>
       <button data-tab="log">Log</button>
       <button data-tab="handoff">Hand off</button>
       <button data-tab="inbox">Inbox<span id="inbox-badge" class="badge hide">0</span></button>
+      <button data-tab="alerts">Alerts<span id="alerts-badge" class="badge hide">0</span></button>
       <button data-tab="routine">Routine</button>
       <button data-tab="record">Record</button>
       <button data-tab="prefs">Prefs</button>
@@ -190,6 +192,25 @@
       <div class="group">
         <div class="card-head"><h2>Handoffs to you</h2><span class="muted">checks every 4s</span></div>
         <div id="inbox"></div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="tab-alerts" class="tabview hide">
+      <div class="card">
+        <div class="group">
+          <h2>What to be told about</h2>
+          <p class="muted">Pick what should ping you. Everyone chooses for themselves.</p>
+        </div>
+        <div id="alerts-subs" class="subs"></div>
+        <button id="btn-subs-save">Save alerts</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Alerts</h2><span class="pill" id="alerts-count">0</span></div>
+        <p class="muted">Newest first. Decrypted on this phone.</p>
+        <div id="alerts-list"><p class="muted">Nothing yet.</p></div>
+        <button id="btn-alerts-read" class="ghost small">Mark all read</button>
       </div>
     </div>
 

@@ -1,6 +1,7 @@
 # Amanah Care. One command brings up the whole stack: docker compose up.
-# Cut-core scope: web, api, projector, redis, postgres. Notifications by polling,
-# so no separate notifier/SSE container (see REQUIREMENTS FR-05, KL-03).
+# Six services: web, api, projector, notifier, redis, postgres. The notifier
+# consumes the events stream and writes per-member notification rows
+# (see REQUIREMENTS FR-05, KL-03).
 services:
   redis:
     image: redis:7-alpine
@@ -37,6 +38,15 @@ services:
 
   projector:
     build: ./projector
+    environment:
+      DATABASE_URL: postgres://amanah:amanah@postgres:5432/amanah
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+
+  notifier:
+    build: ./notifier
     environment:
       DATABASE_URL: postgres://amanah:amanah@postgres:5432/amanah
       REDIS_URL: redis://redis:6379

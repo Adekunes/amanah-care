@@ -57,6 +57,28 @@ async function loadSession(){
 }
 const isElder = ()=> ME?.role === 'elder';
 
+// Wipe every trace of this session from this tab and drop back to the landing card.
+function logout(){
+  clearInterval(pollTimer); pollTimer = null;
+  sessionStorage.removeItem('amanah');
+  KEY = null; ME = null;
+  for(const k of Object.keys(nameCache)) delete nameCache[k];
+  ELDER = 'Elder';
+  ROUTINE = []; routineDirty = false;
+  WEEK = []; HANDOFFS = []; MEMBERS = []; PREFS = null;
+  lastHandoffAt = null; homeSig = null; inboxSig = null; lastTrace = null;
+  document.body.classList.remove('elder');
+  const ORIG_TABS = { home:'Home', record:'Record', prefs:'Prefs' };  // undo ELDER_TABS renames
+  $$('.tabs button').forEach(b=>{
+    b.classList.remove('hide');
+    if(ORIG_TABS[b.dataset.tab]) b.firstChild.nodeValue = ORIG_TABS[b.dataset.tab];
+  });
+  $('#l-login').value = ''; $('#l-pass').value = '333';
+  document.title = 'Amanah Care';
+  show('landing');
+  toast('Logged out');
+}
+
 async function api(path, opts={}){
   const r = await fetch(API+path, { headers:{'content-type':'application/json'}, ...opts });
   if(!r.ok) throw new Error(`${r.status} ${await r.text()}`);
@@ -840,6 +862,7 @@ $('#btn-proof').onclick  = ()=>refreshProof().catch(e=>toast(e.message));
 $('#btn-r-add').onclick  = addRoutineItem;
 $('#btn-r-save').onclick = ()=>saveRoutine().catch(e=>toast(e.message));
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+{ const b=$('#btn-logout'); if(b) b.onclick=logout; }
 
 // resume session if present
 loadSession().then(ok=>{ if(ok) enterApp(); else show('landing'); });

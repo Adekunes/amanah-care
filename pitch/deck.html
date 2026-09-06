@@ -213,7 +213,7 @@
   </div>
   <div class="cols" style="margin-top:4px">
     <div class="card"><h3>Why event sourcing</h3><p>The dashboard, the routine, the record and the workload were added without touching the write path. They are projections over the same log. Replay rebuilds everything.</p></div>
-    <div class="card"><h3>Runs in one command</h3><p>Docker Compose: web, api, projector, redis, postgres. Fallback: one node process runs the same api and projector on an in-memory Postgres.</p></div>
+    <div class="card"><h3>Runs in one command</h3><p>Docker Compose: six containers, web, api, projector, notifier, redis, postgres; a notifier consumer group turns subscribed events into alerts. Fallback: one node process runs the same api and projector on an in-memory Postgres.</p></div>
   </div>
   <div class="foot"><span>Amanah Care</span><span>8</span></div>
 </section>
@@ -265,7 +265,8 @@
   <div class="cols3">
     <div class="card"><h3><span class="tag read">real</span></h3><ul>
       <li>Create family, join by QR or code, then log in with email or login + password</li><li>Elder view in big type</li><li>Log, routine, today's plan</li><li>Handoff: compose, send, accept</li>
-      <li>Dashboard, record, workload</li><li>End-to-end encryption, ciphertext-only server</li><li>Redis Streams → projector → Postgres</li><li>Test suite with coverage</li></ul></div>
+      <li>Dashboard, record, workload</li><li>End-to-end encryption, ciphertext-only server</li><li>Redis Streams → projector → Postgres</li><li>Test suite with coverage</li>
+      <li>Alerts: per-member event subscriptions, notifier on the stream</li><li>Login and logout</li></ul></div>
     <div class="card"><h3><span class="tag seal">simplified</span></h3><ul>
       <li>Notifications by polling every 4 s, not push</li><li>Login exists, but the demo default password is 333, with no rate limiting or recovery yet</li><li>One Redis stream for all families, one consumer group</li><li>Support workers hold the same key as family</li></ul></div>
     <div class="card"><h3><span class="tag warn">not built</span></h3><ul>
@@ -331,7 +332,7 @@
   <div class="qa">
     <div><b>Delivery format?</b><span>Web app, phone first, any browser. Two windows on stage stand in for two phones. Native mobile is roadmap.</span></div>
     <div><b>Technologies?</b><span>Node/Express API, Redis Streams event log, Postgres read models, vanilla JS + WebCrypto AES-GCM, nginx, Docker Compose. Node's built-in test runner. Vendored QR library. No frameworks, no CDNs, so the demo needs no internet.</span></div>
-    <div><b>Behind the scenes?</b><span>Phone encrypts → POST /events → membership check → XADD to the stream → projector consumer group → Postgres events + handoffs + workload view → phones poll and decrypt. The dashboard is computed on the phone.</span></div>
+    <div><b>Behind the scenes?</b><span>Phone encrypts → POST /events → membership check → XADD to the stream → projector consumer group → Postgres events + handoffs + workload view; a second consumer group, the notifier, writes alerts per subscriber → phones poll and decrypt. The dashboard is computed on the phone.</span></div>
     <div><b>Built from scratch here?</b><span>Spec, requirements and two audit rounds were planned ahead. All code was written during the hackathon window. QR generation is a vendored library.</span></div>
     <div><b>Tradeoffs?</b><span>Polling over push, a demo default password over real credential policy, one stream over per-family streams, consent filter deferred. Each one on the honesty slide with the reason.</span></div>
   </div>

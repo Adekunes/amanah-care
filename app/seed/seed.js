@@ -24,6 +24,11 @@ async function post(path, body){
   if(!r.ok) throw new Error(`${path} -> ${r.status} ${await r.text()}`);
   return r.json();
 }
+async function put(path, body){
+  const r = await fetch(API+path,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(`${path} -> ${r.status} ${await r.text()}`);
+  return r.json();
+}
 
 const FAM = uuid().slice(0,8);
 const elder = uuid(), sisA = uuid(), abd = uuid(), fat = uuid();
@@ -103,6 +108,15 @@ await handoff(4,'12:00', fat, abd, 'Dr. Rahman follow-up done, BP checked, ate h
 await handoff(3,'18:00', abd, sisA, 'physio went well, meds given late at 09:30, calm all day', 'dinner 19:00, Maghrib, night meds 21:00');
 await handoff(1,'12:00', fat, sisA, 'Fajr, morning meds, breakfast, calm', 'lunch 13:30, afternoon meds 14:00, walk after Asr');
 
+// Alert subscriptions (NOTIFY-SPEC §1/§6). Ammi is an elder: no defaults, no Alerts tab, no PUT here.
+const SUBSCRIPTIONS = {
+  [sisA]: ['handoff.to_me', 'handoff.accepted', 'care.mood', 'care.meds'],
+  [fat]:  ['handoff.to_me', 'handoff.accepted', 'care.meds', 'care.appointment'],
+  [abd]:  ['handoff.to_me', 'handoff.accepted', 'care.transport'],
+};
+for (const [memberId, kinds] of Object.entries(SUBSCRIPTIONS))
+  await put(`/families/${FAM}/members/${memberId}/subscriptions`, { kinds });
+
 // Today: everything in the routine due before (now - 90 min) is already logged by Sister A.
 const nowMin = new Date().getHours()*60 + new Date().getMinutes();
 const DOW = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
@@ -137,3 +151,4 @@ console.log('ABDULLAH_CODE='+code(abd,'family','Abdullah'));
 console.log('FATIMA_CODE='+code(fat,'family','Fatima'));
 console.log('AMMI_CODE='+code(elder,'elder','Ammi'));
 console.log('\nLOGINS (password 333): sistera, abdullah, fatima, ammi');
+console.log('SUBSCRIPTIONS:', Object.entries(SUBSCRIPTIONS).map(([m, kinds]) => `${NAMES[m]}=[${kinds.join(', ')}]`).join(' | '));

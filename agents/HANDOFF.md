@@ -12,7 +12,7 @@ Read this top to bottom before touching anything. Current as of **2026-09-05, 19
 - Two machines:
   - **This one (RS work Mac, user `abdulrsmac`)**: repo at `~/code/amanah-care/`. `gh` is authed as `Rselectronic` (no access to the repo). No Docker yet (see §3). Owner chose this Mac for the live demo.
   - **Owner's other Mac**: repo at `~/Developer/muslimhacks-2026-elderly-care/`, Docker Desktop installed, `gh` authed as Adekunes. It has commit `48f7ee0`; it does NOT have the four new commits.
-- Stack: **Redis Streams** (event log), **Postgres** (read models), **Node** api + projector, **vanilla JS + WebCrypto** web app, **Docker Compose**. Plus a **one-process dev stack** with no Docker.
+- Stack: **Redis Streams** (event log), **Postgres** (read models), **Node** api + projector + notifier, **vanilla JS + WebCrypto** web app, **Docker Compose**. Six containers: web, api, projector, notifier, redis, postgres. Plus a **one-process dev stack** with no Docker.
 
 Run it right now on this Mac (no Docker needed):
 ```bash
@@ -78,12 +78,13 @@ Added this session:
 - **Login + elder view + per-tab sessions** (commit after `d8e7ac4`): `logins` table; `POST /auth/register` (needs family `key_check` + existing member; stores scrypt hash + PBKDF2/AES-GCM-wrapped H made on the phone) and `POST /auth/login` (returns wrapped material; browser unwraps with the password). `web/crypto.js` `wrapKey`/`unwrapKey`. Landing has a Log in card; create/join end on a "Set your login" screen (skippable). Seed registers `sistera`, `abdullah`, `fatima`, `ammi`, password `333`. Sessions are in `sessionStorage` (one tab = one phone; three tabs on one origin = three members). `role === 'elder'` switches to the elder view (`renderElderHome()`, tabs Today / My week / My preferences / Invite, `body.elder` styles). 46 tests.
 - **Pitch** (`6034913`, `pitch/`): `deck.html` (21 slides, arrow keys, click, `#n`), `Amanah-Care-pitch-deck.pdf`, `explainer.html` + `Amanah-Care-explained.pdf` (simple English, demo commands, all judge Q&A, sources). Regenerate PDFs with headless Chrome:
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/Amanah-Care-pitch-deck.pdf" "file://$PWD/deck.html"` (the CVDisplayLink errors it prints are harmless).
+- **Alerts + logout** (session 3, ten agents in parallel, contract in `spec/NOTIFY-SPEC.md`): a new `notifier` service (`app/notifier/index.js`, `apply.js`, `match.js`) reads the same `events` stream in its own consumer group (`notifier`) and, per event, matches it against per-member `subscriptions` and inserts rows into `notifications` (both new tables in `db/init.sql`). Routes: `app/api/routes/subscriptions.js` (GET/PUT a member's kinds) and `app/api/routes/notifications.js` (GET the list, POST to mark read). `app/web/alerts.js` renders the Alerts tab (subscriptions editor, alert list, unread badge) through the `onEnter`/`onPoll`/`onTab` hooks `app.js` exposes. Seed gives Sister A, Fatima and Abdullah a few default kinds each and Ammi none; elder members get no default subscriptions and no Alerts tab in v1. Logout (`app.js` `logout()`, wired to `#btn-logout`) stops the poll timer, clears the session, and returns to the landing view.
 
 ---
 
 ## 5. DEFERRED (on the honesty slide, not built)
 
-Elder consent filter + audience filtering (needs a scoped support key); RTL Urdu/Arabic for the elder view (the view itself is built); SSE/web push (polling instead); 30-minute reminders; key rotation; password policy, rate limiting and recovery (login exists, default password 333); native mobile; any AI. **AI decision (owner asked, agent advised, owner accepted): AI only at the edge, on the phone, opt-in per family; never on the server; nothing built tonight because a cloud model call would contradict the privacy claim on stage.** Candidate edge features: free text/voice → structured log items; plain-sentence or Urdu/Arabic summaries; "patterns, not predictions" counts. On-device route: Chrome built-in AI (Prompt/Summarizer/Translator on Gemini Nano, stable on desktop) or Apple on-device models.
+Elder consent filter + audience filtering (needs a scoped support key); RTL Urdu/Arabic for the elder view (the view itself is built); SSE/web push (polling instead); 30-minute reminders (event alerts exist now, see §4; timed reminders are still not built); key rotation; password policy, rate limiting and recovery (login exists, default password 333); native mobile; any AI. **AI decision (owner asked, agent advised, owner accepted): AI only at the edge, on the phone, opt-in per family; never on the server; nothing built tonight because a cloud model call would contradict the privacy claim on stage.** Candidate edge features: free text/voice → structured log items; plain-sentence or Urdu/Arabic summaries; "patterns, not predictions" counts. On-device route: Chrome built-in AI (Prompt/Summarizer/Translator on Gemini Nano, stable on desktop) or Apple on-device models.
 
 ---
 
@@ -176,10 +177,13 @@ app/
   db/init.sql               4 tables + 1 view (count(CASE) form)
   api/app.js                createApp(): routes, guards, read models, 500 handler
   api/server.js             wiring: pg pool + redis client, listen
+  api/routes/*              subscriptions.js (GET/PUT alert kinds), notifications.js (GET list, POST read)
   projector/apply.js        applyEvent(): idempotent upsert + handoffs read model
   projector/index.js        consumer group loop
+  notifier/*                match.js (kindsFor/recipients), apply.js (notify), index.js (consumer group notifier)
   web/index.html            tabs: Home, Log, Hand off, Inbox, Routine, Record, Prefs, Invite, Flow
   web/app.js                dashboard, routine, record, handoff, inbox, flow, crypto wiring
+  web/alerts.js             Alerts tab: subscriptions editor, alert list, unread badge
   web/crypto.js             WebCrypto AES-GCM helpers (tested in Node)
   web/styles.css            phone-first theme + dashboard/routine/record styles
   web/nginx.conf            no-store
@@ -189,8 +193,10 @@ app/
   test/api.test.js          routes + privacy test
   test/projector.test.js    applyEvent + workload view
   test/crypto.test.js       AES-GCM, IV, tamper, key check
+  test/notifier.test.js     match + notify, idempotent replay, no self-notify
+  test/subscriptions.test.js  subscription routes, defaults on create/join, read marking
 pitch/
   deck.html, Amanah-Care-pitch-deck.pdf, explainer.html, Amanah-Care-explained.pdf
-spec/                       SPEC, REQUIREMENTS (46 IDs), TASKS, AUDIT, diagrams
+spec/                       SPEC, REQUIREMENTS (46 IDs), TASKS, AUDIT, diagrams, NOTIFY-SPEC
 agents/                     HANDOFF.md (this), README.md (older), OWNER-NOTES.md
 ```
