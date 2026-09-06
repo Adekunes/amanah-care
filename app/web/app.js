@@ -58,6 +58,15 @@ const fmtTime = (iso)=>new Date(iso).toLocaleTimeString([], {hour:'2-digit', min
 const fmtWhen = (iso)=>{ const d=new Date(iso); return d.toDateString()===new Date().toDateString() ? fmtTime(iso)
   : d.toLocaleString([], {weekday:'short', hour:'2-digit', minute:'2-digit'}); };
 const cap = (s)=>{ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); };
+// One colour per person, from the name, same everywhere (top bar dot, cards, family tab).
+const hue = (name)=>{ let h=0; for(const c of String(name)) h=(h*31 + c.charCodeAt(0))>>>0; return h % 360; };
+const roleOf = (id)=> MEMBERS.find(m=>m.id===id)?.role || (id===ME?.member_id ? ME.role : 'family');
+const ROLE_LABEL = { family:'Family', support:'Support worker', elder:'The elder' };
+function avatar(id, cls=''){
+  if(!id) return `<span class="av any ${cls}" title="anyone">?</span>`;
+  const name = nameOf(id); const ini = name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
+  return `<span class="av ${roleOf(id)} ${cls}" style="--h:${hue(name)}" title="${esc(name)} · ${ROLE_LABEL[roleOf(id)]||''}">${esc(ini)}</span>`;
+}
 
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
@@ -94,7 +103,7 @@ function logout(){
   WEEK = []; HANDOFFS = []; MEMBERS = []; PREFS = null;
   lastHandoffAt = null; homeSig = null; inboxSig = null; lastTrace = null;
   document.body.classList.remove('elder');
-  const ORIG_TABS = { home:'Home', record:'Record', prefs:'Prefs' };  // undo ELDER_TABS renames
+  const ORIG_TABS = { home:'Home', record:'Record', prefs:'Prefs', family:'Family' };  // undo ELDER_TABS renames
   $$('.tabs button').forEach(b=>{
     b.classList.remove('hide');
     if(ORIG_TABS[b.dataset.tab]) b.firstChild.nodeValue = ORIG_TABS[b.dataset.tab];
@@ -146,6 +155,7 @@ function tab(name){
   $$('.tabview').forEach(v=>v.classList.add('hide'));
   $('#tab-'+name).classList.remove('hide');
   if(name==='home' || name==='patterns') refreshHome(true);
+  if(name==='family') renderFamily();
   if(name==='log') renderCareToday();
   if(name==='handoff') buildHandoff();
   if(name==='inbox') refreshInbox();
@@ -197,7 +207,7 @@ function showInvite(){
 function renderInviteTab(){
   const code = inviteCode();
   $('#invite-code-app').value = code;
-  renderQR($('#qr-app'), code);
+  if(!$('#qr-app').firstChild) renderQR($('#qr-app'), code);
 }
 
 async function joinFamily(){
@@ -312,7 +322,7 @@ function renderWhoAmI(){
   const sw = $('#btn-switch'); if(sw) sw.classList.toggle('hide', !(ME.families && ME.families.length > 1));
 }
 // The elder gets a different app: Today, My week, My preferences, Invite. Big type, read-only.
-const ELDER_TABS = { home:'Today', record:'My week', prefs:'My preferences', invite:'Invite' };
+const ELDER_TABS = { home:'Today', record:'My week', prefs:'My preferences', family:'My family' };
 const SUPPORT_HIDE = new Set(['invite']);   // a support worker never invites into the family
 function setTabsForRole(){
   document.body.classList.toggle('elder', isElder());
@@ -553,9 +563,9 @@ function renderHome(){
 
 // One card on the board. Meta line: who and when (Done), the reason (Blocked), the target time (To do).
 function cardHtml({card, state, ev}){
-  const meta = state==='done' ? `✓ ${esc(nameOf(ev.actor_id))} · ${fmtTime(ev.occurred_at)}`
-    : state==='blocked' ? `${esc(cap(ev.reason || ev.text))} · ${esc(nameOf(ev.actor_id))} ${fmtTime(ev.occurred_at)}`
-    : `${card.who ? `${esc(nameOf(card.who))} · ` : ''}by ${esc(card.time)}`;
+  const meta = state==='done' ? `${avatar(ev.actor_id)}<span>${esc(nameOf(ev.actor_id))} · ${fmtTime(ev.occurred_at)}</span>`
+    : state==='blocked' ? `${avatar(ev.actor_id)}<span><b>${esc(cap(ev.reason || ev.text))}</b> · ${esc(nameOf(ev.actor_id))} ${fmtTime(ev.occurred_at)}</span>`
+    : `${avatar(card.who)}<span>${card.who ? `${esc(nameOf(card.who))}${roleOf(card.who)==='support'?' (support)':''}` : 'anyone'} · by ${esc(card.time)}</span>`;
   const acts = state==='todo'
     ? `<button data-move="done" data-card="${esc(card.id)}" type="button">Done</button><button class="ghost" data-move="blocked" data-card="${esc(card.id)}" type="button">Blocked</button>`
     : `<button class="ghost" data-move="todo" data-card="${esc(card.id)}" type="button" title="Back to To do">↩ To do</button>`;
@@ -1060,6 +1070,7 @@ async function refreshAll(){
   if(vis('#tab-log')) await renderCareToday();
   if(vis('#tab-record')) await renderRecord();
   if(vis('#tab-handoff')) await renderSent(false);
+  if(vis('#tab-family')) await renderFamily();
   await refreshInbox();                       // inbox, badge, and the poll hooks (alerts)
   for(const fn of liveHooks){ try{ await fn(); }catch{} }
 }
@@ -1122,6 +1133,40 @@ async function renderWorkload(){
         <span class="muted tnum">${r.care_count} logs · ${r.handoff_count} accepted</span></div>
       <div class="bar"><span style="width:${Math.round(total/max*100)}%"></span></div>
     </div>`; }).join('');
+}
+
+// ---- FAMILY: everyone with the key, what each one carries, and the invite ----
+async function renderFamily(){
+  await loadMembers(); await loadNames().catch(()=>{}); await loadWeek(); await loadRoutine();
+  HANDOFFS = await api(`/families/${ME.family_id}/handoffs`).catch(()=>HANDOFFS);
+  const today = todayItems();
+  const acked = HANDOFFS.filter(h=>h.status==='acknowledged').sort((a,b)=>new Date(b.acked_at)-new Date(a.acked_at))[0];
+  const last = today.at(-1);
+  let withNow = null;
+  if(acked && (!last || new Date(acked.acked_at) > new Date(last.occurred_at) || acked.to_id===last.actor_id)) withNow = acked.to_id;
+  else if(last) withNow = last.actor_id;
+  const weekDone = WEEK.filter(x=>!x.blocked);
+  const order = { elder:0, family:1, support:2 };
+  const members = [...MEMBERS].sort((a,b)=>(order[a.role]??3)-(order[b.role]??3) || nameOf(a.id).localeCompare(nameOf(b.id)));
+  $('#family-title').textContent = FAMILY || 'The family';
+  $('#family-count').textContent = `${members.length} people hold the key`;
+  $('#members').innerHTML = members.map(m=>{
+    const done = weekDone.filter(x=>x.actor_id===m.id).length;
+    const blocked = WEEK.filter(x=>x.blocked && x.actor_id===m.id).length;
+    const accepted = HANDOFFS.filter(h=>h.status==='acknowledged' && h.to_id===m.id).length;
+    const share = weekDone.length ? Math.round(done/weekDone.length*100) : 0;
+    const cards = planFor().filter(i=>i.who===m.id);
+    const me = m.id===ME.member_id;
+    if(m.role==='elder') return `<div class="member elder"><div class="m-top">${avatar(m.id,'big')}<div class="m-name"><b>${esc(nameOf(m.id))}${me?' (you)':''}</b><span class="m-role">The elder · this record is about ${esc(nameOf(m.id))}</span></div></div>
+      <div class="m-note">${withNow ? `With <b>${esc(nameOf(withNow))}</b> right now.` : 'Nobody has moved a card yet today.'} ${PREFS?.lang ? `Speaks ${esc(PREFS.lang)}.` : ''}</div></div>`;
+    return `<div class="member ${m.role} ${withNow===m.id?'now':''}">
+      <div class="m-top">${avatar(m.id,'big')}<div class="m-name"><b>${esc(nameOf(m.id))}${me?' (you)':''}</b><span class="m-role">${ROLE_LABEL[m.role]||m.role}${withNow===m.id?` · <i>with ${esc(ELDER)} now</i>`:''}</span></div>
+        <span class="pill ${m.role==='support'?'support':''}">${m.role==='support'?'support':'family'}</span></div>
+      <div class="m-stats"><div><b>${done}</b><span>done, 7 days</span></div><div><b>${share}%</b><span>of the week</span></div><div><b>${accepted}</b><span>handoffs taken</span></div>${blocked?`<div><b>${blocked}</b><span>blocked</span></div>`:''}</div>
+      <div class="m-bar"><span style="width:${share}%"></span></div>
+      <div class="m-cards">${cards.length ? cards.map(c=>`<span class="m-card">${iconFor(c)} ${esc(c.label)} <i>${esc(c.time)}</i></span>`).join('') : '<span class="muted">no card assigned today</span>'}</div>
+    </div>`; }).join('');
+  if(!isElder() && ME.role!=='support') renderInviteTab();
 }
 
 // ---- prefs ----

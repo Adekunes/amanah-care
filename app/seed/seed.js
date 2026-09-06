@@ -60,9 +60,9 @@ const R = (id, category, label, time, days, who='') => ({ id, category, label, t
 const ROUTINE = [
   R('meds',    'meds',          'Medication',    '08:00', 'daily'),
   R('care',    'personal care', 'Personal care', '10:00', 'daily', layla),
-  R('meals',   'meal',          'Meals',         '12:30', 'daily'),
+  R('meals',   'meal',          'Meals',         '12:30', 'daily', sisA),
   R('prayers', 'prayer',        'Prayers',       '13:05', 'daily'),
-  R('walk',    'mobility',      'Walk',          '17:15', 'daily'),
+  R('walk',    'mobility',      'Walk',          '17:15', 'daily', fat),
 ];
 await ev('RoutineSet',{items:ROUTINE},{actor_id:sisA}, week);
 
