@@ -51,6 +51,9 @@ const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
 const DAY_LABEL = { daily:'every day', weekdays:'weekdays', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat', sun:'Sun' };
 
 let pick = { category: null, presets: new Set() };
+let boardDay = 0;                 // 0 = today, -1 = yesterday ... (past boards are read only)
+let boardFilter = 'all';          // 'all' | 'mine'
+const dayAt = (off)=>{ const d=midnight(); d.setDate(d.getDate()+off); return d; };
 
 const esc = (v)=>String(v ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtTime = (iso)=>new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -504,7 +507,10 @@ function renderHome(){
   if(isElder()) return renderElderHome();
   const today = todayItems();
   const rows = planRows();
-  const board = boardFor(planFor(), WEEK);
+  const day = dayAt(boardDay);
+  const past = boardDay !== 0;
+  let board = boardFor(planFor(day), WEEK, day);
+  if(boardFilter==='mine') board = board.filter(b=>b.card.who===ME.member_id || b.ev?.actor_id===ME.member_id);
   const c = counts(board);
   const open = HANDOFFS.filter(h=>h.status==='open').sort((a,b)=>new Date(b.opened_at)-new Date(a.opened_at));
   const acked = HANDOFFS.filter(h=>h.status==='acknowledged').sort((a,b)=>new Date(b.acked_at)-new Date(a.acked_at))[0];
@@ -527,12 +533,18 @@ function renderHome(){
   const top = Object.entries(byActor).sort((a,b)=>b[1]-a[1])[0];
   const share = top && weekDone.length ? Math.round(top[1]/weekDone.length*100) : 0;
 
-  const EMPTY = { todo: c.done+c.blocked===board.length && board.length ? 'Everything decided for today.' : 'Nothing left here.',
-                  done: 'Nothing done yet. Move a card here when it is.', blocked: 'Nothing blocked today.' };
-  const cols = COLUMNS.map(([key,lab])=>`<section class="col ${key}" data-col="${key}">
+  const EMPTY = { todo: c.done+c.blocked===board.length && board.length ? 'Everything decided.' : 'Nothing left here.',
+                  done: past ? 'Nothing was done that day.' : 'Nothing done yet. Move a card here when it is.', blocked: past ? 'Nothing was blocked.' : 'Nothing blocked today.' };
+  const cols = COLUMNS.map(([key,lab])=>`<section class="col ${key} ${past?'past':''}" data-col="${key}">
       <header><h2>${lab}</h2><span class="count tnum">${c[key]}</span></header>
-      <div class="cards">${board.filter(b=>b.state===key).map(cardHtml).join('') || `<p class="empty">${EMPTY[key]}</p>`}</div>
+      <div class="cards">${board.filter(b=>b.state===key).map(b=>cardHtml(b, past)).join('') || `<p class="empty">${EMPTY[key]}</p>`}</div>
+      ${key==='todo' && !past ? `<button type="button" class="add-card" data-addcard>+ Add a card</button>
+      <form class="add-form hide" data-addform><input name="label" placeholder="What, e.g. Physio" maxlength="40" required>
+        <div class="row2"><select name="category">${CATS.map(([k])=>`<option value="${esc(k)}">${esc(k)}</option>`).join('')}</select><input name="time" type="time" value="${String(new Date().getHours()+1).padStart(2,'0')}:00"></div>
+        <select name="who"><option value="">Anyone</option>${MEMBERS.filter(m=>m.role!=='elder').map(m=>`<option value="${esc(m.id)}">${esc(nameOf(m.id))}</option>`).join('')}</select>
+        <div class="bs-actions"><button type="button" class="ghost" data-addcancel>Cancel</button><button type="submit">Add</button></div></form>` : ''}
     </section>`).join('');
+  const dayLabel = boardDay===0 ? 'Today' : (boardDay===-1 ? 'Yesterday' : day.toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'}));
 
   const hr = new Date().getHours(); const greet = hr<12 ? 'Good morning' : (hr<18 ? 'Good afternoon' : 'Good evening');
   $('#home').innerHTML = `
@@ -545,10 +557,15 @@ function renderHome(){
         <div class="hero-actions"><button class="emg-btn" data-emg type="button">Emergency</button><button class="ghost" data-sheet type="button">Hospital sheet</button></div>
       </div>
       <div class="duty ${wait?'wait':''}"><span class="dd"></span><span>${duty}</span></div>
-      <div class="progress"><div class="top"><span>Today</span><b class="tnum">${c.done} of ${board.length} done${c.blocked?` · ${c.blocked} blocked`:''}</b></div>
+      <div class="progress"><div class="top"><span>${dayLabel}</span><b class="tnum">${c.done} of ${board.length} done${c.blocked?` · ${c.blocked} blocked`:''}</b></div>
         <div class="bar"><span style="width:${board.length?Math.round(c.done/board.length*100):0}%"></span></div></div>
     </div>
-    ${board.length ? `<div class="board">${cols}</div>` : `<div class="card"><p class="muted">${SERVER_VIEW ? 'The cards are inside the encrypted routine. The server cannot show them.' : `No cards yet. Set ${esc(ELDER)}'s five cards in the Routine tab.`}</p></div>`}
+    <div class="board-bar">
+      <div class="pager"><button type="button" class="ghost small" data-day="-1" ${boardDay<=-6?'disabled':''}>‹</button><b>${dayLabel}</b><button type="button" class="ghost small" data-day="1" ${boardDay>=0?'disabled':''}>›</button>${past?`<button type="button" class="ghost small" data-day="0">Back to today</button>`:''}</div>
+      <div class="chips"><button type="button" class="chip ${boardFilter==='all'?'on':''}" data-filter="all">Everyone</button><button type="button" class="chip ${boardFilter==='mine'?'on':''}" data-filter="mine">Mine</button></div>
+    </div>
+    ${board.length || !past ? `<div class="board">${cols}</div>` : `<div class="card"><p class="muted">No cards that day.</p></div>`}
+    ${!board.length && !past && !ROUTINE.length ? `<div class="card"><p class="muted">${SERVER_VIEW ? 'The cards are inside the encrypted routine. The server cannot show them.' : `No cards yet. Add ${esc(ELDER)}'s first card above.`}</p></div>` : ''}
     <div class="board-foot">
       <span><b class="tnum">${c.done}/${board.length}</b> done today</span>
       <span><b class="tnum">${c.blocked}</b> blocked</span>
@@ -559,19 +576,29 @@ function renderHome(){
   wireBoard();
   wireEmergencyButtons();
   $('#home').querySelector('[data-gopatterns]').onclick = (e)=>{ e.preventDefault(); tab('patterns'); };
+  $$('#home [data-day]').forEach(b=>b.onclick=()=>{ const v=+b.dataset.day; boardDay = v===0 ? 0 : Math.max(-6, Math.min(0, boardDay+v)); renderHome(); });
+  $$('#home [data-filter]').forEach(b=>b.onclick=()=>{ boardFilter=b.dataset.filter; renderHome(); });
+  const addBtn=$('#home [data-addcard]'), addForm=$('#home [data-addform]');
+  if(addBtn){ addBtn.onclick=()=>{ addBtn.classList.add('hide'); addForm.classList.remove('hide'); addForm.label.focus(); };
+    addForm.querySelector('[data-addcancel]').onclick=()=>{ addForm.classList.add('hide'); addBtn.classList.remove('hide'); };
+    addForm.onsubmit=(e)=>{ e.preventDefault(); const f=addForm;
+      ROUTINE.push({ id: uuid().slice(0,8), category: f.category.value, label: f.label.value.trim(), time: f.time.value||'12:00', days:'daily', who: f.who.value });
+      saveRoutine().then(()=>refreshHome(true)).catch(err=>toast(err.message)); };
+  }
   renderPatternsTab(rows, today, weekDone);
 }
 
 // One card on the board. Meta line: who and when (Done), the reason (Blocked), the target time (To do).
-function cardHtml({card, state, ev}){
+function cardHtml({card, state, ev}, past=false){
+  const late = !past && state==='todo' && hm(card.time) < nowMin()-60;
   const meta = state==='done' ? `${avatar(ev.actor_id)}<span>${esc(nameOf(ev.actor_id))} · ${fmtTime(ev.occurred_at)}</span>`
     : state==='blocked' ? `${avatar(ev.actor_id)}<span><b>${esc(cap(ev.reason || ev.text))}</b> · ${esc(nameOf(ev.actor_id))} ${fmtTime(ev.occurred_at)}</span>`
     : `${avatar(card.who)}<span>${card.who ? `${esc(nameOf(card.who))}${roleOf(card.who)==='support'?' (support)':''}` : 'anyone'} · by ${esc(card.time)}</span>`;
-  const acts = state==='todo'
+  const acts = past ? '' : (state==='todo'
     ? `<button data-move="done" data-card="${esc(card.id)}" type="button">Done</button><button class="ghost" data-move="blocked" data-card="${esc(card.id)}" type="button">Blocked</button>`
-    : `<button class="ghost" data-move="todo" data-card="${esc(card.id)}" type="button" title="Back to To do">↩ To do</button>`;
-  return `<article class="kcard ${state}" draggable="true" data-card="${esc(card.id)}" data-cat="${esc(card.category)}">
-      <div class="k-top"><span class="k-icon">${iconFor(card)}</span><b>${esc(card.label)}</b><span class="k-time tnum">${esc(card.time)}</span></div>
+    : `<button class="ghost" data-move="todo" data-card="${esc(card.id)}" type="button" title="Back to To do">↩ To do</button>`);
+  return `<article class="kcard ${state} ${late?'late':''}" draggable="${past?'false':'true'}" data-card="${esc(card.id)}" data-cat="${esc(card.category)}">
+      <div class="k-top"><span class="k-icon">${iconFor(card)}</span><b>${esc(card.label)}</b>${late?'<span class="pill overdue">late</span>':''}<span class="k-time tnum">${esc(card.time)}</span></div>
       <div class="k-meta">${meta}</div>
       <div class="k-acts">${acts}</div>
     </article>`;
@@ -584,6 +611,8 @@ function wireBoard(){
   home.querySelectorAll('.kcard').forEach(k=>{
     k.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', k.dataset.card); e.dataTransfer.effectAllowed='move'; k.classList.add('dragging'); });
     k.addEventListener('dragend', ()=>k.classList.remove('dragging'));
+    k.addEventListener('click', (e)=>{ if(e.target.closest('button') || k.dataset.dragged) return; openCard(k.dataset.card); });
+    k.addEventListener('pointerdown', (e)=>{ if(e.pointerType==='mouse' || e.target.closest('button') || k.getAttribute('draggable')==='false') return; touchDrag(k, e); });
   });
   home.querySelectorAll('.col').forEach(col=>{
     col.addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; col.classList.add('over'); });
@@ -591,6 +620,44 @@ function wireBoard(){
     col.addEventListener('drop', (e)=>{ e.preventDefault(); col.classList.remove('over');
       const id = e.dataTransfer.getData('text/plain'); if(id) moveCard(id, col.dataset.col).catch(err=>{ toast(err.message); refreshHome(true); }); });
   });
+}
+// Touch: hold a card for a moment, then drag it over a column. Scrolling stays normal until the hold.
+function touchDrag(k, e0){
+  let ghost=null, timer=null, over=null, started=false;
+  const x0=e0.clientX, y0=e0.clientY;
+  const start=()=>{ started=true; k.dataset.dragged='1'; k.classList.add('dragging'); if(navigator.vibrate) navigator.vibrate(20);
+    ghost=k.cloneNode(true); ghost.className='kcard ghost '+k.className.replace('dragging',''); const r=k.getBoundingClientRect();
+    Object.assign(ghost.style,{ position:'fixed', left:r.left+'px', top:r.top+'px', width:r.width+'px', zIndex:80, pointerEvents:'none', transform:'scale(1.03) rotate(1.5deg)' });
+    document.body.appendChild(ghost); };
+  const move=(e)=>{ if(!started){ if(Math.hypot(e.clientX-x0,e.clientY-y0)>8){ clearTimeout(timer); cleanup(); } return; }
+    e.preventDefault(); ghost.style.transform=`translate(${e.clientX-x0}px,${e.clientY-y0}px) scale(1.03) rotate(1.5deg)`;
+    const col=document.elementFromPoint(e.clientX,e.clientY)?.closest('.col'); if(col!==over){ over?.classList.remove('over'); over=col; over?.classList.add('over'); } };
+  const up=()=>{ clearTimeout(timer); if(started && over){ const to=over.dataset.col; cleanup(); moveCard(k.dataset.card, to).catch(err=>{ toast(err.message); refreshHome(true); }); } else cleanup(); };
+  const cleanup=()=>{ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up);
+    ghost?.remove(); over?.classList.remove('over'); k.classList.remove('dragging'); setTimeout(()=>delete k.dataset.dragged, 50); };
+  timer=setTimeout(start, 220);
+  document.addEventListener('pointermove',move,{passive:false}); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
+}
+// Card details: what, when, who, kind, the last seven days, remove. Saves into the routine.
+function openCard(id){
+  const card = ROUTINE.find(i=>i.id===id); if(!card) return;
+  const box=$('#cardsheet');
+  $('#cs-icon').textContent = iconFor(card); $('#cs-title').textContent = card.label;
+  $('#cs-label').value = card.label; $('#cs-time').value = card.time || '';
+  const cat=$('#cs-cat'); cat.innerHTML = CATS.map(([k])=>`<option value="${esc(k)}">${esc(k)}</option>`).join(''); cat.value = card.category;
+  const who=$('#cs-who'); who.innerHTML = '<option value="">Anyone</option>' + MEMBERS.filter(m=>m.role!=='elder').map(m=>`<option value="${esc(m.id)}">${esc(nameOf(m.id))} · ${ROLE_LABEL[m.role]}</option>`).join(''); who.value = card.who || '';
+  const days=[]; for(let k=6;k>=0;k--){ const d=dayAt(-k); const b=boardFor([card], LOG_ITEMS.length?LOG_ITEMS.filter(x=>!x.retracted):WEEK, d)[0];
+    days.push(`<div class="h-day ${b.state}" title="${d.toDateString()}: ${b.state}"><i></i><span>${d.toLocaleDateString([], {weekday:'narrow'})}</span></div>`); }
+  $('#cs-history').innerHTML = days.join('');
+  const doneN = days.filter(x=>x.includes('h-day done')).length, blockedN = days.filter(x=>x.includes('h-day blocked')).length;
+  $('#cs-sub').textContent = `${esc(cap(card.category))} · done ${doneN} of 7 days${blockedN?`, blocked ${blockedN}`:''}`;
+  const close=()=>{ box.classList.add('hide'); };
+  $('#cs-close').onclick=close;
+  $('#cs-save').onclick=async()=>{ card.label=$('#cs-label').value.trim()||card.label; card.time=$('#cs-time').value||card.time; card.category=cat.value; card.who=who.value;
+    close(); try{ await saveRoutine(); await refreshHome(true); }catch(e){ toast(e.message); } };
+  $('#cs-remove').onclick=async()=>{ if(!confirm(`Remove "${card.label}" from the board? Past days keep their record.`)) return;
+    ROUTINE = ROUTINE.filter(i=>i.id!==id); close(); try{ await saveRoutine(); await refreshHome(true); }catch(e){ toast(e.message); } };
+  box.classList.remove('hide');
 }
 function jumpCard(id, to){
   const k = $('#home').querySelector(`.kcard[data-card="${CSS.escape(id)}"]`); const col = $('#home').querySelector(`.col[data-col="${to}"] .cards`);
@@ -1147,6 +1214,10 @@ async function renderFamily(){
   if(acked && (!last || new Date(acked.acked_at) > new Date(last.occurred_at) || acked.to_id===last.actor_id)) withNow = acked.to_id;
   else if(last) withNow = last.actor_id;
   const weekDone = WEEK.filter(x=>!x.blocked);
+  await loadLog();
+  const items90 = LOG_ITEMS.filter(x=>!x.retracted);
+  const contacts = String(PREFS?.contacts||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const phoneOf = (name)=>{ const l = contacts.find(x=>x.toLowerCase().startsWith(name.toLowerCase().split(' ')[0])); const m = l && l.match(/(\+?\d[\d\s().-]{6,})/); return m ? m[1].trim() : null; };
   const order = { elder:0, family:1, support:2 };
   const members = [...MEMBERS].sort((a,b)=>(order[a.role]??3)-(order[b.role]??3) || nameOf(a.id).localeCompare(nameOf(b.id)));
   $('#family-title').textContent = FAMILY || 'The family';
@@ -1158,15 +1229,30 @@ async function renderFamily(){
     const share = weekDone.length ? Math.round(done/weekDone.length*100) : 0;
     const cards = planFor().filter(i=>i.who===m.id);
     const me = m.id===ME.member_id;
+    const mineAll = items90.filter(x=>x.actor_id===m.id).sort((a,b)=>new Date(b.occurred_at)-new Date(a.occurred_at));
+    const lastAt = mineAll[0]?.occurred_at;
+    const daysActive = new Set(WEEK.filter(x=>x.actor_id===m.id).map(x=>new Date(x.occurred_at).toDateString())).size;
+    const phone = phoneOf(nameOf(m.id));
+    const assign = ROUTINE.map(c=>`<button type="button" class="m-card ${c.who===m.id?'on':''}" data-assign="${esc(c.id)}" data-member="${esc(m.id)}" title="${c.who===m.id?'Unassign':'Assign to '+esc(nameOf(m.id))}">${iconFor(c)} ${esc(c.label)}</button>`).join('');
     if(m.role==='elder') return `<div class="member elder"><div class="m-top">${avatar(m.id,'big')}<div class="m-name"><b>${esc(nameOf(m.id))}${me?' (you)':''}</b><span class="m-role">The elder · this record is about ${esc(nameOf(m.id))}</span></div></div>
       <div class="m-note">${withNow ? `With <b>${esc(nameOf(withNow))}</b> right now.` : 'Nobody has moved a card yet today.'} ${PREFS?.lang ? `Speaks ${esc(PREFS.lang)}.` : ''}</div></div>`;
     return `<div class="member ${m.role} ${withNow===m.id?'now':''}">
       <div class="m-top">${avatar(m.id,'big')}<div class="m-name"><b>${esc(nameOf(m.id))}${me?' (you)':''}</b><span class="m-role">${ROLE_LABEL[m.role]||m.role}${withNow===m.id?` · <i>with ${esc(ELDER)} now</i>`:''}</span></div>
         <span class="pill ${m.role==='support'?'support':''}">${m.role==='support'?'support':'family'}</span></div>
-      <div class="m-stats"><div><b>${done}</b><span>done, 7 days</span></div><div><b>${share}%</b><span>of the week</span></div><div><b>${accepted}</b><span>handoffs taken</span></div>${blocked?`<div><b>${blocked}</b><span>blocked</span></div>`:''}</div>
+      <div class="m-stats"><div><b>${done}</b><span>done, 7 days</span></div><div><b>${share}%</b><span>of the week</span></div><div><b>${daysActive}<i>/7</i></b><span>days active</span></div><div><b>${accepted}</b><span>handoffs taken</span></div></div>
       <div class="m-bar"><span style="width:${share}%"></span></div>
-      <div class="m-cards">${cards.length ? cards.map(c=>`<span class="m-card">${iconFor(c)} ${esc(c.label)} <i>${esc(c.time)}</i></span>`).join('') : '<span class="muted">no card assigned today</span>'}</div>
+      <div class="m-meta"><span>${lastAt ? `Last move ${fmtWhen(lastAt)}` : 'No moves yet'}${blocked?` · ${blocked} blocked`:''}</span>${phone ? `<a class="m-call" href="tel:${phone.replace(/[^\d+]/g,'')}">📞 ${esc(phone)}</a>` : ''}</div>
+      <div class="m-assign"><span class="eyebrow">Their cards</span><div class="m-cards">${assign || '<span class="muted">no cards yet</span>'}</div></div>
     </div>`; }).join('');
+  $$('#members [data-assign]').forEach(b=>b.onclick=async()=>{ const c=ROUTINE.find(i=>i.id===b.dataset.assign); if(!c) return;
+    c.who = c.who===b.dataset.member ? '' : b.dataset.member; try{ await saveRoutine(); await renderFamily(); }catch(e){ toast(e.message); } });
+  // the week, person by person: done cards per day
+  const days=[]; for(let k=6;k>=0;k--) days.push(dayAt(-k));
+  const people = members.filter(m=>m.role!=='elder');
+  const maxN = Math.max(1, ...people.flatMap(m=>days.map(d=>weekDone.filter(x=>x.actor_id===m.id && new Date(x.occurred_at).toDateString()===d.toDateString()).length)));
+  $('#fam-heat').innerHTML = `<div class="heat-row head"><span></span>${days.map(d=>`<span>${d.toLocaleDateString([], {weekday:'short'})}</span>`).join('')}<span>week</span></div>` +
+    people.map(m=>{ const ns = days.map(d=>weekDone.filter(x=>x.actor_id===m.id && new Date(x.occurred_at).toDateString()===d.toDateString()).length); const tot=ns.reduce((a,b)=>a+b,0);
+      return `<div class="heat-row ${m.role}"><span class="heat-name">${avatar(m.id)} ${esc(nameOf(m.id))}</span>${ns.map(n=>`<span class="heat-cell" style="--v:${n/maxN}" title="${n} done"><b>${n||''}</b></span>`).join('')}<span class="heat-tot tnum">${tot}</span></div>`; }).join('');
   if(!isElder() && ME.role!=='support') renderInviteTab();
 }
 

@@ -370,6 +370,10 @@
         <div class="card-head"><h2 id="family-title">The family</h2><span class="muted" id="family-count"></span></div>
         <div id="members" class="members"><p class="muted">Loading…</p></div>
       </div>
+      <div class="card">
+        <div class="card-head"><h2>The week, person by person</h2><span class="muted">cards done per day</span></div>
+        <div id="fam-heat" class="heat"></div>
+      </div>
       <div class="card fam-invite">
         <div class="group">
           <h2>Add someone to this family</h2>
@@ -425,6 +429,22 @@
     </div>
     <div id="sheet" class="sheet"></div>
   </section>
+
+  <div id="cardsheet" class="sendfx hide">
+    <div class="sendfx-inner cardsheet">
+      <div class="cs-head"><span class="k-icon" id="cs-icon">•</span><div><div class="sendfx-title" id="cs-title" style="text-align:left;margin:0">Card</div><div class="muted" id="cs-sub"></div></div><button type="button" class="ghost small" id="cs-close">Close</button></div>
+      <div class="row2">
+        <div class="field"><label for="cs-label">What</label><input id="cs-label" maxlength="40"></div>
+        <div class="field"><label for="cs-time">By when</label><input id="cs-time" type="time"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="cs-cat">Kind</label><select id="cs-cat"></select></div>
+        <div class="field"><label for="cs-who">Who does it</label><select id="cs-who"><option value="">Anyone</option></select></div>
+      </div>
+      <div class="field"><label>Last 7 days</label><div id="cs-history" class="cs-history"></div></div>
+      <div class="bs-actions"><button type="button" class="ghost" id="cs-remove">Remove card</button><button type="button" id="cs-save">Save</button></div>
+    </div>
+  </div>
 
   <div id="blocksheet" class="sendfx hide">
     <div class="sendfx-inner blocksheet">

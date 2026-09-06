@@ -713,3 +713,46 @@ body.support .hero.photo::after{background:linear-gradient(90deg,rgba(12,40,80,.
 .board-foot span{display:flex;align-items:center;gap:6px}
 .board-foot b{font-size:var(--fs-4);color:var(--brand-ink)}
 @media (min-width:960px){ .hero.photo{min-height:240px;padding:28px 30px 26px} .hero.photo .hero-row{align-items:flex-end} }
+
+/* ---- a proper board: bar, pager, add card, late, ghost, details, family week ---- */
+.board-bar{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.pager{display:flex;align-items:center;gap:8px}
+.pager b{font-size:var(--fs-4);letter-spacing:-.01em;min-width:90px;text-align:center}
+.pager button{min-height:36px;padding:0 12px;font-size:var(--fs-3)}
+.board-bar .chips .chip{min-height:36px}
+.col.past{opacity:.92;background:linear-gradient(180deg,#fafcfb,#f4f7f6)}
+.col.past .kcard{cursor:default}
+.add-card{width:100%;min-height:42px;background:transparent;color:var(--ink-2);border:1.5px dashed var(--line-2);border-radius:var(--r-sm);font-size:var(--fs-2);margin-top:auto}
+.add-card:hover{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand)}
+.add-form{display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:var(--r-sm);padding:10px;margin-top:auto}
+.add-form input,.add-form select{min-height:40px;font-size:15px}
+.add-form .row2{gap:8px}
+.add-form .bs-actions button{min-height:38px}
+.kcard.late{border-left-color:var(--warn)}
+.kcard .k-top .pill.overdue{padding:2px 8px}
+.kcard.ghost{box-shadow:0 20px 40px -14px rgba(0,0,0,.45);opacity:.95}
+.kcard{touch-action:pan-y}
+.cardsheet{display:flex;flex-direction:column;gap:12px;max-width:460px}
+.cs-head{display:flex;align-items:center;gap:12px}
+.cs-head > div{flex:1;min-width:0}
+.cs-head .k-icon{width:44px;height:44px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;font-size:22px}
+.cs-history{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.h-day{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-1);color:var(--muted)}
+.h-day i{display:block;width:100%;height:26px;border-radius:8px;background:var(--line)}
+.h-day.done i{background:var(--brand)} .h-day.blocked i{background:var(--warn)}
+.m-stats{grid-template-columns:repeat(4,1fr)}
+.m-stats b i{font-style:normal;font-size:var(--fs-2);color:var(--muted);font-weight:600}
+.m-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:var(--fs-2);color:var(--muted);flex-wrap:wrap}
+.m-call{color:var(--brand);font-weight:700;text-decoration:none;white-space:nowrap}
+.m-assign{display:flex;flex-direction:column;gap:6px}
+.m-assign .m-cards button.m-card{width:auto;min-height:32px;background:var(--bg);color:var(--ink-2);border:1.5px solid var(--line);font-size:var(--fs-2);padding:0 10px;border-radius:999px}
+.m-assign .m-cards button.m-card.on{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand)}
+.member.support .m-assign .m-cards button.m-card.on{background:#e4edfa;color:#12386f;border-color:#1f5fb8}
+.heat{display:flex;flex-direction:column;gap:6px;overflow-x:auto}
+.heat-row{display:grid;grid-template-columns:150px repeat(7,minmax(36px,1fr)) 48px;gap:6px;align-items:center;min-width:520px}
+.heat-row.head span{font-size:var(--fs-1);font-weight:700;color:var(--muted);text-align:center;letter-spacing:.04em;text-transform:uppercase}
+.heat-name{display:flex;align-items:center;gap:8px;font-weight:700;font-size:var(--fs-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.heat-cell{height:34px;border-radius:8px;background:color-mix(in srgb,var(--brand) calc(var(--v) * 85%),var(--bg));display:grid;place-items:center;font-size:var(--fs-1);font-weight:700;color:var(--ink)}
+.heat-cell b{mix-blend-mode:multiply;color:var(--brand-ink)}
+.heat-row.support .heat-cell{background:color-mix(in srgb,#1f5fb8 calc(var(--v) * 85%),var(--bg))}
+.heat-tot{text-align:right;font-weight:800;color:var(--brand-ink)}
