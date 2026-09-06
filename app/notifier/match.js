@@ -37,10 +37,12 @@ export function kindsFor(fields) {
     case 'RoutineSet':          return ['routine'];
     case 'MemberJoined':        return ['member'];
     case 'EmergencyRaised':     return ['emergency'];
-    case 'CareLogged': {
+    case 'CareLogged':
+    case 'CareBlocked': {
       // fields.category is the clear routing field (see db/init.sql). Only
       // offer the specific kind if it is one of the eight real categories;
-      // care.* always applies to any CareLogged regardless of category.
+      // care.* always applies to any CareLogged or CareBlocked (a card moved
+      // to Done or to Blocked) regardless of category.
       const specific = `care.${fields.category}`;
       return KINDS.includes(specific) ? [specific, 'care.*'] : ['care.*'];
     }

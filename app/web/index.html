@@ -12,72 +12,93 @@
 
   <!-- LANDING -->
   <section id="view-landing" class="auth">
-    <div class="auth-brand">
-      <div class="auth-word">Amanah Care</div>
-      <p class="auth-tag">The care record only your family can read.</p>
-      <ul class="auth-points">
-        <li>Plan the day, log what happened, hand off without a group chat.</li>
-        <li>One tap makes the hospital sheet the ER needs.</li>
-        <li>Only the family holds the key. The server sees scrambled text.</li>
-      </ul>
+    <div class="auth-visual">
+      <img src="img/family.jpg" alt="A mother in her chair, her daughter and her son beside her" width="1024" height="1536">
+      <div class="auth-overlay">
+        <div class="auth-word">Amanah Care</div>
+        <p class="auth-tag">The care record only your family can read.</p>
+        <ul class="auth-points">
+          <li>Five cards a day. Drag each one to Done, or say why not.</li>
+          <li>One tap makes the hospital sheet the ER needs.</li>
+          <li>Only the family holds the key. The server sees scrambled text.</li>
+        </ul>
+      </div>
     </div>
+    <div class="auth-side">
+      <div class="auth-card">
+        <div class="auth-brandline"><span class="tb-mark">A</span><span>Amanah Care</span></div>
 
-    <div class="auth-card">
-      <nav class="auth-tabs" aria-label="Sign in options">
-        <button type="button" data-auth="login" class="on">Log in</button>
-        <button type="button" data-auth="join">Create account</button>
-        <button type="button" data-auth="create">New family</button>
-      </nav>
+        <nav class="auth-tabs" aria-label="Sign in options">
+          <button type="button" data-auth="login" class="on">Log in</button>
+          <button type="button" data-auth="join">Join a family</button>
+          <button type="button" data-auth="create">New family</button>
+        </nav>
 
-      <div class="auth-pane" data-pane="login">
-        <h2>Welcome back</h2>
-        <p class="muted">Your login and password.</p>
-        <div class="stack tight">
-          <div class="field"><label for="l-login">Email or login</label>
-            <input id="l-login" placeholder="fatima" autocomplete="username"></div>
-          <div class="field"><label for="l-pass">Password</label>
-            <input id="l-pass" type="password" value="333" autocomplete="current-password"></div>
+        <div class="auth-pane" data-pane="login">
+          <div class="auth-head"><span class="eyebrow">Assalamu alaykum</span><h2>Welcome back</h2><p class="muted">Your login and password. Same on every phone in the family.</p></div>
+          <div class="stack tight">
+            <div class="field icon"><label for="l-login">Email or login</label>
+              <div class="in"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><input id="l-login" placeholder="fatima" autocomplete="username"></div></div>
+            <div class="field icon"><label for="l-pass">Password</label>
+              <div class="in"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="l-pass" type="password" value="333" autocomplete="current-password"><button type="button" class="eye" data-eye="l-pass" aria-label="Show password">Show</button></div></div>
+          </div>
+          <button id="btn-login" class="cta">Log in <span aria-hidden="true">→</span></button>
+          <div id="fam-pick" class="hide">
+            <p class="muted">Your login opens more than one family. Which one now?</p>
+            <div class="stack tight" id="fam-pick-list"></div>
+          </div>
+          <div class="auth-or"><span>first time here?</span></div>
+          <div class="auth-doors">
+            <a href="#" class="door" data-auth="join"><span class="d-ico">🔑</span><span class="d-txt"><b>Join with a family code</b><span>Someone in the family shows you the code, face to face.</span></span><span class="d-arrow">→</span></a>
+            <a href="#" class="door" data-auth="create"><span class="d-ico">🏠</span><span class="d-txt"><b>Start a new family</b><span>You are the first one. The key is made on this phone.</span></span><span class="d-arrow">→</span></a>
+          </div>
+          <div class="auth-demo"><b>Demo logins</b> sistera · fatima · abdullah · layla (support) · ammi (elder) · password <code>333</code></div>
         </div>
-        <button id="btn-login">Log in</button>
-        <div id="fam-pick" class="hide">
-          <p class="muted">Your login opens more than one family. Which one now?</p>
-          <div class="stack tight" id="fam-pick-list"></div>
+
+        <div class="auth-pane hide" data-pane="join">
+          <div class="auth-head"><span class="eyebrow">Join a family</span><h2>Create your account</h2><p class="muted">Paste the family code you were given and say who you are. You choose a login and password on the next screen.</p></div>
+          <div class="stack tight">
+            <div class="field"><label for="j-code">Family code</label>
+              <textarea id="j-code" placeholder="paste the family code"></textarea></div>
+            <div class="row2">
+              <div class="field"><label for="j-name">Your name</label>
+                <input id="j-name" placeholder="e.g. Brother B"></div>
+              <div class="field"><label for="j-role">Your role</label>
+                <select id="j-role"><option value="family">Family member</option><option value="support">Support worker</option><option value="elder">The elder</option></select></div>
+            </div>
+          </div>
+          <button id="btn-join" class="cta">Continue <span aria-hidden="true">→</span></button>
+          <div class="auth-note"><b>What is a family code?</b> Whoever started the family generates it from the Family tab. It carries the family key, so it is handed over face to face, never sent by chat.</div>
+          <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
         </div>
-        <p class="auth-switch">First time here? <a href="#" data-auth="join">Create your account with a family code</a>.<br>No family yet? <a href="#" data-auth="create">Start a new family</a>.</p>
+
+        <div class="auth-pane hide" data-pane="create">
+          <div class="auth-head"><span class="eyebrow">New family</span><h2>Start a new family</h2><p class="muted">For the first person only. This makes the family key on this device and gives you the code to share.</p></div>
+          <div class="stack tight">
+            <div class="row2">
+              <div class="field"><label for="c-elder">Elder's name</label>
+                <input id="c-elder" placeholder="e.g. Ammi"></div>
+              <div class="field"><label for="c-family">Family name (optional)</label>
+                <input id="c-family" placeholder="e.g. Ammi's family"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="c-name">Your name</label>
+                <input id="c-name" placeholder="e.g. Sister A"></div>
+              <div class="field"><label for="c-role">Your role</label>
+                <select id="c-role"><option value="family">Family member</option><option value="elder">The elder</option></select></div>
+            </div>
+          </div>
+          <button id="btn-create" class="cta">Start the family <span aria-hidden="true">→</span></button>
+          <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
+        </div>
+
+        <ul class="auth-trust">
+          <li><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Encrypted on your phone</li>
+          <li><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>The key never leaves the family</li>
+          <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>No ads, no tracking</li>
+        </ul>
       </div>
-
-      <div class="auth-pane hide" data-pane="join">
-        <h2>Create your account</h2>
-        <p class="muted">Paste the family code you were given, say who you are. You choose your login and password on the next screen.</p>
-        <div class="stack tight">
-          <div class="field"><label for="j-code">Family code</label>
-            <textarea id="j-code" placeholder="paste the family code"></textarea></div>
-          <div class="field"><label for="j-name">Your name</label>
-            <input id="j-name" placeholder="e.g. Brother B"></div>
-          <div class="field"><label for="j-role">Your role</label>
-            <select id="j-role"><option value="family">Family member</option><option value="support">Support worker</option><option value="elder">The elder</option></select></div>
-        </div>
-        <button id="btn-join">Continue</button>
-        <div class="auth-note"><b>What is a family code?</b> Whoever started the family generates it from their Invite tab. It carries the family key, so it is handed over face to face, never sent by chat.</div>
-        <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
-      </div>
-
-      <div class="auth-pane hide" data-pane="create">
-        <h2>Start a new family</h2>
-        <p class="muted">For the first person only. This makes the family key on this device and gives you the code to share.</p>
-        <div class="stack tight">
-          <div class="field"><label for="c-elder">Elder's name</label>
-            <input id="c-elder" placeholder="e.g. Ammi"></div>
-          <div class="field"><label for="c-family">Family name (optional)</label>
-            <input id="c-family" placeholder="e.g. Ammi's family"></div>
-          <div class="field"><label for="c-name">Your name</label>
-            <input id="c-name" placeholder="e.g. Sister A"></div>
-          <div class="field"><label for="c-role">Your role</label>
-            <select id="c-role"><option value="family">Family member</option><option value="elder">The elder</option></select></div>
-        </div>
-        <button id="btn-create">Start the family</button>
-        <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
-      </div>
+      <p class="auth-foot">Built for MuslimHacks 2026, Elderly Care track. Not a medical record, never medical advice.</p>
     </div>
   </section>
 
@@ -122,29 +143,33 @@
 
   <!-- APP -->
   <section id="view-app" class="hide">
-    <div id="famhead" class="famhead"><span id="fam-name">—</span><span class="fam-sub">private care record</span></div>
-    <div id="whoami" class="whoami">
-      <span class="who-dot" id="who-dot"></span>
-      <span class="who-name" id="who-name">—</span>
-      <span class="who-role" id="who-role"></span>
-      <div class="who-actions">
-        <button id="btn-switch" class="ghost small sv-btn hide" type="button" title="Open another family you belong to">Switch family</button>
-        <button id="btn-serverview" class="ghost small sv-btn" type="button" title="See this screen the way the server sees it">Server view</button>
-        <button id="btn-logout" class="ghost small" type="button">Log out</button>
+    <header class="topbar">
+      <div class="tb-row">
+        <div class="tb-brand"><span class="tb-mark">A</span><span class="tb-text"><span class="tb-word">Amanah Care</span><span id="fam-name">—</span></span></div>
+        <div id="whoami" class="whoami">
+          <span class="who-dot" id="who-dot"></span>
+          <span class="who-name" id="who-name">—</span>
+          <span class="who-role" id="who-role"></span>
+          <div class="who-actions">
+            <button id="btn-switch" class="ghost small sv-btn hide" type="button" title="Open another family you belong to">Switch family</button>
+            <button id="btn-serverview" class="ghost small sv-btn" type="button" title="See this screen the way the server sees it">Server view</button>
+            <button id="btn-logout" class="ghost small" type="button">Log out</button>
+          </div>
+        </div>
       </div>
-    </div>
     <nav class="tabs">
       <button data-tab="home" class="on">Home</button>
-      <button data-tab="log">Log</button>
+      <button data-tab="patterns">Patterns</button>
       <button data-tab="handoff">Hand off</button>
       <button data-tab="inbox">Inbox<span id="inbox-badge" class="badge hide">0</span></button>
       <button data-tab="alerts">Alerts<span id="alerts-badge" class="badge hide">0</span></button>
       <button data-tab="routine">Routine</button>
       <button data-tab="record">Record</button>
       <button data-tab="prefs">Prefs</button>
-      <button data-tab="invite">Invite</button>
+      <button data-tab="family">Family</button>
       <button data-tab="flow">Flow</button>
     </nav>
+    </header>
 
     <div id="emg-banner" class="emg-banner hide">
       <div class="emg-text"><b>EMERGENCY</b><span id="emg-text"></span></div>
@@ -153,9 +178,13 @@
     <div id="sv-banner" class="sv-banner hide"><b>This is what the server, and we who run it, can see.</b> Who, what kind, when. Every word is sealed with the family key that never left the phones.</div>
     <div id="strip" class="strip hide"></div>
 
-    <!-- HOME: the dashboard, computed on this phone from decrypted events -->
+    <!-- HOME: the board, computed on this phone from decrypted events -->
     <div id="tab-home" class="tabview">
       <div id="home"><p class="muted">Loading…</p></div>
+    </div>
+
+    <!-- PATTERNS: recommendations, counts, your part, the week, who carried it -->
+    <div id="tab-patterns" class="tabview hide">
       <div id="home-side">
         <div id="recs" class="hide"></div>
         <div id="home-mid"></div>
@@ -169,7 +198,7 @@
       </div>
     </div>
 
-    <!-- LOG -->
+    <!-- LOG (no longer in the tab row: the board on Home replaced it; kept for the record view code) -->
     <div id="tab-log" class="tabview hide">
       <div class="card">
         <div class="group">
@@ -252,7 +281,7 @@
     <div id="tab-routine" class="tabview hide">
       <div class="card">
         <div class="card-head"><h2 id="routine-title">Routine</h2><span class="pill hide" id="routine-dirty">unsaved</span></div>
-        <p class="muted">Meds, meals, prayers, walks, pickups, appointments. The plan every day is measured against. Stored encrypted like everything else.</p>
+        <p class="muted">The cards on the board, one per line: what, by when, who. Five is the whole idea; rename or retime them here. Stored encrypted like everything else.</p>
         <div id="routine-list"><p class="muted">No routine yet.</p></div>
         <button id="btn-r-save">Save routine</button>
       </div>
@@ -335,9 +364,13 @@
       </div>
     </div>
 
-    <!-- INVITE (in-app: add members at any time) -->
-    <div id="tab-invite" class="tabview hide">
-      <div class="card">
+    <!-- FAMILY: who is in it, who carries what, and the invite code -->
+    <div id="tab-family" class="tabview hide">
+      <div class="group">
+        <div class="card-head"><h2 id="family-title">The family</h2><span class="muted" id="family-count"></span></div>
+        <div id="members" class="members"><p class="muted">Loading…</p></div>
+      </div>
+      <div class="card fam-invite">
         <div class="group">
           <h2>Add someone to this family</h2>
           <p class="muted">Hold this QR up to their phone, or copy the code and hand it over in person. The family key is inside it, so never paste it into a chat.</p>
@@ -349,6 +382,7 @@
         <div class="warnbox">They choose their own name and role on the Join screen. A support worker holds the same key as family, so the card is not filtered for them yet.</div>
       </div>
     </div>
+    <div id="tab-invite" class="tabview hide"></div>
 
     <!-- FLOW -->
     <div id="tab-flow" class="tabview hide">
@@ -391,6 +425,15 @@
     </div>
     <div id="sheet" class="sheet"></div>
   </section>
+
+  <div id="blocksheet" class="sendfx hide">
+    <div class="sendfx-inner blocksheet">
+      <div class="sendfx-title" id="bs-title">Why not?</div>
+      <div class="chips" id="bs-reasons"></div>
+      <input id="bs-other" class="hide" placeholder="a few words" maxlength="80">
+      <div class="bs-actions"><button id="bs-cancel" class="ghost" type="button">Cancel</button><button id="bs-ok" type="button">Mark blocked</button></div>
+    </div>
+  </div>
 
   <div id="sendfx" class="sendfx hide">
     <div class="sendfx-inner">

@@ -86,7 +86,8 @@ const DETECTORS = {
     return { because: `No mobility log in 48 hours; the routine has "${planned.label}".`, evidence: { planned: planned.id } };
   },
   MOOD_AGITATED_EVENINGS(c) {
-    const m = inLast(c.items.filter((i) => i.category === 'mood' && /agit|upset|contrari|énerv|enerv/.test(txt(i)) && new Date(i.occurred_at).getHours() >= 17), c.now, 7 * 24);
+    // A mood log, or a card blocked with an "agitated" reason (the board has no mood card).
+    const m = inLast(c.items.filter((i) => (i.category === 'mood' || i.blocked) && /agit|upset|contrari|énerv|enerv/.test(txt(i)) && new Date(i.occurred_at).getHours() >= 17), c.now, 7 * 24);
     const days = new Set(m.map((i) => dayKey(i.occurred_at)));
     if (days.size < 3) return null;
     return { because: `Agitated or upset logged on ${days.size} evenings in 7 days, after 17:00 (${[...m].slice(-3).map((i) => `${fmtD(i.occurred_at)} ${fmtT(i.occurred_at)}`).join(', ')}).`, evidence: { days: days.size } };

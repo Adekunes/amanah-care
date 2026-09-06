@@ -110,6 +110,15 @@ describe('detect', () => {
     assert.equal(fired(detect(TABLE, ctx({ items: [...healthy(), log(1, '18:40', 'mood', 'agitated'), log(3, '19:10', 'mood', 'agitated')] })), 'MOOD_AGITATED_EVENINGS'), undefined);
     assert.equal(fired(detect(TABLE, ctx({ items: [...healthy(), log(1, '09:40', 'mood', 'agitated'), log(3, '09:10', 'mood', 'agitated'), log(5, '08:30', 'mood', 'agitated')] })), 'MOOD_AGITATED_EVENINGS'), undefined);
   });
+  test('board rows: a Meals card blocked "refused" twice and a Walk card blocked "agitated" three evenings fire the same rules', () => {
+    const blk = (d, hhmm, category, label, reason) => ({ ...log(d, hhmm, category, `${label} not done: ${reason}`, label.toLowerCase()), blocked: true, reason });
+    const items = [...healthy(), blk(1, '12:40', 'meal', 'Meals', 'refused'), blk(0, '12:40', 'meal', 'Meals', 'refused'),
+      blk(1, '18:40', 'mobility', 'Walk', 'agitated'), blk(3, '18:40', 'mobility', 'Walk', 'agitated'), blk(5, '18:40', 'mobility', 'Walk', 'agitated')];
+    const on = ids(detect(TABLE, ctx({ items })));
+    assert.ok(on.includes('MEAL_REFUSED_REPEAT'));
+    assert.ok(on.includes('MOOD_AGITATED_EVENINGS'));
+    assert.ok(!on.includes('MOBILITY_NONE_LOGGED'), 'a blocked walk is still contact');
+  });
   test('APPOINTMENT_NOT_LOGGED: a routine appointment on a past day with no log', () => {
     const items = healthy().filter((i) => i.category !== 'appointment');
     assert.match(fired(detect(TABLE, ctx({ items })), 'APPOINTMENT_NOT_LOGGED').because, /Dr follow-up on Wed/);

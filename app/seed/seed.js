@@ -56,22 +56,13 @@ await ev('PreferenceSet',{lang:'Urdu',diet:'halal, no gelatin, soft food',prayer
 
 // Ammi's routine. The plan the day is measured against.
 const R = (id, category, label, time, days, who='') => ({ id, category, label, time, days, who });
+// The five cards on the board. One per line: what, by when, who.
 const ROUTINE = [
-  R('fajr',   'prayer',      'Fajr',                    '05:30', 'daily'),
-  R('meds1',  'meds',        'morning meds',            '08:00', 'daily'),
-  R('meal1',  'meal',        'breakfast',               '08:30', 'daily'),
-  R('meds2',  'meds',        'afternoon meds',          '14:00', 'daily'),
-  R('dhuhr',  'prayer',      'Dhuhr',                   '13:05', 'daily'),
-  R('meal2',  'meal',        'lunch',                   '13:30', 'daily'),
-  R('asr',    'prayer',      'Asr',                     '16:45', 'daily'),
-  R('walk',   'mobility',    'walk after Asr',          '17:15', 'daily'),
-  R('meal3',  'meal',        'dinner',                  '19:00', 'daily'),
-  R('maghrib','prayer',      'Maghrib',                 '19:25', 'daily'),
-  R('meds3',  'meds',        'night meds',              '21:00', 'daily', fat),
-  R('isha',   'prayer',      'Isha',                    '21:15', 'daily'),
-  R('pharm',  'transport',   'pharmacy pickup',         '11:00', 'sun',  abd),
-  R('physio', 'mobility',    'physio at home',          '15:00', 'tue'),
-  R('doc',    'appointment', 'Dr. Rahman follow-up',    '10:30', 'wed',  fat),
+  R('meds',    'meds',          'Medication',    '08:00', 'daily'),
+  R('care',    'personal care', 'Personal care', '10:00', 'daily', layla),
+  R('meals',   'meal',          'Meals',         '12:30', 'daily', sisA),
+  R('prayers', 'prayer',        'Prayers',       '13:05', 'daily'),
+  R('walk',    'mobility',      'Walk',          '17:15', 'daily', fat),
 ];
 await ev('RoutineSet',{items:ROUTINE},{actor_id:sisA}, week);
 
@@ -79,30 +70,21 @@ await ev('RoutineSet',{items:ROUTINE},{actor_id:sisA}, week);
 const shifts = { 6:[sisA,sisA,fat], 5:[sisA,sisA,sisA], 4:[sisA,fat,sisA], 3:[sisA,sisA,abd], 2:[sisA,sisA,sisA], 1:[sisA,sisA,sisA] };  // Sister A carries the week
 const who = (k, hhmm)=>{ const h=+hhmm.split(':')[0]; const s=shifts[k]; return h<12?s[0]:(h<18?s[1]:s[2]); };
 const care = async (k, hhmm, category, text, routine_id, actor)=>ev('CareLogged',{ text, ...(routine_id?{routine_id}:{}) },{ actor_id: actor||who(k,hhmm), category }, at(k,hhmm));
-const MOODS = { 6:'calm', 5:'cheerful', 4:'tired (slept badly)', 3:'calm', 2:'agitated (missed her nap)', 1:'calm' };
+// A card moved to Blocked: CareBlocked, reason encrypted, never counted as done.
+const blocked = async (k, hhmm, card, reason, actor)=>{ const it = ROUTINE.find(i=>i.id===card);
+  return ev('CareBlocked',{ text:`${it.label} not done: ${reason}`, reason, routine_id: it.id },{ actor_id: actor||who(k,hhmm), category: it.category }, at(k,hhmm)); };
 for (let k=6; k>=1; k--) {
-  await care(k,'05:40','prayer','Fajr','fajr');
-  await care(k,'08:05','meds', k===3?'meds skipped (was asleep, gave at 09:30)':'morning meds','meds1');
-  await care(k,'08:35','meal', k===4?'breakfast (ate half)':'breakfast','meal1');
-  await care(k,'10:00','mood', MOODS[k]);
-  await care(k,'13:10','prayer','Dhuhr','dhuhr');
-  await care(k,'13:35','meal', (k===1||k===2)?'lunch (refused food, had tea and dates)':'lunch','meal2');
-  if (k===5||k===3||k===1) await care(k,'18:40','mood','agitated (restless before Maghrib, settled after)');
-  await care(k,'14:05','meds','afternoon meds','meds2');
-  if (k!==5) await care(k,'16:50','prayer','Asr','asr');
-  if (k>2) await care(k,'17:20','mobility', k===4?'walk after Asr (short, knee sore)':'walk after Asr','walk');   // nothing logged for 48 h
-  await care(k,'19:05','meal','dinner','meal3');
-  await care(k,'19:30','prayer','Maghrib','maghrib');
-  await care(k,'21:05','meds','night meds','meds3');
-  if (k!==6) await care(k,'21:20','prayer','Isha','isha');
+  await care(k, k===3?'09:30':'08:05','meds', k===3?'Medication (was asleep, gave at 09:30)':'Medication','meds');
+  if (k===5||k===2) await care(k,'10:30','personal care','Personal care (bath, hair and nails)','care', layla);
+  else await care(k,'10:15','personal care','Personal care','care');
+  if (k===1||k===2) await blocked(k,'12:40','meals','refused');            // two refusals in 48 h
+  else await care(k,'12:40','meal', k===4?'Meals (ate half at lunch)':'Meals','meals');
+  await care(k,'13:10','prayer','Prayers','prayers');
+  if (k===6||k===5||k===3) await blocked(k,'18:40','walk','agitated');      // three agitated evenings
+  else if (k===4) await care(k,'17:20','mobility','Walk (short, knee sore)','walk');   // nothing for 48 h after that
 }
-await care(4,'10:40','appointment','Dr. Rahman follow-up (BP checked, next visit in a month)','doc', fat);
-await care(6,'11:10','transport','pharmacy pickup done','pharm', abd);
-await care(3,'15:10','mobility','physio at home (20 min, went well)','physio', abd);
-// the agency's support worker: two visits this week, personal care
-await care(5,'10:30','personal care','bath done', null, layla);
-await care(5,'10:50','personal care','hair and nails', null, layla);
-await care(2,'10:30','personal care','bath done', null, layla);
+await care(4,'10:40','appointment','Dr. Rahman follow-up (BP checked, next visit in a month)', null, fat);
+await care(6,'11:10','transport','pharmacy pickup done', null, abd);
 await care(2,'10:45','readings','blood pressure (128/82)', null, layla);
 
 // Past handoffs, all accepted. Summary and next are encrypted.
@@ -112,10 +94,10 @@ async function handoff(k, hhmm, from, to, summary, next, ackMin=4){
   const ackAt = at(k,hhmm); ackAt.setMinutes(ackAt.getMinutes()+ackMin);
   await ev('HandoffAcknowledged',null,{actor_id:to, handoff_id:hid}, ackAt);
 }
-await handoff(6,'12:00', sisA, fat, 'Fajr, morning meds, breakfast, calm', 'Dhuhr 13:05, lunch, afternoon meds 14:00, Abdullah brings the pharmacy bag');
-await handoff(4,'12:00', fat, abd, 'Dr. Rahman follow-up done, BP checked, ate half at breakfast, tired', 'lunch 13:30, afternoon meds 14:00, short walk only, knee sore');
-await handoff(3,'18:00', abd, sisA, 'physio went well, meds given late at 09:30, calm all day', 'dinner 19:00, Maghrib, night meds 21:00');
-await handoff(1,'12:00', fat, sisA, 'Fajr, morning meds, breakfast, calm', 'lunch 13:30, afternoon meds 14:00, walk after Asr');
+await handoff(6,'12:00', sisA, fat, 'Medication, Personal care', 'Meals 12:30, Prayers 13:05, Walk 17:15, Abdullah brings the pharmacy bag');
+await handoff(4,'12:00', fat, abd, 'Dr. Rahman follow-up done, BP checked, Medication, Personal care', 'Meals 12:30, Prayers, short walk only, knee sore');
+await handoff(3,'18:00', abd, sisA, 'Medication (was asleep, gave at 09:30), Personal care, Meals, Prayers', 'Walk 17:15, she was restless');
+await handoff(1,'12:00', fat, sisA, 'Medication, Personal care', 'Meals 12:30, Prayers 13:05, Walk 17:15');
 
 // Alert subscriptions (NOTIFY-SPEC §1/§6). Ammi is an elder: no defaults, no Alerts tab, no PUT here.
 const SUBSCRIPTIONS = {
@@ -135,10 +117,10 @@ for (const it of ROUTINE) {
   const [h,m] = it.time.split(':').map(Number);
   if (h*60+m > nowMin-90) continue;
   const t = `${String(h).padStart(2,'0')}:${String(m+5).padStart(2,'0')}`;
-  await care(0, t, it.category, it.label, it.id, it.who || sisA);
+  if (it.id==='meals') await blocked(0, t, 'meals', 'refused', sisA);      // today's lunch refused too
+  else await care(0, t, it.category, it.label, it.id, it.who || sisA);
   todayDone++;
 }
-if (nowMin > 10*60) await care(0,'10:00','mood','calm', null, sisA);
 
 // Logins for everyone, password 333, H wrapped under the password like the browser does.
 async function wrapH(password){
@@ -166,10 +148,10 @@ await post(`/families/${FAM2}/join`,{ key_check:keyCheck2, member:{id:layla2, ro
 for (const [id,name] of [[nana,'Nana'],[yusuf,'Yusuf'],[layla2,'Nurse Layla']]) await ev2('MemberJoined',{name},{actor_id:id}, week);
 await ev2('FamilyCreated',{elder_name:'Nana', family_name:'the Khan family'},{actor_id:yusuf}, week);
 await ev2('PreferenceSet',{lang:'Arabic',diet:'halal, low salt',prayer:'prayer times matter',modesty:'female caregiver for personal care',fasting:'none',care_contact:'CLSC nurse, 514 555 0199'},{actor_id:nana}, week);
-await ev2('RoutineSet',{items:[R('m1','meds','morning meds','08:00','daily'),R('w1','mobility','short walk','16:00','daily'),R('bath','personal care','bath','10:00','tue')]},{actor_id:yusuf}, week);
-for (const k of [2,1]) { await ev2('CareLogged',{text:'morning meds',routine_id:'m1'},{actor_id:yusuf, category:'meds'}, at(k,'08:10'));
-  await ev2('CareLogged',{text:'short walk',routine_id:'w1'},{actor_id:layla2, category:'mobility'}, at(k,'16:05'));
-  await ev2('CareLogged',{text:'calm'},{actor_id:layla2, category:'mood'}, at(k,'16:20')); }
+await ev2('RoutineSet',{items:[R('meds','meds','Medication','08:00','daily'),R('care','personal care','Personal care','10:00','daily',layla2),R('meals','meal','Meals','12:30','daily'),R('prayers','prayer','Prayers','13:05','daily'),R('walk','mobility','Walk','16:00','daily')]},{actor_id:yusuf}, week);
+for (const k of [2,1]) { await ev2('CareLogged',{text:'Medication',routine_id:'meds'},{actor_id:yusuf, category:'meds'}, at(k,'08:10'));
+  await ev2('CareLogged',{text:'Personal care',routine_id:'care'},{actor_id:layla2, category:'personal care'}, at(k,'10:20'));
+  await ev2('CareLogged',{text:'Walk',routine_id:'walk'},{actor_id:layla2, category:'mobility'}, at(k,'16:05')); }
 async function wrapH2(password){ const salt=wc.getRandomValues(new Uint8Array(16)), iv=wc.getRandomValues(new Uint8Array(12));
   const base=await subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
   const k=await subtle.deriveKey({name:'PBKDF2', salt, iterations:310000, hash:'SHA-256'}, base, {name:'AES-GCM',length:256}, false, ['encrypt']);
