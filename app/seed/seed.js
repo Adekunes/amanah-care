@@ -47,7 +47,7 @@ for (const m of [sisA, abd, fat]) await post(`/families/${FAM}/join`,{ key_check
 
 const week = at(7,'09:00');
 for (const [id,name] of Object.entries(NAMES)) await ev('MemberJoined',{name},{actor_id:id}, week);
-await ev('FamilyCreated',{elder_name:'Ammi'},{actor_id:sisA}, week);
+await ev('FamilyCreated',{elder_name:'Ammi', family_name:"Ammi's family"},{actor_id:sisA}, week);
 await ev('PreferenceSet',{lang:'Urdu',diet:'halal, no gelatin, soft food',prayer:'prayer times matter, help with wudu',modesty:'female caregiver for personal care'},{actor_id:elder}, week);
 
 // Ammi's routine. The plan the day is measured against.

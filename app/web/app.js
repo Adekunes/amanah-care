@@ -15,6 +15,7 @@ let ME = null;                  // { family_id, member_id, role, h, my_name }
 let lastHandoffAt = null;       // to auto-compose summary from care since last handoff
 const nameCache = {};           // member_id -> decrypted name (from MemberJoined events)
 let ELDER = 'Elder';            // decrypted from FamilyCreated
+let FAMILY = '';                // family name, decrypted from FamilyCreated
 let ROUTINE = [];               // decrypted RoutineSet items: {id,category,label,time,days,who}
 let routineDirty = false;
 let WEEK = [];                  // decrypted CareLogged rows, last 7 days
@@ -63,7 +64,7 @@ function logout(){
   sessionStorage.removeItem('amanah');
   KEY = null; ME = null;
   for(const k of Object.keys(nameCache)) delete nameCache[k];
-  ELDER = 'Elder';
+  ELDER = 'Elder'; FAMILY=''; { const fn=$('#fam-name'); if(fn) fn.textContent='—'; }
   ROUTINE = []; routineDirty = false;
   WEEK = []; HANDOFFS = []; MEMBERS = []; PREFS = null;
   lastHandoffAt = null; homeSig = null; inboxSig = null; lastTrace = null;
@@ -133,6 +134,7 @@ function tab(name){
 // ---- create / join ----
 async function createFamily(){
   const elder = $('#c-elder').value.trim() || 'Elder';
+  const familyName = $('#c-family').value.trim() || `${elder}'s family`;
   const myName = $('#c-name').value.trim() || 'Me';
   const role = $('#c-role').value;
   KEY = await makeKey();
@@ -145,7 +147,7 @@ async function createFamily(){
     family_id, key_check: kc, key_version:1, member:{ id:member_id, role } }) });
   // record my name + elder name as encrypted events
   await postEncEvent('MemberJoined', { name: myName }, { actor_id: member_id });
-  await postEncEvent('FamilyCreated', { elder_name: elder }, { actor_id: member_id });
+  await postEncEvent('FamilyCreated', { elder_name: elder, family_name: familyName }, { actor_id: member_id });
   save();
   afterLogin = 'invite'; showSetLogin();
 }
@@ -283,7 +285,11 @@ async function loadNames(){
 }
 async function loadElder(){
   const evs = await fetchEventsByType('FamilyCreated');
-  for(const e of evs){ const p = await decryptJSON(KEY, e.iv, e.payload_cipher); if(p?.elder_name) ELDER=p.elder_name; }
+  for(const e of evs){ const p = await decryptJSON(KEY, e.iv, e.payload_cipher);
+    if(p?.elder_name) ELDER=p.elder_name; if(p?.family_name) FAMILY=p.family_name; }
+  if(!FAMILY) FAMILY = `${ELDER}'s family`;
+  $('#fam-name').textContent = FAMILY;
+  document.title = `${ME.my_name || 'Me'} · ${FAMILY}`;
   $('#routine-title').textContent = `${ELDER}'s routine`;
   $('#record-title').textContent = `${ELDER}'s record`;
 }
