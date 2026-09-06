@@ -50,7 +50,8 @@ for (const [id,name] of Object.entries(NAMES)) await ev('MemberJoined',{name},{a
 await ev('FamilyCreated',{elder_name:'Ammi', family_name:"Ammi's family"},{actor_id:sisA}, week);
 await ev('PreferenceSet',{lang:'Urdu',diet:'halal, no gelatin, soft food',prayer:'prayer times matter, help with wudu',modesty:'female caregiver for personal care',
   conditions:'type 2 diabetes, high blood pressure, sore left knee', allergies:'penicillin', doctor:'Dr. Rahman, 514 555 0100',
-  contacts:'Sister A 514 555 0101\nFatima 514 555 0102\nAbdullah 514 555 0103'},{actor_id:elder}, week);
+  contacts:'Sister A 514 555 0101\nFatima 514 555 0102\nAbdullah 514 555 0103',
+  fasting:'none', care_contact:'CLSC nurse, 514 555 0199'},{actor_id:elder}, week);
 
 // Ammi's routine. The plan the day is measured against.
 const R = (id, category, label, time, days, who='') => ({ id, category, label, time, days, who });
