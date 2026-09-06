@@ -7,6 +7,8 @@
 // Postgres and a fake stream, so every route runs in-process.
 import express from 'express';
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
+import { mountSubscriptions, ensureDefaults } from './routes/subscriptions.js';
+import { mountNotifications } from './routes/notifications.js';
 
 const uuid = () => (globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + Math.random().toString(16).slice(2));
 
@@ -65,6 +67,7 @@ export function createApp({ db, redis, stream = 'events' }) {
     await db.query(
       'INSERT INTO members(id,family_id,role) VALUES($1,$2,$3) ON CONFLICT (id) DO NOTHING',
       [member.id, family_id, member.role]);
+    await ensureDefaults(db, family_id, member.id, member.role);
     res.status(201).json({ family_id });
   }));
 
@@ -78,6 +81,7 @@ export function createApp({ db, redis, stream = 'events' }) {
     if (!member?.id || !member?.role) return res.status(400).json({ error: 'member{id,role} required' });
     await db.query('INSERT INTO members(id,family_id,role) VALUES($1,$2,$3) ON CONFLICT (id) DO NOTHING',
       [member.id, familyId, member.role]);
+    await ensureDefaults(db, familyId, member.id, member.role);
     res.status(201).json({ family_id: familyId, key_version: fam.key_version });
   }));
 
@@ -217,6 +221,10 @@ export function createApp({ db, redis, stream = 'events' }) {
          FROM events ORDER BY occurred_at DESC LIMIT 50`);
     res.json(r.rows);
   }));
+
+  // Alerts: subscriptions + notifications live in their own route modules.
+  mountSubscriptions(app, { db, wrap, isMember });
+  mountNotifications(app, { db, wrap, isMember });
 
   // Last resort: a failing query answers with JSON, never a hung request.
   // eslint-disable-next-line no-unused-vars

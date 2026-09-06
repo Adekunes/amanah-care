@@ -105,6 +105,7 @@ function tab(name){
   if(name==='record') renderRecord();
   if(name==='invite') renderInviteTab();
   if(name==='flow') renderFlow();
+  if(tabHooks[name]) runHooks(tabHooks[name]);
 }
 
 // ---- create / join ----
@@ -245,6 +246,7 @@ async function enterApp(){
   await loadWeek();
   tab('home');
   startPolling();
+  await runHooks(enterHooks);
 }
 
 // ---- members / names ----
@@ -696,6 +698,7 @@ async function refreshInbox(){
   const badge=$('#inbox-badge'); badge.textContent=waiting; badge.classList.toggle('hide', !waiting);
   await refreshHome(false).catch(()=>{});
   if(!$('#tab-handoff').classList.contains('hide')) await renderSent(false).catch(()=>{});
+  await runHooks(pollHooks);
 }
 async function renderInbox(rows){
   const box=$('#inbox');
@@ -806,6 +809,17 @@ async function renderFlow(){
   ].join('');
   animateHops();
 }
+
+// ---- hooks for sibling modules (alerts.js). Kept tiny on purpose. ----
+const enterHooks=[], pollHooks=[], tabHooks={};
+window.amanah = {
+  get me(){ return ME; }, get key(){ return KEY; },
+  api, decryptJSON, nameOf, toast, esc, fmtWhen, isElder, tab,
+  onEnter(fn){ enterHooks.push(fn); },
+  onPoll(fn){ pollHooks.push(fn); },
+  onTab(name, fn){ (tabHooks[name]=tabHooks[name]||[]).push(fn); },
+};
+async function runHooks(list){ for(const fn of list){ try{ await fn(); }catch(e){ console.warn('[hook]', e.message); } } }
 
 // ---- wire up ----
 $('#btn-create').onclick = ()=>createFamily().catch(e=>toast(e.message));

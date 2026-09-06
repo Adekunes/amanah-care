@@ -3,5 +3,6 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
 COPY server.js app.js ./
+COPY routes ./routes
 EXPOSE 4000
 CMD ["node","server.js"]

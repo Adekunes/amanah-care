@@ -79,3 +79,30 @@ CREATE TABLE IF NOT EXISTS logins (
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_login_at  TIMESTAMPTZ
 );
+
+-- Alerts. A member subscribes to kinds of events; the notifier (its own consumer
+-- group on the stream) writes one notification per subscriber per event. Both
+-- tables hold routing metadata only. Kinds are listed in spec/NOTIFY-SPEC.md.
+CREATE TABLE IF NOT EXISTS subscriptions (
+  member_id  TEXT NOT NULL REFERENCES members(id),
+  family_id  TEXT NOT NULL REFERENCES families(id),
+  kind       TEXT NOT NULL,
+  PRIMARY KEY (member_id, kind)
+);
+CREATE INDEX IF NOT EXISTS subscriptions_family_idx ON subscriptions(family_id);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  event_id    TEXT NOT NULL,
+  member_id   TEXT NOT NULL,             -- recipient
+  family_id   TEXT NOT NULL,
+  kind        TEXT NOT NULL,             -- the subscription kind that matched
+  type        TEXT NOT NULL,             -- event type
+  category    TEXT,
+  from_id     TEXT,                      -- actor of the event
+  handoff_id  TEXT,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at     TIMESTAMPTZ,
+  PRIMARY KEY (event_id, member_id)      -- replay-safe
+);
+CREATE INDEX IF NOT EXISTS notifications_member_idx ON notifications(family_id, member_id, read_at);
