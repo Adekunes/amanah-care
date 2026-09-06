@@ -76,6 +76,7 @@ Added this session:
 - **Hand off**: "what is next" pre-filled from routine items still open today (editable).
 - **Seed** (`app/seed/seed.js`): Ammi's 15-item routine, six days of history with rotating caregivers, four accepted past handoffs, today's items before now−90 min already logged by Sister A, mood at 10:00. Prints `SISTER_A_CODE`, `ABDULLAH_CODE`, `FATIMA_CODE`, `AMMI_CODE`. Each run makes a NEW family; old codes die with the old family (and the in-memory stack forgets everything on restart).
 - **Dev stack** (`app/dev/stack.mjs`), **`app/package.json`** with `test` and `coverage` scripts, devDependency `pg-mem`.
+- **Login + elder view + per-tab sessions** (commit after `d8e7ac4`): `logins` table; `POST /auth/register` (needs family `key_check` + existing member; stores scrypt hash + PBKDF2/AES-GCM-wrapped H made on the phone) and `POST /auth/login` (returns wrapped material; browser unwraps with the password). `web/crypto.js` `wrapKey`/`unwrapKey`. Landing has a Log in card; create/join end on a "Set your login" screen (skippable). Seed registers `sistera`, `abdullah`, `fatima`, `ammi`, password `333`. Sessions are in `sessionStorage` (one tab = one phone; three tabs on one origin = three members). `role === 'elder'` switches to the elder view (`renderElderHome()`, tabs Today / My week / My preferences / Invite, `body.elder` styles). 46 tests.
 - **Pitch** (`6034913`, `pitch/`): `deck.html` (21 slides, arrow keys, click, `#n`), `Amanah-Care-pitch-deck.pdf`, `explainer.html` + `Amanah-Care-explained.pdf` (simple English, demo commands, all judge Q&A, sources). Regenerate PDFs with headless Chrome:
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/Amanah-Care-pitch-deck.pdf" "file://$PWD/deck.html"` (the CVDisplayLink errors it prints are harmless).
 
@@ -83,7 +84,7 @@ Added this session:
 
 ## 5. DEFERRED (on the honesty slide, not built)
 
-Elder consent filter + audience filtering (needs a scoped support key); elder read-only large-print today view with RTL Urdu/Arabic; SSE/web push (polling instead); 30-minute reminders; key rotation; real member authentication (trusted client-declared member_id); native mobile; any AI. **AI decision (owner asked, agent advised, owner accepted): AI only at the edge, on the phone, opt-in per family; never on the server; nothing built tonight because a cloud model call would contradict the privacy claim on stage.** Candidate edge features: free text/voice → structured log items; plain-sentence or Urdu/Arabic summaries; "patterns, not predictions" counts. On-device route: Chrome built-in AI (Prompt/Summarizer/Translator on Gemini Nano, stable on desktop) or Apple on-device models.
+Elder consent filter + audience filtering (needs a scoped support key); RTL Urdu/Arabic for the elder view (the view itself is built); SSE/web push (polling instead); 30-minute reminders; key rotation; password policy, rate limiting and recovery (login exists, default password 333); native mobile; any AI. **AI decision (owner asked, agent advised, owner accepted): AI only at the edge, on the phone, opt-in per family; never on the server; nothing built tonight because a cloud model call would contradict the privacy claim on stage.** Candidate edge features: free text/voice → structured log items; plain-sentence or Urdu/Arabic summaries; "patterns, not predictions" counts. On-device route: Chrome built-in AI (Prompt/Summarizer/Translator on Gemini Nano, stable on desktop) or Apple on-device models.
 
 ---
 
@@ -117,7 +118,7 @@ Browser-made 256-bit AES-GCM key H, never sent; server stores `key_check` = SHA-
 ## 9. Demo script (day 2)
 
 1. Reset + seed (Docker: `docker compose down && docker compose up -d --build`, then seed. Dev stack: restart `node dev/stack.mjs`, then seed).
-2. Window A `localhost:8080` = Sister A code. Window B `127.0.0.1:8080` = Fatima code (separate storage per origin).
+2. Three tabs on `localhost:8080`: log in as `sistera`, `fatima`, `ammi` (password 333). Each tab is its own session. Ammi's tab is the elder view.
 3. A: Home. Say what the tiles mean. Tap Done on the next open item. Watch tiles move.
 4. A: Hand off → Fatima. Show "what happened" and "what is next" already written. Send (animation).
 5. B: Inbox badge → open card with preference strip → Accept.

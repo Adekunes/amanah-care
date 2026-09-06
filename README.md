@@ -35,7 +35,7 @@ Then, with either stack up, seed a populated family:
 cd app/seed && npm install && API=http://localhost:4000 node seed.js
 ```
 
-Open http://localhost:8080 in one window and http://127.0.0.1:8080 in another (two origins, two sessions). Paste the Sister A code into one Join box and the Fatima code into the other.
+Open http://localhost:8080 in as many tabs as you have family members (each tab is its own session). Log in as `sistera`, `abdullah`, `fatima` or `ammi` with password 333, or paste a printed code into the Join box. The first join is always by code (it proves you were handed the key); after that, a login and password. The elder (`ammi`) gets her own large-type view.
 
 ## Tests
 
@@ -57,6 +57,7 @@ On create, the browser makes a random 256-bit key H with WebCrypto. H never leav
 ## Honest limits (on the pitch honesty slide)
 
 - Support workers hold the same H, so the consent filter hides categories in the UI only, not by cryptography. A real product gives support a scoped key.
+- Login stores H wrapped under a password-derived key (PBKDF2 + AES-GCM) next to a scrypt hash of the password. The server verifies the password and cannot open the wrap, but the wrap is only as strong as the password, and the demo default is 333.
 - Auth is stubbed: the caller declares its member id and the server trusts it. The privacy story (server holds only ciphertext) does not depend on this.
 - Notifications are demo-grade polling. A closed tab is reached when reopened.
 
