@@ -1301,6 +1301,7 @@ function authMode(mode){
   const first = $(`#view-landing [data-pane="${mode}"] input, #view-landing [data-pane="${mode}"] textarea`); if(first && window.innerWidth>=960) first.focus();
 }
 $$('#view-landing [data-auth]').forEach(el=>el.addEventListener('click', (e)=>{ e.preventDefault(); authMode(el.dataset.auth); }));
+$$('[data-eye]').forEach(b=>b.onclick=()=>{ const i=$('#'+b.dataset.eye); const show=i.type==='password'; i.type=show?'text':'password'; b.textContent=show?'Hide':'Show'; });
 
 // resume session if present
 loadSession().then(ok=>{ if(ok) enterApp(); else show('landing'); });

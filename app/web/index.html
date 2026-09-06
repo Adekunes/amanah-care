@@ -25,64 +25,80 @@
       </div>
     </div>
     <div class="auth-side">
-    <div class="auth-card">
-      <nav class="auth-tabs" aria-label="Sign in options">
-        <button type="button" data-auth="login" class="on">Log in</button>
-        <button type="button" data-auth="join">Create account</button>
-        <button type="button" data-auth="create">New family</button>
-      </nav>
+      <div class="auth-card">
+        <div class="auth-brandline"><span class="tb-mark">A</span><span>Amanah Care</span></div>
 
-      <div class="auth-pane" data-pane="login">
-        <h2>Welcome back</h2>
-        <p class="muted">Your login and password.</p>
-        <div class="stack tight">
-          <div class="field"><label for="l-login">Email or login</label>
-            <input id="l-login" placeholder="fatima" autocomplete="username"></div>
-          <div class="field"><label for="l-pass">Password</label>
-            <input id="l-pass" type="password" value="333" autocomplete="current-password"></div>
-        </div>
-        <button id="btn-login">Log in</button>
-        <div id="fam-pick" class="hide">
-          <p class="muted">Your login opens more than one family. Which one now?</p>
-          <div class="stack tight" id="fam-pick-list"></div>
-        </div>
-        <p class="auth-switch">First time here? <a href="#" data-auth="join">Create your account with a family code</a>.<br>No family yet? <a href="#" data-auth="create">Start a new family</a>.</p>
-      </div>
+        <nav class="auth-tabs" aria-label="Sign in options">
+          <button type="button" data-auth="login" class="on">Log in</button>
+          <button type="button" data-auth="join">Join a family</button>
+          <button type="button" data-auth="create">New family</button>
+        </nav>
 
-      <div class="auth-pane hide" data-pane="join">
-        <h2>Create your account</h2>
-        <p class="muted">Paste the family code you were given, say who you are. You choose your login and password on the next screen.</p>
-        <div class="stack tight">
-          <div class="field"><label for="j-code">Family code</label>
-            <textarea id="j-code" placeholder="paste the family code"></textarea></div>
-          <div class="field"><label for="j-name">Your name</label>
-            <input id="j-name" placeholder="e.g. Brother B"></div>
-          <div class="field"><label for="j-role">Your role</label>
-            <select id="j-role"><option value="family">Family member</option><option value="support">Support worker</option><option value="elder">The elder</option></select></div>
+        <div class="auth-pane" data-pane="login">
+          <div class="auth-head"><span class="eyebrow">Assalamu alaykum</span><h2>Welcome back</h2><p class="muted">Your login and password. Same on every phone in the family.</p></div>
+          <div class="stack tight">
+            <div class="field icon"><label for="l-login">Email or login</label>
+              <div class="in"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><input id="l-login" placeholder="fatima" autocomplete="username"></div></div>
+            <div class="field icon"><label for="l-pass">Password</label>
+              <div class="in"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="l-pass" type="password" value="333" autocomplete="current-password"><button type="button" class="eye" data-eye="l-pass" aria-label="Show password">Show</button></div></div>
+          </div>
+          <button id="btn-login" class="cta">Log in <span aria-hidden="true">→</span></button>
+          <div id="fam-pick" class="hide">
+            <p class="muted">Your login opens more than one family. Which one now?</p>
+            <div class="stack tight" id="fam-pick-list"></div>
+          </div>
+          <div class="auth-or"><span>first time here?</span></div>
+          <div class="auth-doors">
+            <a href="#" class="door" data-auth="join"><span class="d-ico">🔑</span><span class="d-txt"><b>Join with a family code</b><span>Someone in the family shows you the code, face to face.</span></span><span class="d-arrow">→</span></a>
+            <a href="#" class="door" data-auth="create"><span class="d-ico">🏠</span><span class="d-txt"><b>Start a new family</b><span>You are the first one. The key is made on this phone.</span></span><span class="d-arrow">→</span></a>
+          </div>
+          <div class="auth-demo"><b>Demo logins</b> sistera · fatima · abdullah · layla (support) · ammi (elder) · password <code>333</code></div>
         </div>
-        <button id="btn-join">Continue</button>
-        <div class="auth-note"><b>What is a family code?</b> Whoever started the family generates it from their Invite tab. It carries the family key, so it is handed over face to face, never sent by chat.</div>
-        <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
-      </div>
 
-      <div class="auth-pane hide" data-pane="create">
-        <h2>Start a new family</h2>
-        <p class="muted">For the first person only. This makes the family key on this device and gives you the code to share.</p>
-        <div class="stack tight">
-          <div class="field"><label for="c-elder">Elder's name</label>
-            <input id="c-elder" placeholder="e.g. Ammi"></div>
-          <div class="field"><label for="c-family">Family name (optional)</label>
-            <input id="c-family" placeholder="e.g. Ammi's family"></div>
-          <div class="field"><label for="c-name">Your name</label>
-            <input id="c-name" placeholder="e.g. Sister A"></div>
-          <div class="field"><label for="c-role">Your role</label>
-            <select id="c-role"><option value="family">Family member</option><option value="elder">The elder</option></select></div>
+        <div class="auth-pane hide" data-pane="join">
+          <div class="auth-head"><span class="eyebrow">Join a family</span><h2>Create your account</h2><p class="muted">Paste the family code you were given and say who you are. You choose a login and password on the next screen.</p></div>
+          <div class="stack tight">
+            <div class="field"><label for="j-code">Family code</label>
+              <textarea id="j-code" placeholder="paste the family code"></textarea></div>
+            <div class="row2">
+              <div class="field"><label for="j-name">Your name</label>
+                <input id="j-name" placeholder="e.g. Brother B"></div>
+              <div class="field"><label for="j-role">Your role</label>
+                <select id="j-role"><option value="family">Family member</option><option value="support">Support worker</option><option value="elder">The elder</option></select></div>
+            </div>
+          </div>
+          <button id="btn-join" class="cta">Continue <span aria-hidden="true">→</span></button>
+          <div class="auth-note"><b>What is a family code?</b> Whoever started the family generates it from the Family tab. It carries the family key, so it is handed over face to face, never sent by chat.</div>
+          <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
         </div>
-        <button id="btn-create">Start the family</button>
-        <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
+
+        <div class="auth-pane hide" data-pane="create">
+          <div class="auth-head"><span class="eyebrow">New family</span><h2>Start a new family</h2><p class="muted">For the first person only. This makes the family key on this device and gives you the code to share.</p></div>
+          <div class="stack tight">
+            <div class="row2">
+              <div class="field"><label for="c-elder">Elder's name</label>
+                <input id="c-elder" placeholder="e.g. Ammi"></div>
+              <div class="field"><label for="c-family">Family name (optional)</label>
+                <input id="c-family" placeholder="e.g. Ammi's family"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="c-name">Your name</label>
+                <input id="c-name" placeholder="e.g. Sister A"></div>
+              <div class="field"><label for="c-role">Your role</label>
+                <select id="c-role"><option value="family">Family member</option><option value="elder">The elder</option></select></div>
+            </div>
+          </div>
+          <button id="btn-create" class="cta">Start the family <span aria-hidden="true">→</span></button>
+          <p class="auth-switch">Already have an account? <a href="#" data-auth="login">Log in</a>.</p>
+        </div>
+
+        <ul class="auth-trust">
+          <li><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Encrypted on your phone</li>
+          <li><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>The key never leaves the family</li>
+          <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>No ads, no tracking</li>
+        </ul>
       </div>
-    </div>
-    <p class="auth-foot">Private by design. Built for MuslimHacks 2026, Elderly Care track.</p>
+      <p class="auth-foot">Built for MuslimHacks 2026, Elderly Care track. Not a medical record, never medical advice.</p>
     </div>
   </section>
 
